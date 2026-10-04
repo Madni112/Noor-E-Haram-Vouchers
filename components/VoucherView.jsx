@@ -587,91 +587,120 @@ export default function VoucherView({ voucher, origin = '' }) {
         </div>
 
       </div>
-
-      {/* 7. URDU INSTRUCTIONS BOX (ضروری ہدایات برائے معتمرین کرام) */}
-      <div className="border border-slate-300 rounded-lg p-2.5 sm:p-3 mt-2.5 bg-[#fafafa] relative print:p-2 print:mt-1.5" dir="rtl">
-        
-        {/* Header with Title and Badge */}
-        <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-slate-200">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#dfba73]" />
-            <h3 className="font-bold text-[11px] sm:text-xs text-[#0a192f] font-urdu print:text-[8pt]">
-              ضروری ہدایات برائے معتمرین کرام (سعودی حکومتی قوانین)
-            </h3>
-          </div>
-          <span className="border border-slate-300 rounded px-2 py-0.5 text-[8.5px] font-bold text-slate-700 bg-white font-urdu print:text-[6.5pt] print:py-0 shrink-0">
-            قابل عمل شرائط
-          </span>
-        </div>
-
-        {/* 8 Bullet Items cleanly structured with inline custom bullets */}
-        <div className="space-y-1 font-urdu text-[9.5px] sm:text-[10px] text-slate-800 leading-relaxed print:text-[7pt] print:leading-tight print:space-y-0.5 pr-1 pl-1">
-          <div className="flex items-start gap-1.5 text-right">
-            <span className="text-[#c29648] font-bold select-none text-[10px] leading-none mt-0.5 shrink-0">•</span>
-            <span>ہوٹل اور پیکیج اس دستاویز میں لکھ دیا گیا ہے۔ اس کے مطابق آپ کو رہائش اور دیگر سہولیات فراہم کی جائیں گی۔</span>
-          </div>
-          <div className="flex items-start gap-1.5 text-right">
-            <span className="text-[#c29648] font-bold select-none text-[10px] leading-none mt-0.5 shrink-0">•</span>
-            <span>سفری سامان حرمین شریفین کی طرف لے جانا سعودی انتظامیہ کی طرف سے ممنوع ہے۔ خلاف ورزی پر جرمانہ ہوگا۔</span>
-          </div>
-          <div className="flex items-start gap-1.5 text-right">
-            <span className="text-[#c29648] font-bold select-none text-[10px] leading-none mt-0.5 shrink-0">•</span>
-            <span>نشہ آور اشیاء کا لانا قانوناً ممنوع ہے، سعودیہ میں منشیات لے جانے کی سزا موت ہے۔</span>
-          </div>
-          <div className="flex items-start gap-1.5 text-right">
-            <span className="text-[#c29648] font-bold select-none text-[10px] leading-none mt-0.5 shrink-0">•</span>
-            <span>حرمین شریفین کے اندر زمین پر گری پڑی چیز (پرس، موبائل فون یا کوئی قیمتی چیز) ہرگز نہ اٹھائیں۔</span>
-          </div>
-          <div className="flex items-start gap-1.5 text-right">
-            <span className="text-[#c29648] font-bold select-none text-[10px] leading-none mt-0.5 shrink-0">•</span>
-            <span>جدہ ایئرپورٹ پر امیگریشن و سعودی کمپنی کے انتظام میں 3 سے 5 گھنٹے لگ سکتے ہیں۔</span>
-          </div>
-          <div className="flex items-start gap-1.5 text-right">
-            <span className="text-[#c29648] font-bold select-none text-[10px] leading-none mt-0.5 shrink-0">•</span>
-            <span>ہوٹل سے چیک آؤٹ ٹائم دوپہر 2 بجے ہے۔ اس کے بعد اگلی Night چارج ہوگی، واؤچر کی 4 کاپیاں پاس رکھیں۔</span>
-          </div>
-          <div className="flex items-start gap-1.5 text-right">
-            <span className="text-[#c29648] font-bold select-none text-[10px] leading-none mt-0.5 shrink-0">•</span>
-            <span>واپسی فلائٹ سے دس گھنٹے پہلے معتمر اپنے سامان سمیت ہوٹل ریسپشن پر موجود رہیں۔</span>
-          </div>
-          <div className="flex items-start gap-1.5 text-right">
-            <span className="text-[#c29648] font-bold select-none text-[10px] leading-none mt-0.5 shrink-0">•</span>
-            <span>سعودی قانون کے مطابق کمپنی کے علاوہ کسی غیر رجسٹرڈ ہوٹل میں قیام کرنا سنگین جرم ہے۔</span>
-          </div>
-        </div>
-      </div>
-      {/* End of Top Content wrapper */}
+      {/* End of Page 1 Top Content wrapper */}
       </div>
 
-      {/* Bottom Section */}
-      <div className="space-y-1.5 print:space-y-1 mt-auto">
-        {/* 8. STANDARD TERMS & CONDITIONS (ENGLISH) */}
-        <div className="text-[8px] leading-tight text-slate-600 space-y-0.5 print:text-[6.8pt] print:leading-none">
-          <h4 className="font-bold text-[8.5px] uppercase tracking-wider text-slate-800 print:text-[7pt]">
-            STANDARD TERMS &amp; CONDITIONS
-          </h4>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-            <p>1. Connect to airport Wi-Fi on landing and establish contact with designated operational numbers.</p>
-            <p>5. Economy Hotels feature compact room layouts with essential functional furnishings.</p>
-            <p>2. 'Similar' refers to hotels in a similar vicinity strictly for a comparable distance.</p>
-            <p>6. Overstay beyond 30 days is illegal and strictly subject to hefty penalties &amp; fines.</p>
-            <p>3. Distances noted are approximate and subject to on-ground traffic scenarios.</p>
-            <p>7. Contact helpline at least 24h prior to avail bus transport.</p>
+      {/* End of Page 1 Voucher Container */}
+      </div>
+
+      {/* WEB VIEW PAGE SEPARATOR */}
+      <div className="max-w-[850px] mx-auto my-6 no-print flex items-center gap-3">
+        <div className="flex-1 h-px bg-slate-300"></div>
+        <span className="text-[11px] font-bold tracking-wider text-slate-500 uppercase bg-slate-100 px-3 py-1 rounded-full border border-slate-300">
+          PAGE 2 — TERMS &amp; IMPORTANT GUIDELINES
+        </span>
+        <div className="flex-1 h-px bg-slate-300"></div>
+      </div>
+
+      {/* PAGE 2 VOUCHER CONTAINER */}
+      <div 
+        className="voucher-container voucher-page-2 max-w-[850px] mx-auto bg-white rounded-none shadow-2xl border border-slate-300 overflow-hidden text-slate-800 p-4 sm:p-7 print:p-4 print:border-2 print:border-[#0a192f] text-[11px] leading-tight print:max-w-full print:w-full print:m-0 print:flex print:flex-col print:justify-between print:break-before-page"
+        style={{ pageBreakBefore: 'always', breakBefore: 'page' }}
+      >
+        <div className="space-y-3 print:space-y-2">
+          
+          {/* Page 2 Top Header */}
+          <div className="flex items-center justify-between pb-2 border-b-2 border-[#0a192f]">
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-sm text-[#0a192f] uppercase tracking-wide">
+                {voucher.companyName || 'NOOR E HARAM TRAVEL & TOURS'}
+              </span>
+              <span className="text-[10px] text-slate-500 font-semibold">• TERMS &amp; IMPORTANT GUIDELINES</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] font-bold text-slate-600">Voucher No:</span>
+              <span className="font-mono text-xs font-bold text-[#0a192f]">{voucherRefNo}</span>
+            </div>
           </div>
+
+          {/* 7. URDU INSTRUCTIONS BOX (ضروری ہدایات برائے معتمرین کرام) */}
+          <div className="border border-slate-300 rounded-lg p-3 sm:p-4 bg-[#fafafa] relative print:p-2.5" dir="rtl">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#dfba73]" />
+                <h3 className="font-bold text-xs sm:text-[13px] text-[#0a192f] font-urdu print:text-[9pt]">
+                  ضروری ہدایات برائے معتمرین کرام (سعودی حکومتی قوانین)
+                </h3>
+              </div>
+              <span className="border border-slate-300 rounded px-2.5 py-0.5 text-[9px] font-bold text-slate-700 bg-white font-urdu print:text-[7pt] shrink-0">
+                قابل عمل شرائط
+              </span>
+            </div>
+
+            <div className="space-y-1.5 font-urdu text-[10px] sm:text-[11px] text-slate-800 leading-relaxed print:text-[8pt] print:leading-tight print:space-y-1 pr-1 pl-1">
+              <div className="flex items-start gap-2 text-right">
+                <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
+                <span>ہوٹل اور پیکیج اس دستاویز میں لکھ دیا گیا ہے۔ اس کے مطابق آپ کو رہائش اور دیگر سہولیات فراہم کی جائیں گی۔</span>
+              </div>
+              <div className="flex items-start gap-2 text-right">
+                <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
+                <span>سفری سامان حرمین شریفین کی طرف لے جانا سعودی انتظامیہ کی طرف سے ممنوع ہے۔ خلاف ورزی پر جرمانہ ہوگا۔</span>
+              </div>
+              <div className="flex items-start gap-2 text-right">
+                <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
+                <span>نشہ آور اشیاء کا لانا قانوناً ممنوع ہے، سعودیہ میں منشیات لے جانے کی سزا موت ہے۔</span>
+              </div>
+              <div className="flex items-start gap-2 text-right">
+                <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
+                <span>حرمین شریفین کے اندر زمین پر گری پڑی چیز (پرس، موبائل فون یا کوئی قیمتی چیز) ہرگز نہ اٹھائیں۔</span>
+              </div>
+              <div className="flex items-start gap-2 text-right">
+                <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
+                <span>جدہ ایئرپورٹ پر امیگریشن و سعودی کمپنی کے انتظام میں 3 سے 5 گھنٹے لگ سکتے ہیں۔</span>
+              </div>
+              <div className="flex items-start gap-2 text-right">
+                <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
+                <span>ہوٹل سے چیک آؤٹ ٹائم دوپہر 2 بجے ہے۔ اس کے بعد اگلی Night چارج ہوگی، واؤچر کی 4 کاپیاں پاس رکھیں۔</span>
+              </div>
+              <div className="flex items-start gap-2 text-right">
+                <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
+                <span>واپسی فلائٹ سے دس گھنٹے پہلے معتمر اپنے سامان سمیت ہوٹل ریسپشن پر موجود رہیں۔</span>
+              </div>
+              <div className="flex items-start gap-2 text-right">
+                <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
+                <span>سعودی قانون کے مطابق کمپنی کے علاوہ کسی غیر رجسٹرڈ ہوٹل میں قیام کرنا سنگین جرم ہے۔</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 8. STANDARD TERMS & CONDITIONS (ENGLISH) */}
+          <div className="text-[9px] leading-relaxed text-slate-600 space-y-1 print:text-[7.5pt] print:leading-tight border border-slate-200 rounded-lg p-3 bg-white">
+            <h4 className="font-bold text-[9.5px] uppercase tracking-wider text-[#0a192f] print:text-[8pt] border-b border-slate-100 pb-1">
+              STANDARD TERMS &amp; CONDITIONS
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pt-1">
+              <p>1. Connect to airport Wi-Fi on landing and establish contact with designated operational numbers.</p>
+              <p>5. Economy Hotels feature compact room layouts with essential functional furnishings.</p>
+              <p>2. 'Similar' refers to hotels in a similar vicinity strictly for a comparable distance.</p>
+              <p>6. Overstay beyond 30 days is illegal and strictly subject to hefty penalties &amp; fines.</p>
+              <p>3. Distances noted are approximate and subject to on-ground traffic scenarios.</p>
+              <p>7. Contact helpline at least 24h prior to avail bus transport.</p>
+            </div>
+          </div>
+
         </div>
 
-        {/* Agency Contact & Address Footer */}
-        <div className="border-t border-slate-300 pt-1.5 text-center text-[9px] print:text-[7.5pt] text-slate-700 bg-slate-50/80 rounded py-1 px-2">
-          <p className="font-extrabold text-[#0a192f] uppercase tracking-wide">
+        {/* Agency Contact & Address Footer (Page 2 Bottom) */}
+        <div className="border-t-2 border-slate-300 pt-2.5 text-center text-[9.5px] print:text-[8pt] text-slate-700 bg-slate-50/90 rounded-lg py-2 px-3 mt-4 print:mt-auto">
+          <p className="font-extrabold text-[#0a192f] uppercase tracking-wide text-[11px]">
             {voucher.companyName || 'NOOR E HARAM TRAVEL & TOURS'}
           </p>
-          <p className="font-mono font-bold text-slate-800 mt-0.5">
-            {voucher.address || voucher.phone || 'MUHAMMAD FAIZAN 03112324764  G.MURTAZA (HAJI) 0312360 8683'}
+          <p className="font-mono font-bold text-slate-800 mt-0.5 text-[10px]">
+            {voucher.address || voucher.phone || 'Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424'}
           </p>
         </div>
-      </div>
 
-      {/* End of voucher-container */}
+      {/* End of Page 2 Voucher Container */}
       </div>
 
       {/* Action Toolbar (hidden during print & only visible to Admin) */}
