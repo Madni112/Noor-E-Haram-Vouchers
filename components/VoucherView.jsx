@@ -653,15 +653,17 @@ export default function VoucherView({ voucher, origin = '' }) {
             <div className="space-y-1.5 font-urdu text-[10px] sm:text-[11px] text-slate-800 leading-relaxed print:text-[8pt] print:leading-tight print:space-y-1 pr-1 pl-1">
               <div className="flex items-start gap-2 text-right">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
-                <span>ہوٹل اور پیکیج اس دستاویز میں لکھ دیا گیا ہے۔ اس کے مطابق آپ کو رہائش اور دیگر سہولیات فراہم کی جائیں گی۔</span>
+                <span>ہوٹل اور پیکیج اس دستاویز میں لکھ دیا گیا ہے۔</span>
               </div>
               <div className="flex items-start gap-2 text-right">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
                 <span>سفری سامان حرمین شریفین کی طرف لے جانا سعودی انتظامیہ کی طرف سے ممنوع ہے۔ خلاف ورزی پر جرمانہ ہوگا۔</span>
               </div>
               <div className="flex items-start gap-2 text-right">
-                <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
-                <span>نشہ آور اشیاء کا لانا قانوناً ممنوع ہے، سعودیہ میں منشیات لے جانے کی سزا موت ہے۔</span>
+                <span className="text-red-600 font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
+                <span className="text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200 print:text-red-700">
+                  نشہ آور اشیاء کا لانا قانوناً ممنوع ہے، سعودیہ میں منشیات لے جانے کی سزا موت ہے۔
+                </span>
               </div>
               <div className="flex items-start gap-2 text-right">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
