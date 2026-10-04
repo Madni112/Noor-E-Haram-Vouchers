@@ -152,8 +152,8 @@ h1, h2, h3, .font-heading {
   }
 
   .font-urdu {
-    font-size: 9.8pt !important;
-    line-height: 1.5 !important;
+    font-size: 10pt !important;
+    line-height: 2.2 !important;
   }
 
   .print-break-inside-avoid {

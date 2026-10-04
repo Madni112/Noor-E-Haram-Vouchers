@@ -685,38 +685,38 @@ export default function VoucherView({ voucher, origin = '' }) {
               </span>
             </div>
 
-            <div className="space-y-4 sm:space-y-6 font-urdu text-[11px] sm:text-[12.5px] text-slate-800 leading-[2.2] print:text-[9pt] print:leading-relaxed print:space-y-3.5 pr-1 pl-1 py-2">
-              <div className="flex items-start gap-2 text-right">
+            <div className="space-y-4 sm:space-y-6 print:space-y-4.5 font-urdu text-[11px] sm:text-[12.5px] text-slate-800 leading-[2.2] print:text-[10pt] print:leading-[2.2] pr-1 pl-1 py-2">
+              <div className="flex items-start gap-2 text-right py-0.5 print:py-1">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
                 <span>ہوٹل اور پیکیج اس دستاویز میں لکھ دیا گیا ہے۔</span>
               </div>
-              <div className="flex items-start gap-2 text-right">
+              <div className="flex items-start gap-2 text-right py-0.5 print:py-1">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
                 <span>سفری سامان حرمین شریفین کی طرف لے جانا سعودی انتظامیہ کی طرف سے ممنوع ہے۔ خلاف ورزی پر جرمانہ ہوگا۔</span>
               </div>
-              <div className="flex items-start gap-2 text-right">
+              <div className="flex items-start gap-2 text-right py-0.5 print:py-1">
                 <span className="text-red-600 font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
                 <span className="text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200 print:text-red-700">
                   نشہ آور اشیاء کا لانا قانوناً ممنوع ہے، سعودیہ میں منشیات لے جانے کی سزا موت ہے۔
                 </span>
               </div>
-              <div className="flex items-start gap-2 text-right">
+              <div className="flex items-start gap-2 text-right py-0.5 print:py-1">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
                 <span>حرمین شریفین کے اندر زمین پر گری پڑی چیز (پرس، موبائل فون یا کوئی قیمتی چیز) ہرگز نہ اٹھائیں۔</span>
               </div>
-              <div className="flex items-start gap-2 text-right">
+              <div className="flex items-start gap-2 text-right py-0.5 print:py-1">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
                 <span>جدہ ایئرپورٹ پر امیگریشن و سعودی کمپنی کے انتظام میں 3 سے 5 گھنٹے لگ سکتے ہیں۔</span>
               </div>
-              <div className="flex items-start gap-2 text-right">
+              <div className="flex items-start gap-2 text-right py-0.5 print:py-1">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
                 <span>ہوٹل سے چیک آؤٹ ٹائم دوپہر 2 بجے ہے۔ اس کے بعد اگلی Night چارج ہوگی، واؤچر کی 4 کاپیاں پاس رکھیں۔</span>
               </div>
-              <div className="flex items-start gap-2 text-right">
+              <div className="flex items-start gap-2 text-right py-0.5 print:py-1">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
                 <span>واپسی فلائٹ سے دس گھنٹے پہلے معتمر اپنے سامان سمیت ہوٹل ریسپشن پر موجود رہیں۔</span>
               </div>
-              <div className="flex items-start gap-2 text-right">
+              <div className="flex items-start gap-2 text-right py-0.5 print:py-1">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
                 <span>سعودی قانون کے مطابق کمپنی کے علاوہ کسی غیر رجسٹرڈ ہوٹل میں قیام کرنا سنگین جرم ہے۔</span>
               </div>
