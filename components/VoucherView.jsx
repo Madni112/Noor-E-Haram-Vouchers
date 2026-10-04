@@ -266,28 +266,13 @@ export default function VoucherView({ voucher, origin = '' }) {
                 </tr>
               ))
             ) : null}
-            {/* Summary Row for Pax Details and Beds */}
-            <tr className="bg-slate-50/90 font-bold border-t-2 border-slate-300">
-              <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-400">
-                —
-              </td>
-              <td colSpan={2} className="border border-slate-300 py-1.5 px-3 text-[#0a192f] text-[9px] sm:text-[9.5px] font-bold tracking-wide whitespace-nowrap">
+            {/* Summary Row for Pax Details and Beds (Spanned Structure) */}
+            <tr className="bg-slate-50 font-bold border-t-2 border-slate-300">
+              <td colSpan={5} className="border border-slate-300 py-1.5 px-3 text-[#0a192f] text-[9px] sm:text-[9.5px] font-bold tracking-wide whitespace-nowrap">
                 {paxSummaryText}
               </td>
-              <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-400">
-                —
-              </td>
-              <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-400">
-                —
-              </td>
-              <td className="border border-slate-300 py-1.5 px-2 text-center font-bold text-[#0a192f] text-[9.5px] whitespace-nowrap bg-[#fdf8ee]">
+              <td colSpan={3} className="border border-slate-300 py-1.5 px-3 text-center font-bold text-[#0a192f] text-[9.5px] whitespace-nowrap bg-[#fdf8ee]">
                 Bed - {totalBeds}
-              </td>
-              <td className="border border-slate-300 py-1.5 px-3 text-center text-slate-400">
-                —
-              </td>
-              <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-400">
-                —
               </td>
             </tr>
           </tbody>
