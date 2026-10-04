@@ -462,74 +462,94 @@ export default function VoucherView({ voucher, origin = '' }) {
         <div className="space-y-1.5 text-[10px]">
           {/* Departure Flight Card (Full Width) */}
           <div className="border border-slate-300 rounded p-1.5 sm:p-2 bg-white flex flex-col justify-between">
-            <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 gap-1">
+            <div className="pb-1 mb-1 border-b border-slate-200">
               <span className="font-bold text-[#0a192f] text-[9px] sm:text-[9.5px] uppercase tracking-wider whitespace-nowrap">
                 DEPARTURE FLIGHT (PAK-KSA)
               </span>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {departureFlight.date && (
-                  <span className="text-[8.5px] font-bold text-[#926818] bg-[#fdf8ee] px-1.5 py-0.5 rounded border border-[#e8ce97] font-mono whitespace-nowrap">
-                    {formatVoucherDate(departureFlight.date)}
-                  </span>
-                )}
-                <span className="bg-[#0a192f] text-[#dfba73] font-bold text-[8.5px] px-1.5 py-0.5 rounded font-mono whitespace-nowrap">
-                  {departureFlight.flight || 'F3-830'}
+            </div>
+            <div className="grid grid-cols-6 text-center pt-0.5">
+              <div className="border-r border-slate-100">
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">DATE</span>
+                <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap">
+                  {departureFlight.date ? formatVoucherDate(departureFlight.date) : '—'}
                 </span>
               </div>
-            </div>
-            <div className="grid grid-cols-4 text-center pt-0.5">
               <div className="border-r border-slate-100">
-                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">PNR</span>
-                <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap">{departureFlight.pnr || voucher.pnr || '—'}</span>
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">FLIGHT NO.</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap uppercase">
+                  {departureFlight.flight || '—'}
+                </span>
               </div>
               <div className="border-r border-slate-100">
                 <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">SECTOR</span>
-                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{departureFlight.from || 'KHI'}-{departureFlight.to || 'JED'}</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap uppercase">
+                  {(departureFlight.from || 'KHI')}-{(departureFlight.to || 'JED')}
+                </span>
               </div>
               <div className="border-r border-slate-100">
                 <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">DEPARTURE</span>
-                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{departureFlight.departure || '08:00'}</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">
+                  {departureFlight.departure || '—'}
+                </span>
+              </div>
+              <div className="border-r border-slate-100">
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">ARRIVAL</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">
+                  {departureFlight.arrival || '—'}
+                </span>
               </div>
               <div>
-                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">ARRIVAL</span>
-                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{departureFlight.arrival || '10:05'}</span>
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">PNR</span>
+                <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap uppercase">
+                  {departureFlight.pnr || voucher.pnr || '—'}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Return Flight Card (Full Width) */}
           <div className="border border-slate-300 rounded p-1.5 sm:p-2 bg-white flex flex-col justify-between">
-            <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 gap-1">
+            <div className="pb-1 mb-1 border-b border-slate-200">
               <span className="font-bold text-[#0a192f] text-[9px] sm:text-[9.5px] uppercase tracking-wider whitespace-nowrap">
                 RETURN FLIGHT (KSA-PAK)
               </span>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                {returnFlight.date && (
-                  <span className="text-[8.5px] font-bold text-[#926818] bg-[#fdf8ee] px-1.5 py-0.5 rounded border border-[#e8ce97] font-mono whitespace-nowrap">
-                    {formatVoucherDate(returnFlight.date)}
-                  </span>
-                )}
-                <span className="bg-[#0a192f] text-[#dfba73] font-bold text-[8.5px] px-1.5 py-0.5 rounded font-mono whitespace-nowrap">
-                  {returnFlight.flight || 'F3-829'}
+            </div>
+            <div className="grid grid-cols-6 text-center pt-0.5">
+              <div className="border-r border-slate-100">
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">DATE</span>
+                <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap">
+                  {returnFlight.date ? formatVoucherDate(returnFlight.date) : '—'}
                 </span>
               </div>
-            </div>
-            <div className="grid grid-cols-4 text-center pt-0.5">
               <div className="border-r border-slate-100">
-                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">PNR</span>
-                <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap">{returnFlight.pnr || voucher.pnr || '—'}</span>
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">FLIGHT NO.</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap uppercase">
+                  {returnFlight.flight || '—'}
+                </span>
               </div>
               <div className="border-r border-slate-100">
                 <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">SECTOR</span>
-                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{returnFlight.from || 'JED'}-{returnFlight.to || 'KHI'}</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap uppercase">
+                  {(returnFlight.from || 'JED')}-{(returnFlight.to || 'KHI')}
+                </span>
               </div>
               <div className="border-r border-slate-100">
                 <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">DEPARTURE</span>
-                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{returnFlight.departure || '12:45'}</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">
+                  {returnFlight.departure || '—'}
+                </span>
+              </div>
+              <div className="border-r border-slate-100">
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">ARRIVAL</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">
+                  {returnFlight.arrival || '—'}
+                </span>
               </div>
               <div>
-                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">ARRIVAL</span>
-                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{returnFlight.arrival || '07:00'}</span>
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">PNR</span>
+                <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap uppercase">
+                  {returnFlight.pnr || voucher.pnr || '—'}
+                </span>
               </div>
             </div>
           </div>
