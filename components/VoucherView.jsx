@@ -130,21 +130,21 @@ export default function VoucherView({ voucher, origin = '' }) {
         <div className="space-y-2.5 print:space-y-1.5">
         
         {/* 1. TOP HEADER SECTION */}
-      <div className="flex flex-col sm:flex-row items-center justify-between pb-3 border-b border-slate-200 gap-3 text-center sm:text-left">
+      <div className="flex flex-col sm:flex-row items-center justify-between pb-3 print:pb-2 border-b border-slate-200 gap-3 print:gap-2 text-center sm:text-left">
         
         {/* Left: Agency Name & Voucher Meta */}
-        <div className="space-y-1.5 flex-[1.3] text-center sm:text-left shrink-0 order-2 sm:order-1">
+        <div className="space-y-2 print:space-y-1 flex-[1.3] text-center sm:text-left shrink-0 order-2 sm:order-1">
           <div>
-            <h1 className="text-[13.5px] sm:text-[14.5px] print:text-[12.5pt] font-extrabold tracking-tight text-[#0a192f] uppercase sm:whitespace-nowrap">
+            <h1 className="text-[17px] sm:text-[20px] print:text-[15.5pt] font-black tracking-tight text-[#0a192f] uppercase sm:whitespace-nowrap leading-tight">
               {voucher.companyName || 'NOOR E HARAM TRAVEL & TOURS'}
             </h1>
-            <p className="text-[10px] text-slate-500 font-semibold tracking-wide">
+            <p className="text-[11px] sm:text-[12px] print:text-[8.5pt] text-slate-500 font-bold tracking-wide">
               Official Umrah Voucher Portal
             </p>
           </div>
 
           {/* Voucher Meta details */}
-          <div className="text-[10px] leading-tight space-y-0.5 text-slate-700 pt-1 print:text-[8pt]">
+          <div className="text-[11px] leading-snug space-y-1 print:space-y-0.5 text-slate-700 pt-1 print:pt-0.5 print:text-[8.5pt]">
             <div>
               <span className="font-bold text-slate-900">Voucher Date:</span>{' '}
               <span className="font-semibold text-slate-800">
@@ -159,33 +159,33 @@ export default function VoucherView({ voucher, origin = '' }) {
         </div>
 
         {/* Center: Prominent Large Centered Logo + UB Ref Badge */}
-        <div className="flex flex-col items-center justify-center text-center space-y-1.5 flex-[1.4] order-1 sm:order-2">
+        <div className="flex flex-col items-center justify-center text-center space-y-2 print:space-y-1 flex-[1.4] order-1 sm:order-2">
           <img 
             src="/logo.png" 
             alt="Cheepa Travels Logo" 
-            className="h-24 sm:h-36 max-w-[250px] sm:max-w-[300px] w-auto object-contain print:h-32 drop-shadow-sm transition-all" 
+            className="h-28 sm:h-40 max-w-[280px] sm:max-w-[340px] w-auto object-contain print:h-28 drop-shadow-md transition-all" 
           />
           <div className="flex items-center gap-1.5">
-            <span className="font-extrabold text-[10.5px] tracking-wider text-[#0a192f] uppercase">
+            <span className="font-extrabold text-[11px] print:text-[9pt] tracking-wider text-[#0a192f] uppercase">
               HOTEL
             </span>
-            <span className="bg-[#0a192f] text-[#dfba73] font-bold text-[9px] px-2.5 py-0.5 rounded tracking-wider shadow-sm">
+            <span className="bg-[#0a192f] text-[#dfba73] font-bold text-[10px] print:text-[8.5pt] px-3 py-0.5 rounded tracking-wider shadow-sm">
               {voucherRefNo}
             </span>
           </div>
         </div>
 
-        {/* Right: Self Visa & Islamabad */}
-        <div className="text-center sm:text-right space-y-0.5 flex-[0.8] pr-0 sm:pr-1 order-3">
+        {/* Right: Self Visa Badge */}
+        <div className="text-center sm:text-right flex-[0.9] pr-0 sm:pr-1 order-3 flex justify-center sm:justify-end">
           {voucher.isSelfVisa !== false && (
-            <>
-              <h2 className="text-[16px] sm:text-[17px] font-black text-[#0a192f] tracking-tight uppercase">
-                Self Visa
+            <div className="border-2 border-[#dfba73] bg-[#fdf8ee] rounded-xl px-4 py-2.5 print:px-3 print:py-2 shadow-xs text-center inline-block min-w-[140px] print:min-w-[125px]">
+              <h2 className="text-[17px] sm:text-[20px] print:text-[15pt] font-black text-[#0a192f] tracking-tight uppercase leading-none">
+                SELF VISA
               </h2>
-              <p className="text-[12px] sm:text-[13px] font-bold text-slate-600 tracking-wide">
-                Islamabad
+              <p className="text-[12px] sm:text-[13px] print:text-[9.5pt] font-black text-[#926818] tracking-widest uppercase mt-1 print:mt-0.5">
+                ISLAMABAD
               </p>
-            </>
+            </div>
           )}
         </div>
 
@@ -281,10 +281,13 @@ export default function VoucherView({ voucher, origin = '' }) {
       {/* 4. ACCOMMODATION ITINERARY (With APPROVED diagonal watermark) */}
       <div className="mt-3.5 space-y-1 relative">
         
-        {/* Transparent APPROVED Green Stamp Watermark (No Outline) */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 overflow-hidden select-none">
+        {/* Transparent APPROVED Green Stamp Watermark (15% Opacity) */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden select-none">
           <div className="transform -rotate-12 text-center">
-            <span className="text-5xl sm:text-6xl font-black tracking-[0.25em] text-emerald-600/30 uppercase">
+            <span 
+              className="text-5xl sm:text-6xl font-black tracking-[0.25em] uppercase select-none"
+              style={{ color: '#059669', opacity: 0.15 }}
+            >
               APPROVED
             </span>
           </div>
@@ -527,65 +530,76 @@ export default function VoucherView({ voucher, origin = '' }) {
       </div>
 
       {/* 7. DIGITAL VERIFICATION & PAKISTAN HELPLINE (OPTION B) */}
-      <div className="mt-2.5 print:mt-2 border border-slate-300 rounded-lg p-2 sm:p-2.5 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-white border border-slate-200 rounded-lg shadow-inner shrink-0">
+      <div className="mt-2.5 print:mt-2 border border-slate-300 rounded-lg p-2 sm:p-2.5 print:p-2 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 print:gap-2 shadow-xs">
+        <div className="flex items-center gap-3 print:gap-2.5">
+          <div className="p-1.5 print:p-1 bg-white border border-slate-200 rounded-lg shadow-inner shrink-0">
             {voucherUrl ? (
-              <QRCodeSVG value={voucherUrl} size={80} level="H" />
+              <QRCodeSVG value={voucherUrl} size={80} className="w-[60px] h-[60px] sm:w-[80px] sm:h-[80px] print:w-[68px] print:h-[68px]" level="H" />
             ) : (
-              <div className="w-20 h-20 bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">
+              <div className="w-14 h-14 print:w-16 print:h-16 bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">
                 QR Code
               </div>
             )}
           </div>
-          <div className="space-y-1 text-left">
-            <span className="px-3 py-0.5 rounded bg-emerald-50 text-emerald-700 font-extrabold text-[10px] border border-emerald-200 tracking-wider uppercase inline-block">
+          <div className="space-y-1 print:space-y-0.5 text-left">
+            <span className="px-3 py-0.5 print:px-2.5 print:py-0.5 rounded bg-emerald-50 text-emerald-700 font-extrabold text-[10px] print:text-[9pt] border border-emerald-200 tracking-wider uppercase inline-block">
               Authorized
             </span>
-            <p className="text-[9px] text-slate-500 font-medium">
+            <p className="text-[9px] print:text-[8pt] text-slate-500 font-medium">
               Scan QR code to verify authentic booking details on portal
             </p>
           </div>
         </div>
 
         {/* Pakistan Helpline Text */}
-        <div className="text-center sm:text-right border-t sm:border-t-0 sm:border-l border-slate-200 pt-1.5 sm:pt-0 sm:pl-3 w-full sm:w-auto">
-          <span className="text-[#805a1b] font-bold text-[8.5px] uppercase tracking-wider block">
+        <div className="text-center sm:text-right border-t sm:border-t-0 sm:border-l border-slate-200 pt-1.5 sm:pt-0 sm:pl-4 print:pt-0 print:pl-3 w-full sm:w-auto">
+          <span className="text-[#805a1b] font-black text-[9.5px] print:text-[8.5pt] uppercase tracking-wider block mb-1 print:mb-0.5">
             PAKISTAN HELPLINE (24/7)
           </span>
-          <span className="text-[#0a192f] font-black text-xs sm:text-[12px] font-mono tracking-tight block">
-            {voucher.pakistanHelpline || 'Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424'}
-          </span>
+          <div className="text-[#0a192f] font-black text-xs sm:text-[12.5px] print:text-[9.5pt] font-mono tracking-tight leading-tight space-y-0.5 print:space-y-0.5">
+            {voucher.pakistanHelpline && voucher.pakistanHelpline.includes('/') ? (
+              voucher.pakistanHelpline.split('/').map((line, idx) => (
+                <div key={idx} className="whitespace-nowrap">
+                  {line.trim()}
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="whitespace-nowrap">MUHAMMAD FAIZAN 03112324764</div>
+                <div className="whitespace-nowrap">G.MURTAZA (HAJI) 0312360 8683</div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       {/* 8. KSA OPERATIONAL HELPLINES (FULL WIDTH FOOTER) */}
-      <div className="mt-2.5 print:mt-2 bg-[#0a192f] text-white rounded p-2 text-[8.5px] print:p-1.5 print:rounded">
-        <div className="border-b border-slate-700/80 pb-1 mb-1 text-center sm:text-left">
-          <span className="text-[#dfba73] font-bold text-[8.5px] tracking-wider uppercase print:text-[7pt]">
+      <div className="mt-3 print:mt-2 bg-[#0a192f] text-white rounded-lg p-3 sm:p-3.5 print:p-2 text-[10.5px] print:rounded">
+        <div className="border-b border-slate-700/80 pb-1.5 print:pb-1 mb-2 print:mb-1.5 text-center sm:text-left">
+          <span className="text-[#dfba73] font-black text-[11px] sm:text-[12px] tracking-wider uppercase print:text-[9pt]">
             KSA OPERATIONAL HELPLINES (24/7 GROUND SUPPORT)
           </span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[7.5px] leading-tight print:text-[6pt]">
-          <div className="border-r border-slate-700/60 pr-1">
-            <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">JEDDAH AIRPORT</span>
-            <span className="text-slate-300 block">Airport (24/7):</span>
-            <span className="font-bold font-mono text-white">0568832059</span>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3 print:gap-2 text-[9.5px] sm:text-[10.5px] leading-snug print:text-[8pt]">
+          <div className="border-r border-slate-700/60 pr-2 print:pr-1.5">
+            <span className="text-[#dfba73] font-black block uppercase text-[9.5px] sm:text-[10.5px] print:text-[8pt] tracking-wider">JEDDAH AIRPORT</span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Airport (24/7):</span>
+            <span className="font-black font-mono text-white text-[12px] sm:text-[13.5px] print:text-[10pt] block mt-0.5">0568832059</span>
           </div>
-          <div className="border-r border-slate-700/60 pr-1">
-            <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">JEDDAH HEAD OFFICE</span>
-            <span className="text-slate-300 block">Special: <strong className="text-white font-mono">0583000471</strong></span>
-            <span className="text-slate-300 block">Sharing: <strong className="text-white font-mono">0596837655</strong></span>
+          <div className="border-r border-slate-700/60 pr-2 print:pr-1.5">
+            <span className="text-[#dfba73] font-black block uppercase text-[9.5px] sm:text-[10.5px] print:text-[8pt] tracking-wider">JEDDAH HEAD OFFICE</span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Special: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0583000471</strong></span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Sharing: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0596837655</strong></span>
           </div>
-          <div className="border-r border-slate-700/60 pr-1">
-            <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">MAKKAH</span>
-            <span className="text-slate-300 block">Sharing: <strong className="text-white font-mono">0543666527</strong></span>
-            <span className="text-slate-300 block">Special: <strong className="text-white font-mono">0596085887</strong></span>
+          <div className="border-r border-slate-700/60 pr-2 print:pr-1.5">
+            <span className="text-[#dfba73] font-black block uppercase text-[9.5px] sm:text-[10.5px] print:text-[8pt] tracking-wider">MAKKAH</span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Sharing: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0543666527</strong></span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Special: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0596085887</strong></span>
           </div>
           <div>
-            <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">MADINAH</span>
-            <span className="text-slate-300 block">Sharing: <strong className="text-white font-mono">0596836845</strong></span>
-            <span className="text-slate-300 block">Special: <strong className="text-white font-mono">0596836979</strong></span>
+            <span className="text-[#dfba73] font-black block uppercase text-[9.5px] sm:text-[10.5px] print:text-[8pt] tracking-wider">MADINAH</span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Sharing: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0596836845</strong></span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Special: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0596836979</strong></span>
           </div>
         </div>
       </div>
@@ -606,10 +620,10 @@ export default function VoucherView({ voucher, origin = '' }) {
 
       {/* PAGE 2 VOUCHER CONTAINER */}
       <div 
-        className="voucher-container voucher-page-2 max-w-[850px] mx-auto bg-white rounded-none shadow-2xl border border-slate-300 overflow-hidden text-slate-800 p-4 sm:p-7 print:p-4 print:border-2 print:border-[#0a192f] text-[11px] leading-tight print:max-w-full print:w-full print:m-0 print:flex print:flex-col print:justify-between print:break-before-page"
+        className="voucher-container voucher-page-2 max-w-[850px] mx-auto bg-white rounded-none shadow-2xl border border-slate-300 overflow-hidden text-slate-800 p-4 sm:p-7 print:p-3 print:border-2 print:border-[#0a192f] text-[11px] leading-tight print:max-w-full print:w-full print:m-0 print:flex print:flex-col print:justify-between print:break-before-page"
         style={{ pageBreakBefore: 'always', breakBefore: 'page' }}
       >
-        <div className="space-y-3 print:space-y-2">
+        <div className="space-y-3 print:space-y-1.5">
           
           {/* Page 2 Top Header */}
           <div className="flex items-center justify-between pb-2 border-b-2 border-[#0a192f]">

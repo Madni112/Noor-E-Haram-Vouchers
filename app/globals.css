@@ -74,18 +74,18 @@ h1, h2, h3, .font-heading {
   background: #94a3b8;
 }
 
-/* A4 Full-Paper Print Optimization */
+/* A4 Full-Paper Print Optimization (Strict 2-Page Fit & Scaled Up) */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 5mm;
+    margin: 5mm 6mm 5mm 6mm;
   }
   
   html, body {
     background: #ffffff !important;
     color: #0f172a !important;
-    font-size: 9pt !important;
-    line-height: 1.25 !important;
+    font-size: 9.5pt !important;
+    line-height: 1.28 !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
@@ -107,49 +107,53 @@ h1, h2, h3, .font-heading {
     border: 1.5px solid #0a192f !important;
     border-radius: 4px !important;
     margin: 0 !important;
-    padding: 10px 12px !important;
+    padding: 8px 10px !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: 284mm !important;
-    min-height: 284mm !important;
-    max-height: 284mm !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: flex-start !important;
+    box-sizing: border-box !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    box-sizing: border-box !important;
+    overflow: hidden !important;
+  }
+
+  .voucher-page-1 {
+    page-break-after: always !important;
+    break-after: page !important;
   }
 
   .voucher-page-2 {
     page-break-before: always !important;
     break-before: page !important;
-    height: 284mm !important;
-    min-height: 284mm !important;
-    max-height: 284mm !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    min-height: 260mm !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
   }
 
+  .voucher-container table {
+    width: 100% !important;
+  }
+
   .voucher-container table th {
-    padding: 3px 5px !important;
-    font-size: 8pt !important;
+    padding: 3.5px 5px !important;
+    font-size: 8.8pt !important;
   }
 
   .voucher-container table td {
     padding: 3.5px 5px !important;
-    font-size: 8.2pt !important;
+    font-size: 9pt !important;
   }
 
   .voucher-container h1 {
-    font-size: 13pt !important;
+    font-size: 16pt !important;
     line-height: 1.2 !important;
   }
 
   .font-urdu {
-    font-size: 8.5pt !important;
-    line-height: 1.4 !important;
+    font-size: 9.8pt !important;
+    line-height: 1.5 !important;
   }
 
   .print-break-inside-avoid {
