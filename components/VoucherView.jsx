@@ -129,6 +129,14 @@ export default function VoucherView({ voucher, origin = '' }) {
     ? `GENT(S) - ${gents}   LAD(IES) - ${ladies}   CHILD(REN) - ${children}   INFANT(S) - ${infants}`
     : (voucher.paxCounts ? voucher.paxCounts.replaceAll(':', ' - ') : 'GENT(S) - 1   LAD(IES) - 0   CHILD(REN) - 0   INFANT(S) - 0');
 
+  const ksaJeddahAirport = voucher.ksaJeddahAirport || voucher.ksa_jeddah_airport || (voucher.passengers && voucher.passengers[0]?.ksaJeddahAirport) || '0568832059';
+  const ksaJeddahSpecial = voucher.ksaJeddahSpecial || voucher.ksa_jeddah_special || (voucher.passengers && voucher.passengers[0]?.ksaJeddahSpecial) || '0583000471';
+  const ksaJeddahSharing = voucher.ksaJeddahSharing || voucher.ksa_jeddah_sharing || (voucher.passengers && voucher.passengers[0]?.ksaJeddahSharing) || '0596837655';
+  const ksaMakkahSharing = voucher.ksaMakkahSharing || voucher.ksa_makkah_sharing || (voucher.passengers && voucher.passengers[0]?.ksaMakkahSharing) || '0543666527';
+  const ksaMakkahSpecial = voucher.ksaMakkahSpecial || voucher.ksa_makkah_special || (voucher.passengers && voucher.passengers[0]?.ksaMakkahSpecial) || '0596085887';
+  const ksaMadinahSharing = voucher.ksaMadinahSharing || voucher.ksa_madinah_sharing || (voucher.passengers && voucher.passengers[0]?.ksaMadinahSharing) || '0596836845';
+  const ksaMadinahSpecial = voucher.ksaMadinahSpecial || voucher.ksa_madinah_special || (voucher.passengers && voucher.passengers[0]?.ksaMadinahSpecial) || '0596836979';
+
   return (
     <>
       <div className="voucher-container voucher-page-1 max-w-[850px] mx-auto bg-white rounded-none shadow-2xl border border-slate-300 overflow-hidden text-slate-800 p-4 sm:p-7 print:p-3 print:border-2 print:border-[#0a192f] text-[11px] leading-tight print:max-w-full print:w-full print:m-0 print:flex print:flex-col print:justify-start">
@@ -608,22 +616,22 @@ export default function VoucherView({ voucher, origin = '' }) {
           <div className="border-r border-slate-700/60 pr-2 print:pr-1.5">
             <span className="text-[#dfba73] font-black block uppercase text-[9.5px] sm:text-[10.5px] print:text-[8pt] tracking-wider">JEDDAH AIRPORT</span>
             <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Airport (24/7):</span>
-            <span className="font-black font-mono text-white text-[12px] sm:text-[13.5px] print:text-[10pt] block mt-0.5">0568832059</span>
+            <span className="font-black font-mono text-white text-[12px] sm:text-[13.5px] print:text-[10pt] block mt-0.5">{ksaJeddahAirport}</span>
           </div>
           <div className="border-r border-slate-700/60 pr-2 print:pr-1.5">
             <span className="text-[#dfba73] font-black block uppercase text-[9.5px] sm:text-[10.5px] print:text-[8pt] tracking-wider">JEDDAH HEAD OFFICE</span>
-            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Special: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0583000471</strong></span>
-            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Sharing: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0596837655</strong></span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Special: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">{ksaJeddahSpecial}</strong></span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Sharing: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">{ksaJeddahSharing}</strong></span>
           </div>
           <div className="border-r border-slate-700/60 pr-2 print:pr-1.5">
             <span className="text-[#dfba73] font-black block uppercase text-[9.5px] sm:text-[10.5px] print:text-[8pt] tracking-wider">MAKKAH</span>
-            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Sharing: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0543666527</strong></span>
-            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Special: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0596085887</strong></span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Sharing: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">{ksaMakkahSharing}</strong></span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Special: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">{ksaMakkahSpecial}</strong></span>
           </div>
           <div>
             <span className="text-[#dfba73] font-black block uppercase text-[9.5px] sm:text-[10.5px] print:text-[8pt] tracking-wider">MADINAH</span>
-            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Sharing: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0596836845</strong></span>
-            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Special: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">0596836979</strong></span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Sharing: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">{ksaMadinahSharing}</strong></span>
+            <span className="text-slate-300 block text-[9px] sm:text-[10px] print:text-[7.5pt] mt-0.5">Special: <strong className="text-white font-mono text-[11px] sm:text-[12.5px] print:text-[9pt] font-black">{ksaMadinahSpecial}</strong></span>
           </div>
         </div>
       </div>

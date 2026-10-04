@@ -35,7 +35,14 @@ export default function EditVoucherPage() {
   const [groundTransport, setGroundTransport] = useState('+92 328 8189989');
   const [makkahHelpline, setMakkahHelpline] = useState('+966 53 649 2846');
   const [madinahHelpline, setMadinahHelpline] = useState('+966 57 593 0550');
-  const [pakistanHelpline, setPakistanHelpline] = useState('Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424');
+  const [pakistanHelpline, setPakistanHelpline] = useState('MUHAMMAD FAIZan 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
+  const [ksaJeddahAirport, setKsaJeddahAirport] = useState('0568832059');
+  const [ksaJeddahSpecial, setKsaJeddahSpecial] = useState('0583000471');
+  const [ksaJeddahSharing, setKsaJeddahSharing] = useState('0596837655');
+  const [ksaMakkahSharing, setKsaMakkahSharing] = useState('0543666527');
+  const [ksaMakkahSpecial, setKsaMakkahSpecial] = useState('0596085887');
+  const [ksaMadinahSharing, setKsaMadinahSharing] = useState('0596836845');
+  const [ksaMadinahSpecial, setKsaMadinahSpecial] = useState('0596836979');
   const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVEL & TOURS');
   const [executive, setExecutive] = useState('ADMIN');
   const [isSelfVisa, setIsSelfVisa] = useState(true);
@@ -59,6 +66,13 @@ export default function EditVoucherPage() {
         setMakkahHelpline(found.makkahHelpline || found.ksaMakkah || '+966 53 649 2846');
         setMadinahHelpline(found.madinahHelpline || found.ksaMadinah || '+966 57 593 0550');
         setPakistanHelpline(found.pakistanHelpline || 'Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424');
+        setKsaJeddahAirport(found.ksaJeddahAirport || found.ksa_jeddah_airport || (found.passengers && found.passengers[0]?.ksaJeddahAirport) || '0568832059');
+        setKsaJeddahSpecial(found.ksaJeddahSpecial || found.ksa_jeddah_special || (found.passengers && found.passengers[0]?.ksaJeddahSpecial) || '0583000471');
+        setKsaJeddahSharing(found.ksaJeddahSharing || found.ksa_jeddah_sharing || (found.passengers && found.passengers[0]?.ksaJeddahSharing) || '0596837655');
+        setKsaMakkahSharing(found.ksaMakkahSharing || found.ksa_makkah_sharing || (found.passengers && found.passengers[0]?.ksaMakkahSharing) || '0543666527');
+        setKsaMakkahSpecial(found.ksaMakkahSpecial || found.ksa_makkah_special || (found.passengers && found.passengers[0]?.ksaMakkahSpecial) || '0596085887');
+        setKsaMadinahSharing(found.ksaMadinahSharing || found.ksa_madinah_sharing || (found.passengers && found.passengers[0]?.ksaMadinahSharing) || '0596836845');
+        setKsaMadinahSpecial(found.ksaMadinahSpecial || found.ksa_madinah_special || (found.passengers && found.passengers[0]?.ksaMadinahSpecial) || '0596836979');
         setCompanyName(found.companyName || 'NOOR E HARAM TRAVEL & TOURS');
         setExecutive(found.executive || 'ADMIN');
         setIsSelfVisa(found.isSelfVisa !== false);
@@ -267,6 +281,13 @@ export default function EditVoucherPage() {
       makkahHelpline: makkahHelpline.trim(),
       madinahHelpline: madinahHelpline.trim(),
       pakistanHelpline: pakistanHelpline.trim(),
+      ksaJeddahAirport: ksaJeddahAirport.trim(),
+      ksaJeddahSpecial: ksaJeddahSpecial.trim(),
+      ksaJeddahSharing: ksaJeddahSharing.trim(),
+      ksaMakkahSharing: ksaMakkahSharing.trim(),
+      ksaMakkahSpecial: ksaMakkahSpecial.trim(),
+      ksaMadinahSharing: ksaMadinahSharing.trim(),
+      ksaMadinahSpecial: ksaMadinahSpecial.trim(),
       slug: voucher.slug || slugify(cleanParty),
       executive,
       paxCounts,
@@ -461,6 +482,91 @@ export default function EditVoucherPage() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono font-bold text-emerald-800"
                   placeholder="+92 311 2264567"
                 />
+              </div>
+            </div>
+
+            {/* KSA Operational Helplines (24/7 Ground Support) Inputs */}
+            <div className="pt-4 border-t border-slate-200 mt-4">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#c29648]" />
+                <h3 className="text-xs font-bold text-[#0a192f] uppercase tracking-wider">
+                  KSA Operational Helplines (24/7 Ground Support Footer)
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50/80 p-3.5 rounded-xl border border-slate-200">
+                <div>
+                  <span className="block text-[11px] font-black text-[#805a1b] uppercase mb-1">Jeddah Airport</span>
+                  <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Airport (24/7):</label>
+                  <input
+                    type="text"
+                    value={ksaJeddahAirport}
+                    onChange={(e) => setKsaJeddahAirport(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded font-mono font-bold text-slate-800"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <span className="block text-[11px] font-black text-[#805a1b] uppercase mb-1">Jeddah Head Office</span>
+                  <div>
+                    <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Special:</label>
+                    <input
+                      type="text"
+                      value={ksaJeddahSpecial}
+                      onChange={(e) => setKsaJeddahSpecial(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded font-mono font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Sharing:</label>
+                    <input
+                      type="text"
+                      value={ksaJeddahSharing}
+                      onChange={(e) => setKsaJeddahSharing(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded font-mono font-bold text-slate-800"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <span className="block text-[11px] font-black text-[#805a1b] uppercase mb-1">Makkah Ground</span>
+                  <div>
+                    <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Sharing:</label>
+                    <input
+                      type="text"
+                      value={ksaMakkahSharing}
+                      onChange={(e) => setKsaMakkahSharing(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded font-mono font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Special:</label>
+                    <input
+                      type="text"
+                      value={ksaMakkahSpecial}
+                      onChange={(e) => setKsaMakkahSpecial(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded font-mono font-bold text-slate-800"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <span className="block text-[11px] font-black text-[#805a1b] uppercase mb-1">Madinah Ground</span>
+                  <div>
+                    <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Sharing:</label>
+                    <input
+                      type="text"
+                      value={ksaMadinahSharing}
+                      onChange={(e) => setKsaMadinahSharing(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded font-mono font-bold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-500 font-bold mb-0.5">Special:</label>
+                    <input
+                      type="text"
+                      value={ksaMadinahSpecial}
+                      onChange={(e) => setKsaMadinahSpecial(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded font-mono font-bold text-slate-800"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
