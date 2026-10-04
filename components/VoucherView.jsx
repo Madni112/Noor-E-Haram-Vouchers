@@ -288,65 +288,65 @@ export default function VoucherView({ voucher, origin = '' }) {
         <div className="overflow-x-auto w-full -mx-1 px-1 sm:mx-0 sm:px-0">
           <table className="w-full min-w-[620px] sm:min-w-0 border-collapse border border-slate-300 text-left text-[10.5px]">
           <thead>
-            <tr className="bg-[#0a192f] text-white font-bold uppercase text-[9.5px]">
-              <th className="border border-slate-300 py-1 px-3">CITY</th>
-              <th className="border border-slate-300 py-1 px-4">HOTEL NAME</th>
-              <th className="border border-slate-300 py-1 px-2 text-center">VIEW</th>
-              <th className="border border-slate-300 py-1 px-2 text-center">MEAL</th>
-              <th className="border border-slate-300 py-1 px-2 text-center">HCN#</th>
-              <th className="border border-slate-300 py-1 px-3">ROOM TYPE</th>
-              <th className="border border-slate-300 py-1 px-3 text-center">CHECKIN</th>
-              <th className="border border-slate-300 py-1 px-3 text-center">CHECKOUT</th>
-              <th className="border border-slate-300 py-1 px-3 text-center w-14">NIGHTS</th>
+            <tr className="bg-[#0a192f] text-white font-bold uppercase text-[9.5px] whitespace-nowrap">
+              <th className="border border-slate-300 py-1 px-3 whitespace-nowrap">CITY</th>
+              <th className="border border-slate-300 py-1 px-4 whitespace-nowrap">HOTEL NAME</th>
+              <th className="border border-slate-300 py-1 px-2.5 text-center font-mono whitespace-nowrap">UB #</th>
+              <th className="border border-slate-300 py-1 px-2 text-center whitespace-nowrap">MEAL</th>
+              <th className="border border-slate-300 py-1 px-2 text-center whitespace-nowrap">HCN#</th>
+              <th className="border border-slate-300 py-1 px-3 whitespace-nowrap">ROOM TYPE</th>
+              <th className="border border-slate-300 py-1 px-3 text-center whitespace-nowrap">CHECKIN</th>
+              <th className="border border-slate-300 py-1 px-3 text-center whitespace-nowrap">CHECKOUT</th>
+              <th className="border border-slate-300 py-1 px-3 text-center w-14 whitespace-nowrap">NIGHTS</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-300 bg-white">
             {voucher.accommodations && voucher.accommodations.length > 0 ? (
               voucher.accommodations.map((acc, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  <td className="border border-slate-300 py-1.5 px-3 font-bold text-[#0a192f]">
+                <tr key={i} className="hover:bg-slate-50 whitespace-nowrap">
+                  <td className="border border-slate-300 py-1.5 px-3 font-bold text-[#0a192f] whitespace-nowrap">
                     {acc.city === 'MAKKAH' ? 'Makkah' : (acc.city === 'MADINAH' ? 'Medinah' : acc.city)}
                   </td>
-                  <td className="border border-slate-300 py-1.5 px-4 font-bold text-slate-900">
+                  <td className="border border-slate-300 py-1.5 px-4 font-bold text-slate-900 whitespace-nowrap">
                     {acc.hotelName}
                   </td>
-                  <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-600">
-                    Standard
+                  <td className="border border-slate-300 py-1.5 px-2.5 text-center font-mono font-bold text-[#0a192f] whitespace-nowrap">
+                    {acc.ubNo || acc.ubNumber || voucher.ubNumber || '—'}
                   </td>
-                  <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-600 font-semibold">
+                  <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-600 font-semibold whitespace-nowrap">
                     RO
                   </td>
-                  <td className="border border-slate-300 py-1.5 px-2 text-center font-mono font-semibold text-slate-700">
+                  <td className="border border-slate-300 py-1.5 px-2 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
                     {acc.hcn || acc.hotelCode || acc.confirmationNo || '378'}
                   </td>
-                  <td className="border border-slate-300 py-1.5 px-3 text-slate-800 font-medium">
+                  <td className="border border-slate-300 py-1.5 px-3 text-slate-800 font-medium whitespace-nowrap">
                     {acc.roomType || 'Double Bed'}
                   </td>
-                  <td className="border border-slate-300 py-1.5 px-3 text-center font-mono text-slate-800 font-semibold">
+                  <td className="border border-slate-300 py-1.5 px-3 text-center font-mono text-slate-800 font-semibold whitespace-nowrap">
                     {formatVoucherDate(acc.checkIn)}
                   </td>
-                  <td className="border border-slate-300 py-1.5 px-3 text-center font-mono text-slate-800 font-semibold">
+                  <td className="border border-slate-300 py-1.5 px-3 text-center font-mono text-slate-800 font-semibold whitespace-nowrap">
                     {formatVoucherDate(acc.checkOut)}
                   </td>
-                  <td suppressHydrationWarning className="border border-slate-300 py-1.5 px-3 text-center font-bold text-[#0a192f]">
+                  <td suppressHydrationWarning className="border border-slate-300 py-1.5 px-3 text-center font-bold text-[#0a192f] whitespace-nowrap">
                     {calculateNights(acc.checkIn, acc.checkOut, acc.nights)}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={9} className="border border-slate-300 text-center py-2 text-slate-400">
+                <td colSpan={9} className="border border-slate-300 text-center py-2 text-slate-400 whitespace-nowrap">
                   No accommodation scheduled.
                 </td>
               </tr>
             )}
             
             {/* Total Duration Nights Footer Row */}
-            <tr className="bg-[#f8fafc] font-bold text-[#0a192f]">
-              <td colSpan={8} className="border border-slate-300 py-1.5 px-3 text-right uppercase tracking-wider text-[10px]">
+            <tr className="bg-[#f8fafc] font-bold text-[#0a192f] whitespace-nowrap">
+              <td colSpan={8} className="border border-slate-300 py-1.5 px-3 text-right uppercase tracking-wider text-[10px] whitespace-nowrap">
                 TOTAL DURATION (NIGHTS):
               </td>
-              <td suppressHydrationWarning className="border border-slate-300 py-1.5 px-3 text-center bg-[#dfba73] text-[#0a192f] font-black text-xs">
+              <td suppressHydrationWarning className="border border-slate-300 py-1.5 px-3 text-center bg-[#dfba73] text-[#0a192f] font-black text-xs whitespace-nowrap">
                 {totalNights}
               </td>
             </tr>
@@ -371,49 +371,59 @@ export default function VoucherView({ voucher, origin = '' }) {
             <div className="overflow-x-auto w-full -mx-1 px-1 sm:mx-0 sm:px-0">
               <table className="w-full min-w-[480px] sm:min-w-0 border-collapse border border-slate-300 text-left text-[10px]">
               <thead>
-                <tr className="bg-[#0a192f] text-white font-bold uppercase text-[9px]">
-                  <th className="border border-slate-300 py-1 px-3 w-36">TRANSPORTER</th>
-                  <th className="border border-slate-300 py-1 px-3 w-28">TYPE</th>
-                  <th className="border border-slate-300 py-1 px-3">SECTOR / DESCRIPTION</th>
+                <tr className="bg-[#0a192f] text-white font-bold uppercase text-[9px] whitespace-nowrap">
+                  <th className="border border-slate-300 py-1 px-3 w-24 text-center whitespace-nowrap">DATE</th>
+                  <th className="border border-slate-300 py-1 px-3 whitespace-nowrap">DESCRIPTION</th>
+                  <th className="border border-slate-300 py-1 px-3 w-36 whitespace-nowrap">TRANSPORTER</th>
+                  <th className="border border-slate-300 py-1 px-3 w-24 text-center whitespace-nowrap">TYPE</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-300 bg-white">
                 {voucher.transports && voucher.transports.length > 0 ? (
                   voucher.transports.map((t, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      <td className="border border-slate-300 py-1 px-3 font-bold text-slate-900">
+                    <tr key={idx} className="hover:bg-slate-50 whitespace-nowrap">
+                      <td className="border border-slate-300 py-1 px-3 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
+                        {t.pickupDate ? formatVoucherDate(t.pickupDate) : '—'}
+                      </td>
+                      <td className="border border-slate-300 py-1 px-3 font-medium text-slate-900 whitespace-nowrap">
+                        {t.service || t.description || '—'}
+                      </td>
+                      <td className="border border-slate-300 py-1 px-3 font-bold text-slate-800 whitespace-nowrap">
                         {t.transporter || (idx === 0 || t.vehicle?.toUpperCase() === 'BUS' ? 'Company Transport' : 'Private Transport')}
                       </td>
-                      <td className="border border-slate-300 py-1 px-3 text-slate-700">
-                        {t.vehicle || 'Economy By Bus'}
-                      </td>
-                      <td className="border border-slate-300 py-1 px-3 font-medium text-slate-800">
-                        {t.service} {t.pickupDate ? `(${formatVoucherDate(t.pickupDate)})` : ''}
+                      <td className="border border-slate-300 py-1 px-3 text-center text-slate-700 font-mono uppercase whitespace-nowrap">
+                        {t.vehicle || 'BUS'}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <>
-                    <tr className="hover:bg-slate-50">
-                      <td className="border border-slate-300 py-1.5 px-3 font-bold text-slate-900">
-                        Company Transport
+                    <tr className="hover:bg-slate-50 whitespace-nowrap">
+                      <td className="border border-slate-300 py-1.5 px-3 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
+                        01-Oct-2026
                       </td>
-                      <td className="border border-slate-300 py-1.5 px-3 text-slate-700">
-                        Economy By Bus
-                      </td>
-                      <td className="border border-slate-300 py-1.5 px-3 font-medium text-slate-800">
+                      <td className="border border-slate-300 py-1.5 px-3 font-medium text-slate-900 whitespace-nowrap">
                         JED AIRPORT TO MAKKAH HOTEL
                       </td>
+                      <td className="border border-slate-300 py-1.5 px-3 font-bold text-slate-800 whitespace-nowrap">
+                        Company Transport
+                      </td>
+                      <td className="border border-slate-300 py-1.5 px-3 text-center text-slate-700 font-mono uppercase whitespace-nowrap">
+                        BUS
+                      </td>
                     </tr>
-                    <tr className="hover:bg-slate-50">
-                      <td className="border border-slate-300 py-1.5 px-3 font-bold text-slate-900">
-                        Private Transport
+                    <tr className="hover:bg-slate-50 whitespace-nowrap">
+                      <td className="border border-slate-300 py-1.5 px-3 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
+                        06-Oct-2026
                       </td>
-                      <td className="border border-slate-300 py-1.5 px-3 text-slate-700">
-                        Sedan Car / Bus
+                      <td className="border border-slate-300 py-1.5 px-3 font-medium text-slate-900 whitespace-nowrap">
+                        MAKKAH HOTEL TO MADINAH HOTEL
                       </td>
-                      <td className="border border-slate-300 py-1.5 px-3 font-medium text-slate-800">
-                        Jeddah Airport - Makkah Hotel
+                      <td className="border border-slate-300 py-1.5 px-3 font-bold text-slate-800 whitespace-nowrap">
+                        Company Transport
+                      </td>
+                      <td className="border border-slate-300 py-1.5 px-3 text-center text-slate-700 font-mono uppercase whitespace-nowrap">
+                        BUS
                       </td>
                     </tr>
                   </>

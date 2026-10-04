@@ -533,13 +533,14 @@ export default function CreateVoucherPage() {
                         className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-semibold text-slate-900"
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1">
                       <input 
                         type="text"
-                        placeholder="Room Type (e.g. DOUBLE)"
-                        value={acc.roomType}
-                        onChange={(e) => updateAccommodation(idx, 'roomType', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white"
+                        placeholder="UB #"
+                        value={acc.ubNo !== undefined ? acc.ubNo : ''}
+                        onChange={(e) => updateAccommodation(idx, 'ubNo', e.target.value)}
+                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-mono text-center text-[11px] font-bold uppercase text-[#0a192f]"
+                        title="Hotel UB Number"
                       />
                     </div>
                     <div className="col-span-1">
@@ -555,16 +556,25 @@ export default function CreateVoucherPage() {
                     <div className="col-span-2">
                       <input 
                         type="text"
-                        placeholder="Check-in (e.g. 01-Oct-2026)"
+                        placeholder="Room Type (e.g. DOUBLE)"
+                        value={acc.roomType}
+                        onChange={(e) => updateAccommodation(idx, 'roomType', e.target.value)}
+                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white"
+                      />
+                    </div>
+                    <div className="col-span-1.5">
+                      <input 
+                        type="text"
+                        placeholder="Check-in"
                         value={acc.checkIn}
                         onChange={(e) => updateAccommodation(idx, 'checkIn', e.target.value)}
                         className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1.5">
                       <input 
                         type="text"
-                        placeholder="Check-out (e.g. 06-Oct-2026)"
+                        placeholder="Check-out"
                         value={acc.checkOut}
                         onChange={(e) => updateAccommodation(idx, 'checkOut', e.target.value)}
                         className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
@@ -611,6 +621,24 @@ export default function CreateVoucherPage() {
             <div className="space-y-2">
               {transports.map((t, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 items-center text-xs">
+                  <div className="col-span-2">
+                    <input 
+                      type="text"
+                      placeholder="Date (01-Oct-2026)"
+                      value={t.pickupDate || ''}
+                      onChange={(e) => updateTransport(idx, 'pickupDate', e.target.value)}
+                      className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white text-[11px] font-mono"
+                    />
+                  </div>
+                  <div className="col-span-4">
+                    <input 
+                      type="text"
+                      placeholder="Description (e.g. JED AIRPORT TO MAKKAH HOTEL)"
+                      value={t.service || ''}
+                      onChange={(e) => updateTransport(idx, 'service', e.target.value)}
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded bg-white font-medium text-slate-800"
+                    />
+                  </div>
                   <div className="col-span-3">
                     <input 
                       type="text"
@@ -620,31 +648,13 @@ export default function CreateVoucherPage() {
                       className="w-full px-2.5 py-1.5 border border-slate-300 rounded bg-white font-semibold text-slate-900"
                     />
                   </div>
-                  <div className="col-span-3">
-                    <input 
-                      type="text"
-                      placeholder="Type (e.g. Economy By Bus, GMC)"
-                      value={t.vehicle || ''}
-                      onChange={(e) => updateTransport(idx, 'vehicle', e.target.value)}
-                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded bg-white"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    <input 
-                      type="text"
-                      placeholder="Sector (e.g. JED AIRPORT TO MAKKAH HOTEL)"
-                      value={t.service || ''}
-                      onChange={(e) => updateTransport(idx, 'service', e.target.value)}
-                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded bg-white font-medium text-slate-800"
-                    />
-                  </div>
                   <div className="col-span-2">
                     <input 
                       type="text"
-                      placeholder="Date (01-Oct-2026)"
-                      value={t.pickupDate || ''}
-                      onChange={(e) => updateTransport(idx, 'pickupDate', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
+                      placeholder="Type (e.g. BUS, GMC)"
+                      value={t.vehicle || ''}
+                      onChange={(e) => updateTransport(idx, 'vehicle', e.target.value)}
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded bg-white uppercase font-mono"
                     />
                   </div>
                   <div className="col-span-1 text-right">
