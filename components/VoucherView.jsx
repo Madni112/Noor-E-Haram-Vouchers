@@ -191,21 +191,13 @@ export default function VoucherView({ voucher, origin = '' }) {
 
       </div>
 
-      {/* 2. FAMILY HEAD & VOUCHER NO BAR */}
-      <div className="grid grid-cols-1 sm:grid-cols-12 bg-[#f8fafc] border border-slate-300 rounded mt-3 py-2 sm:py-1.5 px-3 text-[11px] items-center gap-1.5 sm:gap-0 text-center sm:text-left">
-        <div className="sm:col-span-6 flex items-center justify-center sm:justify-start gap-2">
+      {/* 2. FAMILY HEAD BAR */}
+      <div className="bg-[#f8fafc] border border-slate-300 rounded mt-3 py-2 sm:py-1.5 px-3 text-[11px] flex items-center justify-between text-center sm:text-left">
+        <div className="flex items-center justify-center sm:justify-start gap-2">
           <span className="font-bold text-slate-600">Family Head:</span>
           <span className="font-extrabold text-[#0a192f] uppercase text-xs tracking-wide">
             {formatDisplayName(voucher.party || 'MUHAMMAD INSHAL SYED')}
           </span>
-        </div>
-        <div className="sm:col-span-3 flex items-center justify-center sm:justify-start gap-1.5">
-          <span className="font-bold text-slate-600">Voucher No:</span>
-          <span className="font-bold font-mono text-[#0a192f]">{voucherRefNo}</span>
-        </div>
-        <div className="sm:col-span-3 flex items-center justify-center sm:justify-end gap-1.5 sm:text-right">
-          <span className="font-bold text-slate-600">Manual No:</span>
-          <span className="font-mono text-slate-700">--</span>
         </div>
       </div>
 
