@@ -544,22 +544,22 @@ export default function VoucherView({ voucher, origin = '' }) {
       </div>
 
       {/* 7. DIGITAL VERIFICATION & PAKISTAN HELPLINE (OPTION B) */}
-      <div className="mt-2.5 print:mt-2 border border-slate-300 rounded-lg p-2 bg-white flex flex-col sm:flex-row items-center justify-between gap-2.5 shadow-xs">
+      <div className="mt-2.5 print:mt-2 border border-slate-300 rounded-lg p-2 sm:p-2.5 bg-white flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-white border border-slate-200 rounded-lg shadow-inner shrink-0">
             {voucherUrl ? (
-              <QRCodeSVG value={voucherUrl} size={54} level="H" />
+              <QRCodeSVG value={voucherUrl} size={80} level="H" />
             ) : (
-              <div className="w-14 h-14 bg-slate-100 flex items-center justify-center text-[9px] text-slate-400">
+              <div className="w-20 h-20 bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">
                 QR Code
               </div>
             )}
           </div>
-          <div className="space-y-0.5 text-left">
-            <span className="px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-extrabold text-[9px] border border-emerald-200 tracking-wider uppercase inline-block">
+          <div className="space-y-1 text-left">
+            <span className="px-3 py-0.5 rounded bg-emerald-50 text-emerald-700 font-extrabold text-[10px] border border-emerald-200 tracking-wider uppercase inline-block">
               Authorized
             </span>
-            <p className="text-[8.5px] text-slate-500 font-medium">
+            <p className="text-[9px] text-slate-500 font-medium">
               Scan QR code to verify authentic booking details on portal
             </p>
           </div>
