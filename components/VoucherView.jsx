@@ -102,6 +102,26 @@ export default function VoucherView({ voucher, origin = '' }) {
       }, 0)
     : (voucher.totalPax || 1);
 
+  // Calculate pax category breakdown
+  let gents = 0, ladies = 0, children = 0, infants = 0;
+  if (voucher.passengers && voucher.passengers.length > 0) {
+    voucher.passengers.forEach(p => {
+      const cat = getPaxCategory(p);
+      const g = getGender(p);
+      if (cat === 'Adult') {
+        if (g === 'M') gents++;
+        else ladies++;
+      } else if (cat === 'Child') {
+        children++;
+      } else if (cat === 'Infant') {
+        infants++;
+      }
+    });
+  }
+  const paxSummaryText = (voucher.passengers && voucher.passengers.length > 0)
+    ? `GENT(S) - ${gents}   LAD(IES) - ${ladies}   CHILD(REN) - ${children}   INFANT(S) - ${infants}`
+    : (voucher.paxCounts ? voucher.paxCounts.replaceAll(':', ' - ') : 'GENT(S) - 1   LAD(IES) - 0   CHILD(REN) - 0   INFANT(S) - 0');
+
   return (
     <>
       <div className="voucher-container voucher-page-1 max-w-[850px] mx-auto bg-white rounded-none shadow-2xl border border-slate-300 overflow-hidden text-slate-800 p-4 sm:p-7 print:p-3 print:border-2 print:border-[#0a192f] text-[11px] leading-tight print:max-w-full print:w-full print:m-0 print:flex print:flex-col print:justify-start">
@@ -134,12 +154,6 @@ export default function VoucherView({ voucher, origin = '' }) {
             <div>
               <span className="font-bold text-slate-900">Package:</span>{' '}
               <span suppressHydrationWarning className="font-semibold text-slate-800">{totalNights} Standard Umrah</span>
-            </div>
-            <div>
-              <span className="font-bold text-slate-900">PAX Count:</span>{' '}
-              <span className="font-semibold text-slate-800">
-                {voucher.totalPax || voucher.passengers?.length || 1} ({voucher.paxCounts || 'GENT(S):1 LAD(IES):1 CHILD(REN): 0 INFANT(S):0'}) • Beds: {totalBeds}
-              </span>
             </div>
           </div>
         </div>
@@ -251,13 +265,31 @@ export default function VoucherView({ voucher, origin = '' }) {
                   </td>
                 </tr>
               ))
-            ) : (
-              <tr>
-                <td colSpan={8} className="border border-slate-300 text-center py-2 text-slate-400">
-                  No mutamers listed.
-                </td>
-              </tr>
-            )}
+            ) : null}
+            {/* Summary Row for Pax Details and Beds */}
+            <tr className="bg-slate-50/90 font-bold border-t-2 border-slate-300">
+              <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-400">
+                —
+              </td>
+              <td colSpan={2} className="border border-slate-300 py-1.5 px-3 text-[#0a192f] text-[9px] sm:text-[9.5px] font-bold tracking-wide whitespace-nowrap">
+                {paxSummaryText}
+              </td>
+              <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-400">
+                —
+              </td>
+              <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-400">
+                —
+              </td>
+              <td className="border border-slate-300 py-1.5 px-2 text-center font-bold text-[#0a192f] text-[9.5px] whitespace-nowrap bg-[#fdf8ee]">
+                Bed - {totalBeds}
+              </td>
+              <td className="border border-slate-300 py-1.5 px-3 text-center text-slate-400">
+                —
+              </td>
+              <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-400">
+                —
+              </td>
+            </tr>
           </tbody>
         </table>
         </div>
@@ -355,237 +387,224 @@ export default function VoucherView({ voucher, origin = '' }) {
         </div>
       </div>
 
-      {/* 5. TRANSPORT & FLIGHT SCHEDULE (LEFT) + DIGITAL QR STAND (RIGHT) */}
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 mt-3.5 items-start">
-        
-        {/* Left cols: Transport Services & Flight Schedule */}
-        <div className="sm:col-span-8 space-y-3">
-          
-          {/* Transport Services */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-[#0a192f] font-bold text-xs uppercase tracking-wide">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#c29648]" />
-              <span>TRANSPORT SERVICES</span>
-            </div>
-
-            <div className="overflow-x-auto w-full -mx-1 px-1 sm:mx-0 sm:px-0">
-              <table className="w-full min-w-[480px] sm:min-w-0 border-collapse border border-slate-300 text-left text-[10px]">
-              <thead>
-                <tr className="bg-[#0a192f] text-white font-bold uppercase text-[9px] whitespace-nowrap">
-                  <th className="border border-slate-300 py-1 px-3 w-24 text-center whitespace-nowrap">DATE</th>
-                  <th className="border border-slate-300 py-1 px-3 whitespace-nowrap">DESCRIPTION</th>
-                  <th className="border border-slate-300 py-1 px-3 w-36 whitespace-nowrap">TRANSPORTER</th>
-                  <th className="border border-slate-300 py-1 px-3 w-24 text-center whitespace-nowrap">TYPE</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-300 bg-white">
-                {voucher.transports && voucher.transports.length > 0 ? (
-                  voucher.transports.map((t, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50 whitespace-nowrap">
-                      <td className="border border-slate-300 py-1 px-3 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
-                        {t.pickupDate ? formatVoucherDate(t.pickupDate) : '—'}
-                      </td>
-                      <td className="border border-slate-300 py-1 px-3 font-medium text-slate-900 whitespace-nowrap">
-                        {t.service || t.description || '—'}
-                      </td>
-                      <td className="border border-slate-300 py-1 px-3 font-bold text-slate-800 whitespace-nowrap">
-                        {t.transporter || (idx === 0 || t.vehicle?.toUpperCase() === 'BUS' ? 'Company Transport' : 'Private Transport')}
-                      </td>
-                      <td className="border border-slate-300 py-1 px-3 text-center text-slate-700 font-mono uppercase whitespace-nowrap">
-                        {t.vehicle || 'BUS'}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <>
-                    <tr className="hover:bg-slate-50 whitespace-nowrap">
-                      <td className="border border-slate-300 py-1.5 px-3 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
-                        01-Oct-2026
-                      </td>
-                      <td className="border border-slate-300 py-1.5 px-3 font-medium text-slate-900 whitespace-nowrap">
-                        JED AIRPORT TO MAKKAH HOTEL
-                      </td>
-                      <td className="border border-slate-300 py-1.5 px-3 font-bold text-slate-800 whitespace-nowrap">
-                        Company Transport
-                      </td>
-                      <td className="border border-slate-300 py-1.5 px-3 text-center text-slate-700 font-mono uppercase whitespace-nowrap">
-                        BUS
-                      </td>
-                    </tr>
-                    <tr className="hover:bg-slate-50 whitespace-nowrap">
-                      <td className="border border-slate-300 py-1.5 px-3 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
-                        06-Oct-2026
-                      </td>
-                      <td className="border border-slate-300 py-1.5 px-3 font-medium text-slate-900 whitespace-nowrap">
-                        MAKKAH HOTEL TO MADINAH HOTEL
-                      </td>
-                      <td className="border border-slate-300 py-1.5 px-3 font-bold text-slate-800 whitespace-nowrap">
-                        Company Transport
-                      </td>
-                      <td className="border border-slate-300 py-1.5 px-3 text-center text-slate-700 font-mono uppercase whitespace-nowrap">
-                        BUS
-                      </td>
-                    </tr>
-                  </>
-                )}
-              </tbody>
-            </table>
-            </div>
-          </div>
-
-          {/* Flight Schedule */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-[#0a192f] font-bold text-xs uppercase tracking-wide">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#c29648]" />
-              <span>FLIGHT SCHEDULE</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
-              
-              {/* Departure Flight Card */}
-              <div className="border border-slate-300 rounded p-2 bg-white flex flex-col justify-between">
-                <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 gap-1">
-                  <span className="font-bold text-[#0a192f] text-[9px] uppercase tracking-wider whitespace-nowrap">
-                    DEPARTURE (PAK-KSA)
-                  </span>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {departureFlight.date && (
-                      <span className="text-[8.5px] font-bold text-[#926818] bg-[#fdf8ee] px-1.5 py-0.5 rounded border border-[#e8ce97] font-mono whitespace-nowrap">
-                        {formatVoucherDate(departureFlight.date)}
-                      </span>
-                    )}
-                    <span className="bg-[#0a192f] text-[#dfba73] font-bold text-[8.5px] px-1.5 py-0.5 rounded font-mono whitespace-nowrap">
-                      {departureFlight.flight || 'F3-830'}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 text-center pt-0.5">
-                  <div className="border-r border-slate-100">
-                    <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">PNR</span>
-                    <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap">{departureFlight.pnr || voucher.pnr || '—'}</span>
-                  </div>
-                  <div className="border-r border-slate-100">
-                    <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">SECTOR</span>
-                    <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{departureFlight.from || 'KHI'}-{departureFlight.to || 'JED'}</span>
-                  </div>
-                  <div className="border-r border-slate-100">
-                    <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">DEPARTURE</span>
-                    <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{departureFlight.departure || '08:00'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">ARRIVAL</span>
-                    <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{departureFlight.arrival || '10:05'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Return Flight Card */}
-              <div className="border border-slate-300 rounded p-2 bg-white flex flex-col justify-between">
-                <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 gap-1">
-                  <span className="font-bold text-[#0a192f] text-[9px] uppercase tracking-wider whitespace-nowrap">
-                    RETURN (KSA-PAK)
-                  </span>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {returnFlight.date && (
-                      <span className="text-[8.5px] font-bold text-[#926818] bg-[#fdf8ee] px-1.5 py-0.5 rounded border border-[#e8ce97] font-mono whitespace-nowrap">
-                        {formatVoucherDate(returnFlight.date)}
-                      </span>
-                    )}
-                    <span className="bg-[#0a192f] text-[#dfba73] font-bold text-[8.5px] px-1.5 py-0.5 rounded font-mono whitespace-nowrap">
-                      {returnFlight.flight || 'F3-829'}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 text-center pt-0.5">
-                  <div className="border-r border-slate-100">
-                    <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">PNR</span>
-                    <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap">{returnFlight.pnr || voucher.pnr || '—'}</span>
-                  </div>
-                  <div className="border-r border-slate-100">
-                    <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">SECTOR</span>
-                    <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{returnFlight.from || 'JED'}-{returnFlight.to || 'KHI'}</span>
-                  </div>
-                  <div className="border-r border-slate-100">
-                    <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">DEPARTURE</span>
-                    <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{returnFlight.departure || '12:45'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">ARRIVAL</span>
-                    <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{returnFlight.arrival || '07:00'}</span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
+      {/* 5. TRANSPORT SERVICES (FULL WIDTH) */}
+      <div className="space-y-1 mt-2.5 print:mt-2">
+        <div className="flex items-center gap-1.5 text-[#0a192f] font-bold text-xs uppercase tracking-wide">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#c29648]" />
+          <span>TRANSPORT SERVICES</span>
         </div>
 
-        {/* Right cols: Digital QR Stand Card */}
-        <div className="sm:col-span-4 border border-slate-300 rounded-xl p-3 bg-white flex flex-col items-center justify-center text-center shadow-xs">
-          <div className="p-2 bg-white border border-slate-200 rounded-lg shadow-inner">
+        <div className="overflow-x-auto w-full -mx-1 px-1 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[480px] sm:min-w-0 border-collapse border border-slate-300 text-left text-[10px]">
+            <thead>
+              <tr className="bg-[#0a192f] text-white font-bold uppercase text-[9px] whitespace-nowrap">
+                <th className="border border-slate-300 py-1 px-3 w-28 text-center whitespace-nowrap">DATE</th>
+                <th className="border border-slate-300 py-1 px-3 whitespace-nowrap">DESCRIPTION</th>
+                <th className="border border-slate-300 py-1 px-3 w-40 whitespace-nowrap">TRANSPORTER</th>
+                <th className="border border-slate-300 py-1 px-3 w-24 text-center whitespace-nowrap">TYPE</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-300 bg-white">
+              {voucher.transports && voucher.transports.length > 0 ? (
+                voucher.transports.map((t, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50 whitespace-nowrap">
+                    <td className="border border-slate-300 py-1 px-3 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
+                      {t.pickupDate ? formatVoucherDate(t.pickupDate) : '—'}
+                    </td>
+                    <td className="border border-slate-300 py-1 px-3 font-medium text-slate-900 whitespace-nowrap">
+                      {t.service || t.description || '—'}
+                    </td>
+                    <td className="border border-slate-300 py-1 px-3 font-bold text-slate-800 whitespace-nowrap">
+                      {t.transporter || (idx === 0 || t.vehicle?.toUpperCase() === 'BUS' ? 'Company Transport' : 'Private Transport')}
+                    </td>
+                    <td className="border border-slate-300 py-1 px-3 text-center text-slate-700 font-mono uppercase whitespace-nowrap">
+                      {t.vehicle || 'BUS'}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <>
+                  <tr className="hover:bg-slate-50 whitespace-nowrap">
+                    <td className="border border-slate-300 py-1.5 px-3 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
+                      01-Oct-2026
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-3 font-medium text-slate-900 whitespace-nowrap">
+                      JED AIRPORT TO MAKKAH HOTEL
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-3 font-bold text-slate-800 whitespace-nowrap">
+                      Company Transport
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-3 text-center text-slate-700 font-mono uppercase whitespace-nowrap">
+                      BUS
+                    </td>
+                  </tr>
+                  <tr className="hover:bg-slate-50 whitespace-nowrap">
+                    <td className="border border-slate-300 py-1.5 px-3 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
+                      06-Oct-2026
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-3 font-medium text-slate-900 whitespace-nowrap">
+                      MAKKAH HOTEL TO MADINAH HOTEL
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-3 font-bold text-slate-800 whitespace-nowrap">
+                      Company Transport
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-3 text-center text-slate-700 font-mono uppercase whitespace-nowrap">
+                      BUS
+                    </td>
+                  </tr>
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 6. FLIGHT SCHEDULE (FULL WIDTH - 1 PER ROW) */}
+      <div className="space-y-1.5 mt-2.5 print:mt-2">
+        <div className="flex items-center gap-1.5 text-[#0a192f] font-bold text-xs uppercase tracking-wide">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#c29648]" />
+          <span>FLIGHT SCHEDULE</span>
+        </div>
+
+        <div className="space-y-1.5 text-[10px]">
+          {/* Departure Flight Card (Full Width) */}
+          <div className="border border-slate-300 rounded p-1.5 sm:p-2 bg-white flex flex-col justify-between">
+            <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 gap-1">
+              <span className="font-bold text-[#0a192f] text-[9px] sm:text-[9.5px] uppercase tracking-wider whitespace-nowrap">
+                DEPARTURE FLIGHT (PAK-KSA)
+              </span>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {departureFlight.date && (
+                  <span className="text-[8.5px] font-bold text-[#926818] bg-[#fdf8ee] px-1.5 py-0.5 rounded border border-[#e8ce97] font-mono whitespace-nowrap">
+                    {formatVoucherDate(departureFlight.date)}
+                  </span>
+                )}
+                <span className="bg-[#0a192f] text-[#dfba73] font-bold text-[8.5px] px-1.5 py-0.5 rounded font-mono whitespace-nowrap">
+                  {departureFlight.flight || 'F3-830'}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 text-center pt-0.5">
+              <div className="border-r border-slate-100">
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">PNR</span>
+                <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap">{departureFlight.pnr || voucher.pnr || '—'}</span>
+              </div>
+              <div className="border-r border-slate-100">
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">SECTOR</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{departureFlight.from || 'KHI'}-{departureFlight.to || 'JED'}</span>
+              </div>
+              <div className="border-r border-slate-100">
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">DEPARTURE</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{departureFlight.departure || '08:00'}</span>
+              </div>
+              <div>
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">ARRIVAL</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{departureFlight.arrival || '10:05'}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Return Flight Card (Full Width) */}
+          <div className="border border-slate-300 rounded p-1.5 sm:p-2 bg-white flex flex-col justify-between">
+            <div className="flex items-center justify-between pb-1 mb-1 border-b border-slate-200 gap-1">
+              <span className="font-bold text-[#0a192f] text-[9px] sm:text-[9.5px] uppercase tracking-wider whitespace-nowrap">
+                RETURN FLIGHT (KSA-PAK)
+              </span>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {returnFlight.date && (
+                  <span className="text-[8.5px] font-bold text-[#926818] bg-[#fdf8ee] px-1.5 py-0.5 rounded border border-[#e8ce97] font-mono whitespace-nowrap">
+                    {formatVoucherDate(returnFlight.date)}
+                  </span>
+                )}
+                <span className="bg-[#0a192f] text-[#dfba73] font-bold text-[8.5px] px-1.5 py-0.5 rounded font-mono whitespace-nowrap">
+                  {returnFlight.flight || 'F3-829'}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 text-center pt-0.5">
+              <div className="border-r border-slate-100">
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">PNR</span>
+                <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap">{returnFlight.pnr || voucher.pnr || '—'}</span>
+              </div>
+              <div className="border-r border-slate-100">
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">SECTOR</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{returnFlight.from || 'JED'}-{returnFlight.to || 'KHI'}</span>
+              </div>
+              <div className="border-r border-slate-100">
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">DEPARTURE</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{returnFlight.departure || '12:45'}</span>
+              </div>
+              <div>
+                <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">ARRIVAL</span>
+                <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{returnFlight.arrival || '07:00'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 7. DIGITAL VERIFICATION & PAKISTAN HELPLINE (OPTION B) */}
+      <div className="mt-2.5 print:mt-2 border border-slate-300 rounded-lg p-2 bg-white flex flex-col sm:flex-row items-center justify-between gap-2.5 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-white border border-slate-200 rounded-lg shadow-inner shrink-0">
             {voucherUrl ? (
-              <QRCodeSVG value={voucherUrl} size={92} level="H" />
+              <QRCodeSVG value={voucherUrl} size={54} level="H" />
             ) : (
-              <div className="w-[92px] h-[92px] bg-slate-100 flex items-center justify-center text-[10px] text-slate-400">
+              <div className="w-14 h-14 bg-slate-100 flex items-center justify-center text-[9px] text-slate-400">
                 QR Code
               </div>
             )}
           </div>
-          <span className="font-mono font-bold text-[10px] text-slate-700 mt-2">
-            {voucherRefNo}
-          </span>
-          <span className="mt-1 px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-extrabold text-[9px] border border-emerald-200 tracking-wider uppercase">
-            SCANNED &amp; VALIDATED
-          </span>
-        </div>
-
-      </div>
-
-      {/* 6. KSA & PAKISTAN HELPLINES BANNER */}
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 mt-2.5 print:mt-1.5 print:gap-1.5">
-        
-        {/* Left Dark KSA Helplines Box */}
-        <div className="sm:col-span-8 bg-[#0a192f] text-white rounded p-2 text-[8.5px] print:p-1.5 print:rounded flex flex-col justify-between">
-          <div className="border-b border-slate-700/80 pb-1 mb-1">
-            <span className="text-[#dfba73] font-bold text-[8.5px] tracking-wider uppercase print:text-[7pt]">
-              KSA OPERATIONAL HELPLINES
+          <div className="space-y-0.5 text-left">
+            <span className="px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-extrabold text-[9px] border border-emerald-200 tracking-wider uppercase inline-block">
+              Authorized
             </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[7.5px] leading-tight print:text-[6pt]">
-            <div className="border-r border-slate-700/60 pr-1">
-              <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">JEDDAH AIRPORT</span>
-              <span className="text-slate-300 block">Airport (24/7):</span>
-              <span className="font-bold font-mono text-white">0568832059</span>
-            </div>
-            <div className="border-r border-slate-700/60 pr-1">
-              <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">JEDDAH HEAD OFFICE</span>
-              <span className="text-slate-300 block">Special: <strong className="text-white font-mono">0583000471</strong></span>
-              <span className="text-slate-300 block">Sharing: <strong className="text-white font-mono">0596837655</strong></span>
-            </div>
-            <div className="border-r border-slate-700/60 pr-1">
-              <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">MAKKAH</span>
-              <span className="text-slate-300 block">Sharing: <strong className="text-white font-mono">0543666527</strong></span>
-              <span className="text-slate-300 block">Special: <strong className="text-white font-mono">0596085887</strong></span>
-            </div>
-            <div>
-              <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">MADINAH</span>
-              <span className="text-slate-300 block">Sharing: <strong className="text-white font-mono">0596836845</strong></span>
-              <span className="text-slate-300 block">Special: <strong className="text-white font-mono">0596836979</strong></span>
-            </div>
+            <p className="text-[8.5px] text-slate-500 font-medium">
+              Scan QR code to verify authentic booking details on portal
+            </p>
           </div>
         </div>
 
-        {/* Right Gold Pakistan Helpline Box */}
-        <div className="sm:col-span-4 bg-[#fcf8ee] border-2 border-[#dfba73] rounded p-2 text-center flex flex-col justify-center print:p-1.5 print:rounded">
-          <span className="text-[#805a1b] font-bold text-[9px] uppercase tracking-wider block print:text-[7.5pt]">
+        {/* Pakistan Helpline Text */}
+        <div className="text-center sm:text-right border-t sm:border-t-0 sm:border-l border-slate-200 pt-1.5 sm:pt-0 sm:pl-3 w-full sm:w-auto">
+          <span className="text-[#805a1b] font-bold text-[8.5px] uppercase tracking-wider block">
             PAKISTAN HELPLINE (24/7)
           </span>
-          <span className="text-[#0a192f] font-black text-xs sm:text-[13px] font-mono tracking-tight print:text-[8.5pt]">
+          <span className="text-[#0a192f] font-black text-xs sm:text-[12px] font-mono tracking-tight block">
             {voucher.pakistanHelpline || 'Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424'}
           </span>
         </div>
+      </div>
 
+      {/* 8. KSA OPERATIONAL HELPLINES (FULL WIDTH FOOTER) */}
+      <div className="mt-2.5 print:mt-2 bg-[#0a192f] text-white rounded p-2 text-[8.5px] print:p-1.5 print:rounded">
+        <div className="border-b border-slate-700/80 pb-1 mb-1 text-center sm:text-left">
+          <span className="text-[#dfba73] font-bold text-[8.5px] tracking-wider uppercase print:text-[7pt]">
+            KSA OPERATIONAL HELPLINES (24/7 GROUND SUPPORT)
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-[7.5px] leading-tight print:text-[6pt]">
+          <div className="border-r border-slate-700/60 pr-1">
+            <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">JEDDAH AIRPORT</span>
+            <span className="text-slate-300 block">Airport (24/7):</span>
+            <span className="font-bold font-mono text-white">0568832059</span>
+          </div>
+          <div className="border-r border-slate-700/60 pr-1">
+            <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">JEDDAH HEAD OFFICE</span>
+            <span className="text-slate-300 block">Special: <strong className="text-white font-mono">0583000471</strong></span>
+            <span className="text-slate-300 block">Sharing: <strong className="text-white font-mono">0596837655</strong></span>
+          </div>
+          <div className="border-r border-slate-700/60 pr-1">
+            <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">MAKKAH</span>
+            <span className="text-slate-300 block">Sharing: <strong className="text-white font-mono">0543666527</strong></span>
+            <span className="text-slate-300 block">Special: <strong className="text-white font-mono">0596085887</strong></span>
+          </div>
+          <div>
+            <span className="text-[#dfba73] font-bold block uppercase text-[7px] tracking-wider">MADINAH</span>
+            <span className="text-slate-300 block">Sharing: <strong className="text-white font-mono">0596836845</strong></span>
+            <span className="text-slate-300 block">Special: <strong className="text-white font-mono">0596836979</strong></span>
+          </div>
+        </div>
       </div>
       {/* End of Page 1 Top Content wrapper */}
       </div>
