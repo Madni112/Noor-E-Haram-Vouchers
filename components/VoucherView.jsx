@@ -139,7 +139,7 @@ export default function VoucherView({ voucher, origin = '' }) {
         <div className="flex flex-col items-center justify-center text-center space-y-1.5 flex-[1.4] order-1 sm:order-2">
           <img 
             src="/logo.png" 
-            alt="Noor E Haram Logo" 
+            alt="Cheepa Travels Logo" 
             className="h-24 sm:h-36 max-w-[250px] sm:max-w-[300px] w-auto object-contain print:h-32 drop-shadow-sm transition-all" 
           />
           <div className="flex items-center gap-1.5">
@@ -206,7 +206,6 @@ export default function VoucherView({ voucher, origin = '' }) {
               <th className="border border-slate-300 py-1 px-2 text-center w-12">BED</th>
               <th className="border border-slate-300 py-1 px-3 text-center">GROUP NO</th>
               <th className="border border-slate-300 py-1 px-2 text-center">VISA #</th>
-              
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-300 bg-white">
@@ -232,12 +231,11 @@ export default function VoucherView({ voucher, origin = '' }) {
                     Yes
                   </td>
                   <td className="border border-slate-300 py-1.5 px-3 text-center font-mono text-slate-600">
-                    {pax.group || '480900760934'}
+                    {pax.group || '-'}
                   </td>
                   <td className="border border-slate-300 py-1.5 px-2 text-center font-mono text-slate-600">
                     {pax.visaNo || '-'}
                   </td>
-                  
                 </tr>
               ))
             ) : (
@@ -324,7 +322,7 @@ export default function VoucherView({ voucher, origin = '' }) {
               ))
             ) : (
               <tr>
-                <td colSpan={8} className="border border-slate-300 text-center py-2 text-slate-400">
+                <td colSpan={9} className="border border-slate-300 text-center py-2 text-slate-400">
                   No accommodation scheduled.
                 </td>
               </tr>
@@ -498,9 +496,6 @@ export default function VoucherView({ voucher, origin = '' }) {
             </div>
           </div>
 
-            </div>
-          </div>
-
         </div>
 
         {/* Right cols: Digital QR Stand Card */}
@@ -563,8 +558,8 @@ export default function VoucherView({ voucher, origin = '' }) {
           <span className="text-[#805a1b] font-bold text-[9px] uppercase tracking-wider block print:text-[7.5pt]">
             PAKISTAN HELPLINE (24/7)
           </span>
-          <span className="text-[#0a192f] font-black text-sm font-mono tracking-tight print:text-[9.5pt]">
-            {voucher.pakistanHelpline || '+92 311 2264567'}
+          <span className="text-[#0a192f] font-black text-xs sm:text-[13px] font-mono tracking-tight print:text-[8.5pt]">
+            {voucher.pakistanHelpline || 'Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424'}
           </span>
         </div>
 
@@ -640,6 +635,16 @@ export default function VoucherView({ voucher, origin = '' }) {
             <p>3. Distances noted are approximate and subject to on-ground traffic scenarios.</p>
             <p>7. Contact helpline at least 24h prior to avail bus transport.</p>
           </div>
+        </div>
+
+        {/* Agency Contact & Address Footer */}
+        <div className="border-t border-slate-300 pt-1.5 text-center text-[9px] print:text-[7.5pt] text-slate-700 bg-slate-50/80 rounded py-1 px-2">
+          <p className="font-extrabold text-[#0a192f] uppercase tracking-wide">
+            {voucher.companyName || 'NOOR E HARAM TRAVEL & TOURS'}
+          </p>
+          <p className="font-mono font-bold text-slate-800 mt-0.5">
+            {voucher.address || voucher.phone || 'MUHAMMAD FAIZAN 03112324764  G.MURTAZA (HAJI) 0312360 8683'}
+          </p>
         </div>
       </div>
 
