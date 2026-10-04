@@ -56,6 +56,13 @@ function getPaxCategory(pax) {
   return 'Adult';
 }
 
+function formatPakistaniPhone(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/\b(03\d{2})[\s-]*(\d{3})[\s-]*(\d{4})\b/g, '$1-$2$3')
+    .replace(/\b(03\d{2})[\s-]*(\d{7})\b/g, '$1-$2');
+}
+
 export default function VoucherView({ voucher, origin = '' }) {
   if (!voucher) return null;
   const { isAdmin } = useAuth();
@@ -557,13 +564,13 @@ export default function VoucherView({ voucher, origin = '' }) {
             {voucher.pakistanHelpline && voucher.pakistanHelpline.includes('/') ? (
               voucher.pakistanHelpline.split('/').map((line, idx) => (
                 <div key={idx} className="whitespace-nowrap">
-                  {line.trim()}
+                  {formatPakistaniPhone(line.trim())}
                 </div>
               ))
             ) : (
               <>
-                <div className="whitespace-nowrap">MUHAMMAD FAIZAN 03112324764</div>
-                <div className="whitespace-nowrap">G.MURTAZA (HAJI) 0312360 8683</div>
+                <div className="whitespace-nowrap">MUHAMMAD FAIZAN 0311-2324764</div>
+                <div className="whitespace-nowrap">G.MURTAZA (HAJI) 0312-3608683</div>
               </>
             )}
           </div>
@@ -711,7 +718,7 @@ export default function VoucherView({ voucher, origin = '' }) {
             {voucher.companyName || 'NOOR E HARAM TRAVEL & TOURS'}
           </p>
           <p className="font-mono font-bold text-slate-800 mt-0.5 text-[10px]">
-            {voucher.address || voucher.phone || 'Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424'}
+            {formatPakistaniPhone(voucher.address || voucher.phone || 'Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424')}
           </p>
         </div>
 
