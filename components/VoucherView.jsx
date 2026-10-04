@@ -206,7 +206,7 @@ export default function VoucherView({ voucher, origin = '' }) {
               <th className="border border-slate-300 py-1 px-2 text-center w-12">BED</th>
               <th className="border border-slate-300 py-1 px-3 text-center">GROUP NO</th>
               <th className="border border-slate-300 py-1 px-2 text-center">VISA #</th>
-              <th className="border border-slate-300 py-1 px-3 text-center font-mono">PNR</th>
+              
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-300 bg-white">
@@ -237,14 +237,12 @@ export default function VoucherView({ voucher, origin = '' }) {
                   <td className="border border-slate-300 py-1.5 px-2 text-center font-mono text-slate-600">
                     {pax.visaNo || '-'}
                   </td>
-                  <td className="border border-slate-300 py-1.5 px-3 text-center font-mono font-bold text-[#0a192f]">
-                    {voucher.flights?.[0]?.pnr || 'GDKHVK'}
-                  </td>
+                  
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={9} className="border border-slate-300 text-center py-2 text-slate-400">
+                <td colSpan={8} className="border border-slate-300 text-center py-2 text-slate-400">
                   No mutamers listed.
                 </td>
               </tr>
@@ -326,7 +324,7 @@ export default function VoucherView({ voucher, origin = '' }) {
               ))
             ) : (
               <tr>
-                <td colSpan={9} className="border border-slate-300 text-center py-2 text-slate-400">
+                <td colSpan={8} className="border border-slate-300 text-center py-2 text-slate-400">
                   No accommodation scheduled.
                 </td>
               </tr>
@@ -430,6 +428,11 @@ export default function VoucherView({ voucher, origin = '' }) {
                     DEPARTURE (PAK-KSA)
                   </span>
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {(departureFlight.pnr || voucher.pnr) && (
+                      <span className="text-[8.5px] font-bold text-[#0a192f] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300 font-mono whitespace-nowrap">
+                        PNR: <strong className="text-emerald-800">{departureFlight.pnr || voucher.pnr}</strong>
+                      </span>
+                    )}
                     {departureFlight.date && (
                       <span className="text-[8.5px] font-bold text-[#926818] bg-[#fdf8ee] px-1.5 py-0.5 rounded border border-[#e8ce97] font-mono whitespace-nowrap">
                         {formatVoucherDate(departureFlight.date)}
@@ -463,6 +466,11 @@ export default function VoucherView({ voucher, origin = '' }) {
                     RETURN (KSA-PAK)
                   </span>
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {(returnFlight.pnr || voucher.pnr) && (
+                      <span className="text-[8.5px] font-bold text-[#0a192f] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300 font-mono whitespace-nowrap">
+                        PNR: <strong className="text-emerald-800">{returnFlight.pnr || voucher.pnr}</strong>
+                      </span>
+                    )}
                     {returnFlight.date && (
                       <span className="text-[8.5px] font-bold text-[#926818] bg-[#fdf8ee] px-1.5 py-0.5 rounded border border-[#e8ce97] font-mono whitespace-nowrap">
                         {formatVoucherDate(returnFlight.date)}

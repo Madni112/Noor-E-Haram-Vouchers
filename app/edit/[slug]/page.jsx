@@ -709,6 +709,16 @@ export default function EditVoucherPage() {
                   <div className="col-span-2">
                     <input 
                       type="text"
+                      placeholder="PNR (GDKHVK)"
+                      value={f.pnr || ''}
+                      onChange={(e) => updateFlight(idx, 'pnr', e.target.value.toUpperCase())}
+                      className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-mono font-bold uppercase text-emerald-950"
+                      title="PNR Number"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <input 
+                      type="text"
                       placeholder="Flight (F3-830)"
                       value={f.flight}
                       onChange={(e) => updateFlight(idx, 'flight', e.target.value)}
@@ -724,22 +734,22 @@ export default function EditVoucherPage() {
                       className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <input 
                       type="text"
-                      placeholder="From (KHI)"
+                      placeholder="From"
                       value={f.from}
                       onChange={(e) => updateFlight(idx, 'from', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-mono"
+                      className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-mono uppercase text-center"
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <input 
                       type="text"
-                      placeholder="To (JED)"
+                      placeholder="To"
                       value={f.to}
                       onChange={(e) => updateFlight(idx, 'to', e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-mono"
+                      className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-mono uppercase text-center"
                     />
                   </div>
                   <div className="col-span-3 flex items-center gap-1">
@@ -764,6 +774,7 @@ export default function EditVoucherPage() {
                         type="button"
                         onClick={() => removeFlight(idx)}
                         className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                        title="Remove Flight"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
