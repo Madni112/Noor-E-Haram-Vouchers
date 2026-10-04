@@ -202,6 +202,7 @@ export default function CreateVoucherPage() {
       emergencyContact,
       phone,
       voucherTitle: 'UMRAH PACKAGE VOUCHER',
+      voucherDate: new Date().toISOString(),
       party: cleanParty,
       ubNumber: ubNumber.trim(),
       voucherRefNo: ubNumber.trim(),

@@ -91,7 +91,7 @@ export default function VoucherView({ voucher, origin = '' }) {
     arrival: '07:00'
   };
 
-  const voucherStartDate = voucher.accommodations?.[0]?.checkIn || voucher.flights?.[0]?.date || '2026-10-01';
+  const voucherCreationDate = voucher.voucherDate || voucher.created_at || voucher.createdAt || new Date().toISOString();
 
   // Calculate total beds dynamically
   const totalBeds = voucher.passengers && voucher.passengers.length > 0
@@ -148,7 +148,7 @@ export default function VoucherView({ voucher, origin = '' }) {
             <div>
               <span className="font-bold text-slate-900">Voucher Date:</span>{' '}
               <span className="font-semibold text-slate-800">
-                {formatVoucherDate(voucherStartDate)}
+                {formatVoucherDate(voucherCreationDate)}
               </span>
             </div>
             <div>
