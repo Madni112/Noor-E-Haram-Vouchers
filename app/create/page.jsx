@@ -623,6 +623,107 @@ export default function CreateVoucherPage() {
             </div>
           </div>
 
+          {/* Section 5: Flight Schedule */}
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-2">
+                <Plane className="w-4 h-4 text-emerald-700" />
+                <span>5. Flight Schedule ({flights.length})</span>
+              </h2>
+              <button
+                type="button"
+                onClick={addFlight}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-xs transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Flight</span>
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {flights.map((f, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 items-center text-xs">
+                  <div className="col-span-2">
+                    <input 
+                      type="text"
+                      placeholder="PNR (GDKHVK)"
+                      value={f.pnr || ''}
+                      onChange={(e) => updateFlight(idx, 'pnr', e.target.value.toUpperCase())}
+                      className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-mono font-bold uppercase text-emerald-950"
+                      title="PNR Number"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <input 
+                      type="text"
+                      placeholder="Flight (F3-830)"
+                      value={f.flight}
+                      onChange={(e) => updateFlight(idx, 'flight', e.target.value)}
+                      className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-mono font-bold"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <input 
+                      type="text"
+                      placeholder="Date (01-Oct-2026)"
+                      value={f.date}
+                      onChange={(e) => updateFlight(idx, 'date', e.target.value)}
+                      className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <input 
+                      type="text"
+                      placeholder="From"
+                      value={f.from}
+                      onChange={(e) => updateFlight(idx, 'from', e.target.value)}
+                      className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-mono uppercase text-center"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <input 
+                      type="text"
+                      placeholder="To"
+                      value={f.to}
+                      onChange={(e) => updateFlight(idx, 'to', e.target.value)}
+                      className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-mono uppercase text-center"
+                    />
+                  </div>
+                  <div className="col-span-3 flex items-center gap-1">
+                    <input 
+                      type="text"
+                      placeholder="Dep (08:00)"
+                      value={f.departure}
+                      onChange={(e) => updateFlight(idx, 'departure', e.target.value)}
+                      className="w-1/2 px-2 py-1.5 border border-slate-300 rounded bg-white font-mono text-[11px]"
+                    />
+                    <input 
+                      type="text"
+                      placeholder="Arr (10:05)"
+                      value={f.arrival}
+                      onChange={(e) => updateFlight(idx, 'arrival', e.target.value)}
+                      className="w-1/2 px-2 py-1.5 border border-slate-300 rounded bg-white font-mono text-[11px]"
+                    />
+                  </div>
+                  <div className="col-span-1 text-right">
+                    {flights.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeFlight(idx)}
+                        className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                        title="Remove Flight"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+
+
           {/* Submit Button */}
           <div className="pt-6 border-t border-slate-100 flex items-center justify-end gap-3">
             <Link
