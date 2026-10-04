@@ -428,11 +428,6 @@ export default function VoucherView({ voucher, origin = '' }) {
                     DEPARTURE (PAK-KSA)
                   </span>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    {(departureFlight.pnr || voucher.pnr) && (
-                      <span className="text-[8.5px] font-bold text-[#0a192f] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300 font-mono whitespace-nowrap">
-                        PNR: <strong className="text-emerald-800">{departureFlight.pnr || voucher.pnr}</strong>
-                      </span>
-                    )}
                     {departureFlight.date && (
                       <span className="text-[8.5px] font-bold text-[#926818] bg-[#fdf8ee] px-1.5 py-0.5 rounded border border-[#e8ce97] font-mono whitespace-nowrap">
                         {formatVoucherDate(departureFlight.date)}
@@ -443,7 +438,11 @@ export default function VoucherView({ voucher, origin = '' }) {
                     </span>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 text-center pt-0.5">
+                <div className="grid grid-cols-4 text-center pt-0.5">
+                  <div className="border-r border-slate-100">
+                    <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">PNR</span>
+                    <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap">{departureFlight.pnr || voucher.pnr || '—'}</span>
+                  </div>
                   <div className="border-r border-slate-100">
                     <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">SECTOR</span>
                     <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{departureFlight.from || 'KHI'}-{departureFlight.to || 'JED'}</span>
@@ -466,11 +465,6 @@ export default function VoucherView({ voucher, origin = '' }) {
                     RETURN (KSA-PAK)
                   </span>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    {(returnFlight.pnr || voucher.pnr) && (
-                      <span className="text-[8.5px] font-bold text-[#0a192f] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300 font-mono whitespace-nowrap">
-                        PNR: <strong className="text-emerald-800">{returnFlight.pnr || voucher.pnr}</strong>
-                      </span>
-                    )}
                     {returnFlight.date && (
                       <span className="text-[8.5px] font-bold text-[#926818] bg-[#fdf8ee] px-1.5 py-0.5 rounded border border-[#e8ce97] font-mono whitespace-nowrap">
                         {formatVoucherDate(returnFlight.date)}
@@ -481,7 +475,11 @@ export default function VoucherView({ voucher, origin = '' }) {
                     </span>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 text-center pt-0.5">
+                <div className="grid grid-cols-4 text-center pt-0.5">
+                  <div className="border-r border-slate-100">
+                    <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">PNR</span>
+                    <span className="font-bold text-[#0a192f] text-[9.5px] font-mono whitespace-nowrap">{returnFlight.pnr || voucher.pnr || '—'}</span>
+                  </div>
                   <div className="border-r border-slate-100">
                     <span className="text-[8px] text-slate-400 block font-bold uppercase tracking-wider">SECTOR</span>
                     <span className="font-bold text-slate-900 text-[9.5px] font-mono whitespace-nowrap">{returnFlight.from || 'JED'}-{returnFlight.to || 'KHI'}</span>
@@ -496,6 +494,9 @@ export default function VoucherView({ voucher, origin = '' }) {
                   </div>
                 </div>
               </div>
+
+            </div>
+          </div>
 
             </div>
           </div>
