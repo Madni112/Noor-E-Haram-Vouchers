@@ -104,7 +104,7 @@ export default function VoucherView({ voucher, origin = '' }) {
 
   return (
     <>
-      <div className="voucher-container max-w-[850px] mx-auto bg-white rounded-none shadow-2xl border border-slate-300 overflow-hidden text-slate-800 p-4 sm:p-7 print:p-3 print:border-2 print:border-[#0a192f] text-[11px] leading-tight print:max-w-full print:w-full print:m-0 print:flex print:flex-col print:justify-between">
+      <div className="voucher-container voucher-page-1 max-w-[850px] mx-auto bg-white rounded-none shadow-2xl border border-slate-300 overflow-hidden text-slate-800 p-4 sm:p-7 print:p-3 print:border-2 print:border-[#0a192f] text-[11px] leading-tight print:max-w-full print:w-full print:m-0 print:flex print:flex-col print:justify-start">
         
         {/* Top Content wrapper */}
         <div className="space-y-2.5 print:space-y-1.5">

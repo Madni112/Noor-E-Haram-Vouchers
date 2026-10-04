@@ -74,11 +74,11 @@ h1, h2, h3, .font-heading {
   background: #94a3b8;
 }
 
-/* A4 Strict 1-Page Full-Paper Print Optimization */
+/* A4 Full-Paper Print Optimization */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 4mm 5mm 4mm 5mm;
+    margin: 5mm;
   }
   
   html, body {
@@ -90,7 +90,6 @@ h1, h2, h3, .font-heading {
     margin: 0 !important;
     width: 100% !important;
     height: auto !important;
-    overflow: hidden !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -108,19 +107,29 @@ h1, h2, h3, .font-heading {
     border: 1.5px solid #0a192f !important;
     border-radius: 4px !important;
     margin: 0 !important;
-    padding: 8px 12px !important;
+    padding: 10px 12px !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: auto !important;
-    max-height: 278mm !important;
+    height: 284mm !important;
+    min-height: 284mm !important;
+    max-height: 284mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-sizing: border-box !important;
+  }
+
+  .voucher-page-2 {
+    page-break-before: always !important;
+    break-before: page !important;
+    height: 284mm !important;
+    min-height: 284mm !important;
+    max-height: 284mm !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    page-break-after: avoid !important;
-    break-after: avoid !important;
-    box-sizing: border-box !important;
   }
 
   .voucher-container table th {
@@ -139,8 +148,8 @@ h1, h2, h3, .font-heading {
   }
 
   .font-urdu {
-    font-size: 8pt !important;
-    line-height: 1.38 !important;
+    font-size: 8.5pt !important;
+    line-height: 1.4 !important;
   }
 
   .print-break-inside-avoid {
