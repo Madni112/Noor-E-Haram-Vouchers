@@ -139,7 +139,7 @@ export default function VoucherView({ voucher, origin = '' }) {
               {voucher.companyName || 'NOOR E HARAM TRAVEL & TOURS'}
             </h1>
             <p className="text-[11px] sm:text-[12px] print:text-[8.5pt] text-slate-500 font-bold tracking-wide">
-              Official Umrah Voucher Portal
+              Official Umrah Portal
             </p>
           </div>
 
@@ -545,9 +545,6 @@ export default function VoucherView({ voucher, origin = '' }) {
             <span className="px-3 py-0.5 print:px-2.5 print:py-0.5 rounded bg-emerald-50 text-emerald-700 font-extrabold text-[10px] print:text-[9pt] border border-emerald-200 tracking-wider uppercase inline-block">
               Authorized
             </span>
-            <p className="text-[9px] print:text-[8pt] text-slate-500 font-medium">
-              Scan QR code to verify authentic booking details on portal
-            </p>
           </div>
         </div>
 
