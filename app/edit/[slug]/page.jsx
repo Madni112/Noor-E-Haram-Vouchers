@@ -182,7 +182,10 @@ export default function EditVoucherPage() {
 
   const updateAccommodation = (index, field, value) => {
     const copy = [...accommodations];
-    copy[index] = { ...copy[index], [field]: value };
+    const finalVal = (field === 'ubNo' || field === 'hcn' || field === 'hotelCode') && typeof value === 'string' 
+      ? value.toUpperCase() 
+      : value;
+    copy[index] = { ...copy[index], [field]: finalVal };
     
     // Automatically recalculate nights when dates are updated
     if (field === 'checkIn' || field === 'checkOut') {
@@ -606,7 +609,7 @@ export default function EditVoucherPage() {
                         type="text"
                         placeholder="UB #"
                         value={acc.ubNo !== undefined ? acc.ubNo : ''}
-                        onChange={(e) => updateAccommodation(idx, 'ubNo', e.target.value)}
+                        onChange={(e) => updateAccommodation(idx, 'ubNo', e.target.value.toUpperCase())}
                         className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-mono text-center text-[11px] font-bold uppercase text-[#0a192f]"
                         title="Hotel UB Number"
                       />
@@ -616,8 +619,8 @@ export default function EditVoucherPage() {
                         type="text"
                         placeholder="HCN#"
                         value={acc.hcn !== undefined ? acc.hcn : (acc.hotelCode || '')}
-                        onChange={(e) => updateAccommodation(idx, 'hcn', e.target.value)}
-                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-mono text-center text-[11px]"
+                        onChange={(e) => updateAccommodation(idx, 'hcn', e.target.value.toUpperCase())}
+                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-mono text-center text-[11px] uppercase font-bold"
                         title="Hotel Confirmation / Contract Number (HCN#)"
                       />
                     </div>
