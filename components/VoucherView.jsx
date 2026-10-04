@@ -677,7 +677,7 @@ export default function VoucherView({ voucher, origin = '' }) {
               </span>
             </div>
 
-            <div className="space-y-1.5 font-urdu text-[10px] sm:text-[11px] text-slate-800 leading-relaxed print:text-[8pt] print:leading-tight print:space-y-1 pr-1 pl-1">
+            <div className="space-y-3 sm:space-y-4 font-urdu text-[11px] sm:text-[12px] text-slate-800 leading-loose print:text-[8.8pt] print:leading-relaxed print:space-y-2.5 pr-1 pl-1 py-1.5">
               <div className="flex items-start gap-2 text-right">
                 <span className="text-[#c29648] font-bold select-none text-[11px] leading-none mt-0.5 shrink-0">•</span>
                 <span>ہوٹل اور پیکیج اس دستاویز میں لکھ دیا گیا ہے۔</span>
