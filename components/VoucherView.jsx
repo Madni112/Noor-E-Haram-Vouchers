@@ -672,7 +672,7 @@ export default function VoucherView({ voucher, origin = '' }) {
                   ضروری ہدایات برائے معتمرین کرام (سعودی حکومتی قوانین)
                 </h3>
               </div>
-              <span className="border border-slate-300 rounded px-2.5 py-0.5 text-[9px] font-bold text-slate-700 bg-white font-urdu print:text-[7pt] shrink-0">
+              <span className="border border-slate-300 rounded-md px-3.5 py-1.5 sm:py-2 text-[10px] font-bold text-slate-800 bg-white font-urdu print:text-[8pt] print:py-1 print:px-3 shrink-0 inline-flex items-center justify-center leading-normal shadow-2xs">
                 قابل عمل شرائط
               </span>
             </div>
