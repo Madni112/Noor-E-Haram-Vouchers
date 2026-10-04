@@ -93,6 +93,15 @@ export default function VoucherView({ voucher, origin = '' }) {
 
   const voucherStartDate = voucher.accommodations?.[0]?.checkIn || voucher.flights?.[0]?.date || '2026-10-01';
 
+  // Calculate total beds dynamically
+  const totalBeds = voucher.passengers && voucher.passengers.length > 0
+    ? voucher.passengers.reduce((acc, p) => {
+        const cat = getPaxCategory(p);
+        const hasBed = cat === 'Adult' ? (p.hasBed !== false) : Boolean(p.hasBed);
+        return acc + (hasBed ? 1 : 0);
+      }, 0)
+    : (voucher.totalPax || 1);
+
   return (
     <>
       <div className="voucher-container max-w-[850px] mx-auto bg-white rounded-none shadow-2xl border border-slate-300 overflow-hidden text-slate-800 p-4 sm:p-7 print:p-3 print:border-2 print:border-[#0a192f] text-[11px] leading-tight print:max-w-full print:w-full print:m-0 print:flex print:flex-col print:justify-between">
@@ -129,7 +138,7 @@ export default function VoucherView({ voucher, origin = '' }) {
             <div>
               <span className="font-bold text-slate-900">PAX Count:</span>{' '}
               <span className="font-semibold text-slate-800">
-                {voucher.totalPax || voucher.passengers?.length || 1} ({voucher.paxCounts || 'GENT(S):1 LAD(IES):1 CHILD(REN): 0 INFANT(S):0'}) • Beds: {voucher.totalPax || voucher.passengers?.length || 1}
+                {voucher.totalPax || voucher.passengers?.length || 1} ({voucher.paxCounts || 'GENT(S):1 LAD(IES):1 CHILD(REN): 0 INFANT(S):0'}) • Beds: {totalBeds}
               </span>
             </div>
           </div>
@@ -154,12 +163,16 @@ export default function VoucherView({ voucher, origin = '' }) {
 
         {/* Right: Self Visa & Islamabad */}
         <div className="text-center sm:text-right space-y-0.5 flex-[0.8] pr-0 sm:pr-1 order-3">
-          <h2 className="text-[16px] sm:text-[17px] font-black text-[#0a192f] tracking-tight uppercase">
-            Self Visa
-          </h2>
-          <p className="text-[12px] sm:text-[13px] font-bold text-slate-600 tracking-wide">
-            Islamabad
-          </p>
+          {voucher.isSelfVisa !== false && (
+            <>
+              <h2 className="text-[16px] sm:text-[17px] font-black text-[#0a192f] tracking-tight uppercase">
+                Self Visa
+              </h2>
+              <p className="text-[12px] sm:text-[13px] font-bold text-slate-600 tracking-wide">
+                Islamabad
+              </p>
+            </>
+          )}
         </div>
 
       </div>
@@ -227,8 +240,8 @@ export default function VoucherView({ voucher, origin = '' }) {
                   <td className="border border-slate-300 py-1.5 px-2 text-center font-medium text-slate-700">
                     {getPaxCategory(pax)}
                   </td>
-                  <td className="border border-slate-300 py-1.5 px-2 text-center font-bold text-emerald-700">
-                    Yes
+                  <td className={`border border-slate-300 py-1.5 px-2 text-center font-bold ${(getPaxCategory(pax) === 'Adult' ? pax.hasBed !== false : Boolean(pax.hasBed)) ? 'text-emerald-700' : 'text-slate-400'}`}>
+                    {(getPaxCategory(pax) === 'Adult' ? pax.hasBed !== false : Boolean(pax.hasBed)) ? 'Yes' : 'No'}
                   </td>
                   <td className="border border-slate-300 py-1.5 px-3 text-center font-mono text-slate-600">
                     {pax.group || '-'}
