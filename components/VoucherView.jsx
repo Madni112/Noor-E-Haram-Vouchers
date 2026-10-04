@@ -269,7 +269,13 @@ export default function VoucherView({ voucher, origin = '' }) {
             {/* Summary Row for Pax Details and Beds (Spanned Structure) */}
             <tr className="bg-slate-50 font-bold border-t-2 border-slate-300">
               <td colSpan={5} className="border border-slate-300 py-1.5 px-3 text-[#0a192f] text-[9px] sm:text-[9.5px] font-bold tracking-wide whitespace-nowrap">
-                {paxSummaryText}
+                <span>GENT(S) - {gents}</span>
+                <span className="text-emerald-600 font-black px-1.5 select-none">•</span>
+                <span>LAD(IES) - {ladies}</span>
+                <span className="text-emerald-600 font-black px-1.5 select-none">•</span>
+                <span>CHILD(REN) - {children}</span>
+                <span className="text-emerald-600 font-black px-1.5 select-none">•</span>
+                <span>INFANT(S) - {infants}</span>
               </td>
               <td colSpan={3} className="border border-slate-300 py-1.5 px-3 text-center font-bold text-[#0a192f] text-[9.5px] whitespace-nowrap bg-[#fdf8ee]">
                 Bed - {totalBeds}
