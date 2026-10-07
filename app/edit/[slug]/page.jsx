@@ -35,7 +35,7 @@ export default function EditVoucherPage() {
   const [groundTransport, setGroundTransport] = useState('+92 328 8189989');
   const [makkahHelpline, setMakkahHelpline] = useState('+966 53 649 2846');
   const [madinahHelpline, setMadinahHelpline] = useState('+966 57 593 0550');
-  const [pakistanHelpline, setPakistanHelpline] = useState('MUHAMMAD FAIZan 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
+  const [pakistanHelpline, setPakistanHelpline] = useState('UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911');
   const [ksaJeddahAirport, setKsaJeddahAirport] = useState('0568832059');
   const [ksaJeddahSpecial, setKsaJeddahSpecial] = useState('0583000471');
   const [ksaJeddahSharing, setKsaJeddahSharing] = useState('0596837655');
@@ -65,7 +65,7 @@ export default function EditVoucherPage() {
         setGroundTransport(found.groundTransport || found.ksaGroundTransport || '+92 328 8189989');
         setMakkahHelpline(found.makkahHelpline || found.ksaMakkah || '+966 53 649 2846');
         setMadinahHelpline(found.madinahHelpline || found.ksaMadinah || '+966 57 593 0550');
-        setPakistanHelpline(found.pakistanHelpline || 'Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424');
+        setPakistanHelpline(found.pakistanHelpline || 'UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911');
         setKsaJeddahAirport(found.ksaJeddahAirport || found.ksa_jeddah_airport || (found.passengers && found.passengers[0]?.ksaJeddahAirport) || '0568832059');
         setKsaJeddahSpecial(found.ksaJeddahSpecial || found.ksa_jeddah_special || (found.passengers && found.passengers[0]?.ksaJeddahSpecial) || '0583000471');
         setKsaJeddahSharing(found.ksaJeddahSharing || found.ksa_jeddah_sharing || (found.passengers && found.passengers[0]?.ksaJeddahSharing) || '0596837655');

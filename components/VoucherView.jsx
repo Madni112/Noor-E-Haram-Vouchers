@@ -589,18 +589,33 @@ export default function VoucherView({ voucher, origin = '' }) {
             PAKISTAN HELPLINE (24/7)
           </span>
           <div className="text-[#0a192f] font-black text-xs sm:text-[12.5px] print:text-[9.5pt] font-mono tracking-tight leading-tight space-y-0.5 print:space-y-0.5">
-            {voucher.pakistanHelpline && voucher.pakistanHelpline.includes('/') ? (
-              voucher.pakistanHelpline.split('/').map((line, idx) => (
-                <div key={idx} className="whitespace-nowrap">
-                  {formatPakistaniPhone(line.trim())}
+            {(() => {
+              const isNoor = (voucher.companyName && voucher.companyName.toUpperCase().includes('NOOR')) || 
+                             (voucher.logo && voucher.logo.toLowerCase().includes('noor')) ||
+                             (voucher.domain && voucher.domain.includes('noor'));
+              let helplineStr = voucher.pakistanHelpline;
+              
+              if (isNoor && (!helplineStr || helplineStr.toUpperCase().includes('FAIZAN') || helplineStr.toUpperCase().includes('MURTAZA'))) {
+                helplineStr = 'UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911';
+              } else if (!helplineStr) {
+                helplineStr = isNoor 
+                  ? 'UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911'
+                  : 'UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911';
+              }
+
+              if (helplineStr && helplineStr.includes('/')) {
+                return helplineStr.split('/').map((line, idx) => (
+                  <div key={idx} className="whitespace-nowrap">
+                    {formatPakistaniPhone(line.trim())}
+                  </div>
+                ));
+              }
+              return (
+                <div className="whitespace-nowrap">
+                  {formatPakistaniPhone(helplineStr)}
                 </div>
-              ))
-            ) : (
-              <>
-                <div className="whitespace-nowrap">MUHAMMAD FAIZAN 0311-2324764</div>
-                <div className="whitespace-nowrap">G.MURTAZA (HAJI) 0312-3608683</div>
-              </>
-            )}
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -746,7 +761,7 @@ export default function VoucherView({ voucher, origin = '' }) {
             {voucher.companyName || 'NOOR E HARAM TRAVEL & TOURS'}
           </p>
           <p className="font-mono font-bold text-slate-800 mt-0.5 text-[10px]">
-            {formatPakistaniPhone(voucher.address || voucher.phone || 'Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424')}
+            {formatPakistaniPhone(voucher.address || voucher.phone || 'UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911')}
           </p>
         </div>
 

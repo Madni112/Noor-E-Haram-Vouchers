@@ -26,14 +26,14 @@ export default function CreateVoucherPage() {
   const { isAdmin, isLoaded } = useAuth();
 
   const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVEL & TOURS');
-  const [phone, setPhone] = useState('Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424');
+  const [phone, setPhone] = useState('UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911');
   const [emergencyContact, setEmergencyContact] = useState('+966 50 627 7492');
   const [party, setParty] = useState('');
   const [ubNumber, setUbNumber] = useState('UB-0013');
   const [groundTransport, setGroundTransport] = useState('+92 328 8189989');
   const [makkahHelpline, setMakkahHelpline] = useState('+966 53 649 2846');
   const [madinahHelpline, setMadinahHelpline] = useState('+966 57 593 0550');
-  const [pakistanHelpline, setPakistanHelpline] = useState('Mob : UBAID RAZA +92-311-2264567 / +92-348-3138424');
+  const [pakistanHelpline, setPakistanHelpline] = useState('UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911');
   const [ksaJeddahAirport, setKsaJeddahAirport] = useState('0568832059');
   const [ksaJeddahSpecial, setKsaJeddahSpecial] = useState('0583000471');
   const [ksaJeddahSharing, setKsaJeddahSharing] = useState('0596837655');
