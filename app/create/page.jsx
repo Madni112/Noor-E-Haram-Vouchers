@@ -660,9 +660,9 @@ export default function CreateVoucherPage() {
                       <input 
                         type="text"
                         placeholder="Room Type (e.g. DOUBLE)"
-                        value={acc.roomType}
+                        value={acc.roomType !== undefined ? acc.roomType : (acc.room_type || acc.rpp || acc.type || '')}
                         onChange={(e) => updateAccommodation(idx, 'roomType', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white"
+                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-medium text-slate-900"
                       />
                     </div>
                     <div className="col-span-1.5">

@@ -353,7 +353,7 @@ export default function VoucherView({ voucher, origin = '' }) {
                     {acc.hcn || acc.hotelCode || acc.confirmationNo || '378'}
                   </td>
                   <td className="border border-slate-300 py-1.5 px-3 text-slate-800 font-medium whitespace-nowrap">
-                    {acc.roomType || 'Double Bed'}
+                    {acc.roomType || acc.room_type || acc.rpp || acc.type || 'Double Bed'}
                   </td>
                   <td className="border border-slate-300 py-1.5 px-3 text-center font-mono text-slate-800 font-semibold whitespace-nowrap">
                     {formatVoucherDate(acc.checkIn)}

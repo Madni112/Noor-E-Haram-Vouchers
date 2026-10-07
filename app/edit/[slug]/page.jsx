@@ -112,9 +112,20 @@ export default function EditVoucherPage() {
         setPassengers(loadedPassengers);
         setPaxCounts(computePaxSummary(loadedPassengers));
 
-        setAccommodations(found.accommodations && found.accommodations.length > 0 ? found.accommodations : [
+        const loadedAccommodations = (found.accommodations && found.accommodations.length > 0 ? found.accommodations : [
           { city: 'MAKKAH', hotelCode: '378', hotelName: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '5' }
-        ]);
+        ]).map(acc => ({
+          ...acc,
+          city: acc.city || 'MAKKAH',
+          hotelName: acc.hotelName || acc.hotel_name || '',
+          ubNo: acc.ubNo !== undefined ? acc.ubNo : (acc.ub_no || acc.ubNumber || ''),
+          hcn: acc.hcn !== undefined ? acc.hcn : (acc.hotelCode || acc.hcn_no || '378'),
+          roomType: acc.roomType !== undefined ? acc.roomType : (acc.room_type || acc.rpp || acc.type || 'DOUBLE'),
+          checkIn: acc.checkIn || acc.check_in || '',
+          checkOut: acc.checkOut || acc.check_out || '',
+          nights: acc.nights ? String(acc.nights) : '1',
+        }));
+        setAccommodations(loadedAccommodations);
         setTransports(found.transports && found.transports.length > 0 ? found.transports : [
           { sNo: '1', tnNo: '317', service: 'JED AIRPORT TO MAKKAH HOTEL', vehicle: 'BUS', pickupDate: '', contactPerson: '', bookingRefNo: '' }
         ]);
@@ -247,7 +258,7 @@ export default function EditVoucherPage() {
     setFlights(copy);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!party.trim()) {
       alert('Please provide a Party Name / Family Head');
@@ -293,17 +304,18 @@ export default function EditVoucherPage() {
       paxCounts,
       totalPax: processedPassengers.length,
       passengers: processedPassengers,
-      accommodations,
+      accommodations: accommodations.map(a => ({
+        ...a,
+        roomType: a.roomType !== undefined ? a.roomType : (a.room_type || a.rpp || a.type || 'DOUBLE'),
+      })),
       transports,
       flights,
     };
 
-    updateVoucher(voucher.slug || voucher.id || slug, updatedData);
+    await updateVoucher(voucher.slug || voucher.id || slug, updatedData);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      router.push(`/voucher/${updatedData.slug || slug}`);
-    }, 400);
+    setIsSubmitting(false);
+    router.push(`/voucher/${updatedData.slug || slug}`);
   };
 
   return (
@@ -734,9 +746,9 @@ export default function EditVoucherPage() {
                       <input 
                         type="text"
                         placeholder="Room Type"
-                        value={acc.roomType}
+                        value={acc.roomType !== undefined ? acc.roomType : (acc.room_type || acc.rpp || acc.type || '')}
                         onChange={(e) => updateAccommodation(idx, 'roomType', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white"
+                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-medium text-slate-900"
                       />
                     </div>
                     <div className="col-span-1.5">
