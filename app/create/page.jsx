@@ -180,7 +180,7 @@ export default function CreateVoucherPage() {
     setFlights(copy);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!party.trim()) {
       alert('Please enter a Party / Lead Passenger Name');
@@ -238,11 +238,11 @@ export default function CreateVoucherPage() {
       flights: flights.filter((f) => f.flight.trim() !== ''),
     };
 
-    saveCustomVoucher(newVoucher);
+    await saveCustomVoucher(newVoucher);
 
     setTimeout(() => {
       router.push(`/voucher/${partySlug}`);
-    }, 500);
+    }, 400);
   };
 
   return (
