@@ -129,13 +129,13 @@ export default function VoucherView({ voucher, origin = '' }) {
     ? `GENT(S) - ${gents}   LAD(IES) - ${ladies}   CHILD(REN) - ${children}   INFANT(S) - ${infants}`
     : (voucher.paxCounts ? voucher.paxCounts.replaceAll(':', ' - ') : 'GENT(S) - 1   LAD(IES) - 0   CHILD(REN) - 0   INFANT(S) - 0');
 
-  const ksaJeddahAirport = voucher.ksaJeddahAirport || voucher.ksa_jeddah_airport || (voucher.passengers && voucher.passengers[0]?.ksaJeddahAirport) || '0568832059';
-  const ksaJeddahSpecial = voucher.ksaJeddahSpecial || voucher.ksa_jeddah_special || (voucher.passengers && voucher.passengers[0]?.ksaJeddahSpecial) || '0583000471';
-  const ksaJeddahSharing = voucher.ksaJeddahSharing || voucher.ksa_jeddah_sharing || (voucher.passengers && voucher.passengers[0]?.ksaJeddahSharing) || '0596837655';
-  const ksaMakkahSharing = voucher.ksaMakkahSharing || voucher.ksa_makkah_sharing || (voucher.passengers && voucher.passengers[0]?.ksaMakkahSharing) || '0543666527';
-  const ksaMakkahSpecial = voucher.ksaMakkahSpecial || voucher.ksa_makkah_special || (voucher.passengers && voucher.passengers[0]?.ksaMakkahSpecial) || '0596085887';
-  const ksaMadinahSharing = voucher.ksaMadinahSharing || voucher.ksa_madinah_sharing || (voucher.passengers && voucher.passengers[0]?.ksaMadinahSharing) || '0596836845';
-  const ksaMadinahSpecial = voucher.ksaMadinahSpecial || voucher.ksa_madinah_special || (voucher.passengers && voucher.passengers[0]?.ksaMadinahSpecial) || '0596836979';
+  const ksaJeddahAirport = voucher.ksaJeddahAirport ?? voucher.ksa_jeddah_airport ?? (voucher.passengers && voucher.passengers[0]?.ksaJeddahAirport) ?? '';
+  const ksaJeddahSpecial = voucher.ksaJeddahSpecial ?? voucher.ksa_jeddah_special ?? (voucher.passengers && voucher.passengers[0]?.ksaJeddahSpecial) ?? '';
+  const ksaJeddahSharing = voucher.ksaJeddahSharing ?? voucher.ksa_jeddah_sharing ?? (voucher.passengers && voucher.passengers[0]?.ksaJeddahSharing) ?? '';
+  const ksaMakkahSharing = voucher.ksaMakkahSharing ?? voucher.ksa_makkah_sharing ?? (voucher.passengers && voucher.passengers[0]?.ksaMakkahSharing) ?? '';
+  const ksaMakkahSpecial = voucher.ksaMakkahSpecial ?? voucher.ksa_makkah_special ?? (voucher.passengers && voucher.passengers[0]?.ksaMakkahSpecial) ?? '';
+  const ksaMadinahSharing = voucher.ksaMadinahSharing ?? voucher.ksa_madinah_sharing ?? (voucher.passengers && voucher.passengers[0]?.ksaMadinahSharing) ?? '';
+  const ksaMadinahSpecial = voucher.ksaMadinahSpecial ?? voucher.ksa_madinah_special ?? (voucher.passengers && voucher.passengers[0]?.ksaMadinahSpecial) ?? '';
 
   return (
     <>
