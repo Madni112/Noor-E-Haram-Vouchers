@@ -25,7 +25,7 @@ export default function CreateVoucherPage() {
   const router = useRouter();
   const { isAdmin, isLoaded } = useAuth();
 
-  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVEL & TOURS');
+  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVELS & TOURS');
   const [phone, setPhone] = useState('UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911');
   const [emergencyContact, setEmergencyContact] = useState('+966 50 627 7492');
   const [party, setParty] = useState('');

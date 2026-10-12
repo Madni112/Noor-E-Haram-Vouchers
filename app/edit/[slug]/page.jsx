@@ -43,7 +43,7 @@ export default function EditVoucherPage() {
   const [ksaMakkahSpecial, setKsaMakkahSpecial] = useState('');
   const [ksaMadinahSharing, setKsaMadinahSharing] = useState('');
   const [ksaMadinahSpecial, setKsaMadinahSpecial] = useState('');
-  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVEL & TOURS');
+  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVELS & TOURS');
   const [executive, setExecutive] = useState('ADMIN');
   const [isSelfVisa, setIsSelfVisa] = useState(true);
   const [paxCounts, setPaxCounts] = useState('GENT(S): 1  LAD(IES): 0  CHILD(REN): 0  INFANT(S): 0');
@@ -73,7 +73,7 @@ export default function EditVoucherPage() {
         setKsaMakkahSpecial(found.ksaMakkahSpecial ?? found.ksa_makkah_special ?? (found.passengers && found.passengers[0]?.ksaMakkahSpecial) ?? '');
         setKsaMadinahSharing(found.ksaMadinahSharing ?? found.ksa_madinah_sharing ?? (found.passengers && found.passengers[0]?.ksaMadinahSharing) ?? '');
         setKsaMadinahSpecial(found.ksaMadinahSpecial ?? found.ksa_madinah_special ?? (found.passengers && found.passengers[0]?.ksaMadinahSpecial) ?? '');
-        setCompanyName(found.companyName || 'NOOR E HARAM TRAVEL & TOURS');
+        setCompanyName(found.companyName || 'NOOR E HARAM TRAVELS & TOURS');
         setExecutive(found.executive || 'ADMIN');
         setIsSelfVisa(found.isSelfVisa !== false);
 

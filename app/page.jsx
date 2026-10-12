@@ -27,7 +27,8 @@ import {
 
 export default function HomePage() {
   const { isAdmin, isLoaded } = useAuth();
-  const [vouchers, setVouchers] = useState(initialVouchers);
+  const [vouchers, setVouchers] = useState([]);
+  const [loadingVouchers, setLoadingVouchers] = useState(true);
   const [search, setSearch] = useState('');
   const [origin, setOrigin] = useState('');
   const [copiedId, setCopiedId] = useState(null);
@@ -35,13 +36,9 @@ export default function HomePage() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setOrigin(window.location.origin);
-      const all = getAllVouchers();
-      setVouchers(all);
-
       fetchSupabaseVouchers().then((liveList) => {
-        if (liveList && liveList.length > 0) {
-          setVouchers(liveList);
-        }
+        setVouchers(liveList || []);
+        setLoadingVouchers(false);
       });
     }
   }, []);
@@ -95,24 +92,32 @@ export default function HomePage() {
             <div className="space-y-2 max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/80 text-amber-300 text-xs font-semibold border border-amber-400/20 backdrop-blur-sm">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Next.js QR Code Voucher Portal</span>
+                <span>Cheepa FJ Travels Portal</span>
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-heading tracking-tight text-white">
                 Umrah Package Vouchers &amp; QR Verification
               </h1>
               <p className="text-emerald-200/90 text-sm sm:text-base leading-relaxed">
-                Complete digitised records for all <strong>12 vouchers</strong> from <span className="text-amber-300 font-medium">Book1.xlsx</span>. Each voucher is linked with dynamic live QR codes for instant mobile viewing and print handover.
+                Complete digitised Umrah vouchers for <strong>Cheepa FJ Travels</strong>. Each voucher is linked with dynamic live QR codes for instant mobile viewing and print handover.
               </p>
             </div>
 
             {/* Quick Actions */}
             <div className="flex flex-wrap items-center gap-3">
               <Link
+                href="/erp"
+                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-emerald-950 font-black text-sm shadow-lg hover:shadow-amber-500/25 transition-all"
+              >
+                <Building2 className="w-5 h-5 stroke-[2.2]" />
+                <span>Launch ERP Portal</span>
+              </Link>
+
+              <Link
                 href="/create"
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-emerald-950 font-bold text-sm shadow-lg hover:shadow-amber-500/25 transition-all"
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-800/90 hover:bg-emerald-700 text-white font-bold text-sm border border-emerald-600/50 shadow transition-all"
               >
                 <PlusCircle className="w-5 h-5 stroke-[2.2]" />
-                <span>Create New Voucher</span>
+                <span>New Voucher</span>
               </Link>
             </div>
           </div>
@@ -182,12 +187,12 @@ export default function HomePage() {
                         <span className="text-[11px] font-bold font-mono px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200/80">
                           {ubBadge}
                         </span>
-                        <span className="text-xs text-slate-400 font-medium truncate max-w-[140px]">
-                          {voucher.sheetName}
+                        <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider truncate max-w-[140px]">
+                          CHEEPA FJ
                         </span>
                       </div>
-                      <h3 className="font-heading font-bold text-slate-900 text-lg group-hover:text-emerald-800 transition-colors mt-1 truncate max-w-[200px]">
-                        {voucher.party}
+                      <h3 className="font-heading font-bold text-slate-900 text-base sm:text-lg group-hover:text-emerald-800 transition-colors mt-1 uppercase truncate max-w-[200px]">
+                        {(voucher.party || '').replace(/(\s*\/\s*(MR|MRS|MS|MISS|CHD|INF|MSTR|MASTER|CHILD|INFANT|LADY|GENT))+\s*$/gi, '').replace(/\s*\(8\)$/i, '').trim().toUpperCase()}
                       </h3>
                     </div>
 
@@ -267,15 +272,36 @@ export default function HomePage() {
           })}
         </div>
 
-        {filtered.length === 0 && (
-          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 space-y-3">
-            <p className="text-slate-500 text-base">No vouchers found matching "{search}"</p>
-            <button
-              onClick={() => setSearch('')}
-              className="text-xs text-emerald-700 font-semibold underline"
-            >
-              Clear Search Filter
-            </button>
+        {filtered.length === 0 && !loadingVouchers && (
+          <div className="bg-white rounded-2xl p-12 text-center border border-slate-200 space-y-4">
+            {search ? (
+              <>
+                <p className="text-slate-500 text-base">No vouchers found matching "{search}"</p>
+                <button
+                  onClick={() => setSearch('')}
+                  className="text-xs text-emerald-700 font-semibold underline"
+                >
+                  Clear Search Filter
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
+                  <PlusCircle className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-slate-800 text-lg">No Vouchers in Cheepa FJ Travels Portal Yet</h3>
+                  <p className="text-slate-500 text-xs sm:text-sm">Get started by creating your first digital Umrah package voucher.</p>
+                </div>
+                <Link
+                  href="/create"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-md transition-all"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Create First Voucher</span>
+                </Link>
+              </>
+            )}
           </div>
         )}
 
