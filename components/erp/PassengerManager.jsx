@@ -249,7 +249,7 @@ function SearchablePartySelect({
 }
 
 export default function PassengerManager({ parties = [], onPartiesUpdated }) {
-  const [selectedPartyUid, setSelectedPartyUid] = useState(parties[0]?.partyHeadUid || 'ALL');
+  const [selectedPartyUid, setSelectedPartyUid] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   
   // Unified Family & Passenger Builder Modal State
