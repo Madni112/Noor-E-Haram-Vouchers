@@ -99,7 +99,7 @@ function SearchablePartySelect({
                 {allLabel}
               </span>
               <span className="text-[10px] font-semibold text-slate-400 shrink-0">
-                ({parties.length} Manifests)
+                ({parties.length} Families)
               </span>
             </>
           ) : selectedParty ? (
@@ -181,7 +181,7 @@ function SearchablePartySelect({
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
                   <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {parties.length} Manifests
+                    {parties.length} Families
                   </span>
                   {isAllSelected && (
                     <Check className="w-3.5 h-3.5 text-emerald-600" />
@@ -757,13 +757,13 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             </button>
           )}
 
-          {/* Primary Action: Add Family / Manifest */}
+          {/* Primary Action: Add Family / Group */}
           <button
             onClick={openNewFamilyModal}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95"
           >
             <Users className="w-3.5 h-3.5 text-slate-300" />
-            <span>Add Family / Passenger Manifest</span>
+            <span>Add Family / Group</span>
           </button>
         </div>
       </div>
@@ -896,7 +896,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
               {displayPassengers.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-10 text-center text-slate-400 font-medium italic">
-                    No passenger records found. Click "Add Family / Passenger Manifest" above to create one.
+                    No passenger records found. Click "Add Family / Group" above to create one.
                   </td>
                 </tr>
               ) : (
@@ -1147,7 +1147,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
-                    Family Manifest Builder
+                    Family &amp; Group Builder
                   </span>
                   <span className="text-xs text-slate-400">•</span>
                   <span className="text-xs font-semibold text-slate-600">
@@ -1155,7 +1155,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                   </span>
                 </div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-1">
-                  {modalMode === 'NEW_FAMILY' ? 'Add Family / Group Manifest' : 'Add Family Members to Group'}
+                  {modalMode === 'NEW_FAMILY' ? 'Add New Family / Group' : 'Add Family Members to Group'}
                 </h3>
               </div>
 
@@ -1181,7 +1181,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
-                1. New Family / Group Manifest
+                1. New Family / Group
               </button>
               
               {parties.length > 0 && (
@@ -1263,7 +1263,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                     />
                   </div>
                   <div className="text-xs text-slate-500 sm:text-right sm:max-w-xs">
-                    <span>New members will be added directly into this selected family manifest.</span>
+                    <span>New members will be added directly into this selected family group.</span>
                   </div>
                 </div>
               )}
@@ -1462,8 +1462,8 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                     <span>
                       {modalMode === 'NEW_FAMILY'
                         ? (familyMembers.length === 1 
-                            ? 'Save Single Passenger Manifest (1 PAX)' 
-                            : `Save Family Manifest (${familyMembers.length} PAX)`)
+                            ? 'Save Single Passenger (1 PAX)' 
+                            : `Save Family / Group (${familyMembers.length} PAX)`)
                         : `Add ${familyMembers.length} Member(s) to Family`}
                     </span>
                   </button>
