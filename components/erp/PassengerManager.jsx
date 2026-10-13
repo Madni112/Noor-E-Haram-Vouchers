@@ -260,6 +260,37 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   // In-List Passenger Deletion Mode State
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [selectedPaxIdsToDelete, setSelectedPaxIdsToDelete] = useState([]);
+  const deleteContainerRef = useRef(null);
+
+  const cancelDelete = () => {
+    setIsDeleteMode(false);
+    setSelectedPaxIdsToDelete([]);
+  };
+
+  // Auto-cancel delete mode on click outside or Escape key
+  useEffect(() => {
+    if (!isDeleteMode) return;
+
+    const handleClickOutside = (e) => {
+      if (deleteContainerRef.current && !deleteContainerRef.current.contains(e.target)) {
+        cancelDelete();
+      }
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        cancelDelete();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isDeleteMode]);
 
   // Family Group Information
   const [familyName, setFamilyName] = useState('');
@@ -299,6 +330,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
 
   // Open modal in New Family mode
   const openNewFamilyModal = () => {
+    cancelDelete();
     setModalMode('NEW_FAMILY');
     setFamilyName('');
     setFamilyPhone('');
@@ -309,6 +341,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
 
   // Open modal in Add to Existing Family mode
   const openAddToExistingModal = (partyUid) => {
+    cancelDelete();
     const activeUid = partyUid || (selectedPartyUid !== 'ALL' ? selectedPartyUid : parties[0]?.partyHeadUid);
     setTargetPartyUid(activeUid);
     setModalMode('ADD_TO_EXISTING');
@@ -647,23 +680,25 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
         </div>
       </div>
 
-      {/* Filter and Selector Controls */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        {/* Parent Party Dropdown */}
-        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
-          <label className="text-xs font-semibold text-slate-500 shrink-0">Family Group Filter:</label>
-          <div className="w-72 sm:w-80 max-w-full">
-            <SearchablePartySelect
-              parties={parties}
-              value={selectedPartyUid}
-              onChange={(uid) => {
-                setSelectedPartyUid(uid);
-                if (isDeleteMode) setSelectedPaxIdsToDelete([]);
-              }}
-              allowAll={true}
-              allLabel="All Family Groups"
-            />
-          </div>
+      {/* Container with Auto-Cancel Ref for Delete Mode */}
+      <div ref={deleteContainerRef} className="space-y-4">
+        {/* Filter and Selector Controls */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Parent Party Dropdown */}
+          <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
+            <label className="text-xs font-semibold text-slate-500 shrink-0">Family Group Filter:</label>
+            <div className="w-72 sm:w-80 max-w-full">
+              <SearchablePartySelect
+                parties={parties}
+                value={selectedPartyUid}
+                onChange={(uid) => {
+                  cancelDelete();
+                  setSelectedPartyUid(uid);
+                }}
+                allowAll={true}
+                allLabel="All Family Groups"
+              />
+            </div>
 
           {selectedPartyUid !== 'ALL' && (
             <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -689,10 +724,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             <div className="inline-flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setIsDeleteMode(false);
-                  setSelectedPaxIdsToDelete([]);
-                }}
+                onClick={cancelDelete}
                 className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
               >
                 Cancel
@@ -724,7 +756,10 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             type="text"
             placeholder="Search by name, passport #, visa #..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              if (isDeleteMode) cancelDelete();
+              setSearchTerm(e.target.value);
+            }}
             className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 bg-slate-50/50"
           />
         </div>
@@ -876,6 +911,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* ============================================================== */}
