@@ -425,7 +425,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                 <th className="py-3 px-3.5 border-r border-slate-100">Role / Status</th>
                 <th className="py-3 px-3.5 border-r border-slate-100">Full Legal Name</th>
                 <th className="py-3 px-3.5 border-r border-slate-100">Passport #</th>
-                <th className="py-3 px-3.5 border-r border-slate-100 text-center">DOB &amp; Gender</th>
+                <th className="py-3 px-3.5 border-r border-slate-100 text-center">Date of Birth</th>
                 <th className="py-3 px-3.5 border-r border-slate-100 text-center">Demographics</th>
                 <th className="py-3 px-3.5 text-right">Actions</th>
               </tr>
@@ -472,7 +472,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                       {pax.passportNo || '—'}
                     </td>
                     <td className="py-2.5 px-3.5 border-r border-slate-100 text-center font-mono text-slate-500">
-                      {pax.dob || '—'} ({pax.gender || 'M'})
+                      {pax.dob || '—'}
                     </td>
                     <td className="py-2.5 px-3.5 border-r border-slate-100 text-center">
                       <span className={`inline-block px-2.5 py-0.5 rounded-full font-semibold text-[10px] ${
@@ -779,25 +779,15 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                             </select>
                           </div>
 
-                          {/* Date of Birth & Gender */}
+                          {/* Date of Birth */}
                           <div className="col-span-1 sm:col-span-1 md:col-span-1">
-                            <label className="block text-slate-500 text-[10px] font-semibold mb-1">DOB &amp; Gender</label>
-                            <div className="flex items-center gap-1.5">
-                              <input 
-                                type="date"
-                                value={member.dob}
-                                onChange={(e) => handleUpdateMember(index, 'dob', e.target.value)}
-                                className="w-full px-2 py-2 border border-slate-200 rounded-xl bg-white font-mono text-slate-800 text-[11px] outline-none"
-                              />
-                              <select
-                                value={member.gender}
-                                onChange={(e) => handleUpdateMember(index, 'gender', e.target.value)}
-                                className="px-2 py-2 border border-slate-200 rounded-xl bg-white font-semibold text-slate-800 outline-none"
-                              >
-                                <option value="M">M</option>
-                                <option value="F">F</option>
-                              </select>
-                            </div>
+                            <label className="block text-slate-500 text-[10px] font-semibold mb-1">Date of Birth</label>
+                            <input 
+                              type="date"
+                              value={member.dob}
+                              onChange={(e) => handleUpdateMember(index, 'dob', e.target.value)}
+                              className="w-full px-2.5 py-2 border border-slate-200 rounded-xl bg-white font-mono text-slate-800 text-[11px] outline-none focus:ring-1 focus:ring-slate-900"
+                            />
                           </div>
                         </div>
                       </div>
