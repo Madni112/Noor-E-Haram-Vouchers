@@ -738,6 +738,20 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                             </select>
                           </div>
 
+                          {/* Demographics Category (Moved after Prefix) */}
+                          <div className="col-span-1 sm:col-span-1 md:col-span-1">
+                            <label className="block text-slate-500 text-[10px] font-semibold mb-1">Demographics</label>
+                            <select
+                              value={member.category}
+                              onChange={(e) => handleUpdateMember(index, 'category', e.target.value)}
+                              className="w-full px-2.5 py-2 border border-slate-200 rounded-xl bg-white font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
+                            >
+                              <option value="Adult">Adult</option>
+                              <option value="Child">Child</option>
+                              <option value="Infant">Infant</option>
+                            </select>
+                          </div>
+
                           {/* Full Name */}
                           <div className="col-span-1 sm:col-span-2 md:col-span-2">
                             <label className="block text-slate-500 text-[10px] font-semibold mb-1">
@@ -763,20 +777,6 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                               onChange={(e) => handleUpdateMember(index, 'passportNo', e.target.value)}
                               className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white uppercase font-mono text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
                             />
-                          </div>
-
-                          {/* Demographics Category */}
-                          <div className="col-span-1 sm:col-span-1 md:col-span-1">
-                            <label className="block text-slate-500 text-[10px] font-semibold mb-1">Demographics</label>
-                            <select
-                              value={member.category}
-                              onChange={(e) => handleUpdateMember(index, 'category', e.target.value)}
-                              className="w-full px-2.5 py-2 border border-slate-200 rounded-xl bg-white font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
-                            >
-                              <option value="Adult">Adult</option>
-                              <option value="Child">Child</option>
-                              <option value="Infant">Infant</option>
-                            </select>
                           </div>
 
                           {/* Date of Birth */}
