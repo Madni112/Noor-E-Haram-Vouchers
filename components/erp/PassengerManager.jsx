@@ -562,12 +562,19 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       const hasDeletions = (party.passengers || []).some(p => idsSet.has(p.id));
       if (!hasDeletions) return party;
 
-      const remainingPax = (party.passengers || []).filter(p => !idsSet.has(p.id));
+      let remainingPax = (party.passengers || []).filter(p => !idsSet.has(p.id));
 
       if (remainingPax.length === 0) {
         completelyRemovedUids.push(party.partyHeadUid);
         return null;
       }
+
+      // Re-index serial numbers cleanly
+      remainingPax = remainingPax.map((p, idx) => ({
+        ...p,
+        sNo: String(idx + 1),
+        relationship: idx === 0 ? 'Head of Family' : (p.relationship === 'Head of Family' || p.relationship === 'Family Head / Lead Pilgrim' ? 'Family Member' : p.relationship),
+      }));
 
       return {
         ...party,
