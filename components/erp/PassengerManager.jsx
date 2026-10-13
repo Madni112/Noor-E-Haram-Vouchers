@@ -24,7 +24,7 @@ import {
   Sparkles,
   ChevronDown
 } from 'lucide-react';
-import { saveParty, deleteParty, deletePassenger, deletePassengers } from '../../lib/erpData';
+import { saveParty, deleteParty, getAllParties } from '../../lib/erpData';
 
 // Searchable SKU-style Family Group Dropdown Combobox
 function SearchablePartySelect({ 
@@ -257,9 +257,8 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   const [modalMode, setModalMode] = useState('NEW_FAMILY'); // 'NEW_FAMILY' | 'ADD_TO_EXISTING'
   const [targetPartyUid, setTargetPartyUid] = useState(parties[0]?.partyHeadUid || '');
 
-  // Delete / Manage Passengers Modal State
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletePartyUid, setDeletePartyUid] = useState(parties[0]?.partyHeadUid || '');
+  // In-List Passenger Deletion Mode State
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [selectedPaxIdsToDelete, setSelectedPaxIdsToDelete] = useState([]);
 
   // Family Group Information
@@ -506,50 +505,69 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     setShowFamilyModal(false);
   };
 
-  // Open modal to select passenger(s) to delete
-  const openDeleteModal = (partyHeadUid, preselectedPaxId = null) => {
-    const targetUid = partyHeadUid || (selectedPartyUid !== 'ALL' ? selectedPartyUid : parties[0]?.partyHeadUid || '');
-    setDeletePartyUid(targetUid);
-    if (preselectedPaxId) {
-      setSelectedPaxIdsToDelete([preselectedPaxId]);
-    } else {
-      setSelectedPaxIdsToDelete([]);
-    }
-    setShowDeleteModal(true);
-  };
-
+  // Toggle selection for a single passenger in delete mode
   const handleTogglePaxToDelete = (paxId) => {
     setSelectedPaxIdsToDelete(prev => 
       prev.includes(paxId) ? prev.filter(id => id !== paxId) : [...prev, paxId]
     );
   };
 
-  const handleSelectAllPaxToDelete = (allPaxIds) => {
-    if (selectedPaxIdsToDelete.length === allPaxIds.length) {
+  // Toggle select-all for visible passengers in the list
+  const handleToggleSelectAll = () => {
+    const allVisiblePaxIds = displayPassengers.map(p => p.id);
+    if (selectedPaxIdsToDelete.length === allVisiblePaxIds.length && allVisiblePaxIds.length > 0) {
       setSelectedPaxIdsToDelete([]);
     } else {
-      setSelectedPaxIdsToDelete([...allPaxIds]);
+      setSelectedPaxIdsToDelete(allVisiblePaxIds);
     }
   };
 
-  const handleSaveDeleteChanges = () => {
-    if (!deletePartyUid || selectedPaxIdsToDelete.length === 0) return;
-    
-    const targetParty = parties.find(p => p.partyHeadUid === deletePartyUid);
-    const count = selectedPaxIdsToDelete.length;
-    const isDeletingAll = targetParty && targetParty.passengers?.length === count;
+  // Save changes: delete selected passengers, persist to storage & cloud, exit mode
+  const handleSaveDelete = () => {
+    if (selectedPaxIdsToDelete.length === 0) return;
 
-    const updated = deletePassengers(deletePartyUid, selectedPaxIdsToDelete);
-    
-    if (isDeletingAll && selectedPartyUid === deletePartyUid) {
+    let allParties = getAllParties();
+    const idsSet = new Set(selectedPaxIdsToDelete);
+    const completelyRemovedUids = [];
+
+    allParties = allParties.map(party => {
+      const hasDeletions = (party.passengers || []).some(p => idsSet.has(p.id));
+      if (!hasDeletions) return party;
+
+      const remainingPax = (party.passengers || []).filter(p => !idsSet.has(p.id));
+
+      if (remainingPax.length === 0) {
+        completelyRemovedUids.push(party.partyHeadUid);
+        return null;
+      }
+
+      return {
+        ...party,
+        passengers: remainingPax,
+        totalPax: remainingPax.length,
+        partyName: remainingPax[0].name || party.partyName,
+      };
+    }).filter(Boolean);
+
+    // Clean up completely removed parties from Supabase & storage
+    completelyRemovedUids.forEach(uid => {
+      deleteParty(uid);
+    });
+
+    // Save updated parties to Supabase & storage
+    allParties.forEach(party => {
+      saveParty(party);
+    });
+
+    if (selectedPartyUid !== 'ALL' && completelyRemovedUids.includes(selectedPartyUid)) {
       setSelectedPartyUid('ALL');
     }
-    
+
     if (onPartiesUpdated) {
-      onPartiesUpdated(updated);
+      onPartiesUpdated(allParties);
     }
-    
-    setShowDeleteModal(false);
+
+    setIsDeleteMode(false);
     setSelectedPaxIdsToDelete([]);
   };
 
@@ -618,16 +636,6 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             </button>
           )}
 
-          {/* Delete Passenger(s) Action */}
-          <button
-            onClick={() => openDeleteModal(selectedPartyUid !== 'ALL' ? selectedPartyUid : parties[0]?.partyHeadUid)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 rounded-xl text-xs font-semibold border border-rose-200 transition-all shadow-xs"
-            title="Select passenger(s) to delete"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Delete Passenger(s)</span>
-          </button>
-
           {/* Primary Action: Add Family / Manifest */}
           <button
             onClick={openNewFamilyModal}
@@ -648,27 +656,64 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             <SearchablePartySelect
               parties={parties}
               value={selectedPartyUid}
-              onChange={(uid) => setSelectedPartyUid(uid)}
+              onChange={(uid) => {
+                setSelectedPartyUid(uid);
+                if (isDeleteMode) setSelectedPaxIdsToDelete([]);
+              }}
               allowAll={true}
               allLabel="All Family Groups"
             />
           </div>
 
           {selectedPartyUid !== 'ALL' && (
-            <>
-              <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                {parties.find(p => p.partyHeadUid === selectedPartyUid)?.passengers?.length || 0} Family Members
-              </span>
+            <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              {parties.find(p => p.partyHeadUid === selectedPartyUid)?.passengers?.length || 0} Family Members
+            </span>
+          )}
+
+          {/* ONLY ONE DELETE BUTTON & CANCEL / SAVE CHANGES NEXT TO FILTER */}
+          {!isDeleteMode ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsDeleteMode(true);
+                setSelectedPaxIdsToDelete([]);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl border border-rose-200 transition-all shadow-2xs cursor-pointer"
+              title="Select passengers to delete"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Passengers</span>
+            </button>
+          ) : (
+            <div className="inline-flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDeleteMode(false);
+                  setSelectedPaxIdsToDelete([]);
+                }}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
 
               <button
-                onClick={() => openDeleteModal(selectedPartyUid)}
-                title="Select which passenger to delete from this group"
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-0.5 rounded-full border border-rose-200 transition-colors"
+                type="button"
+                onClick={handleSaveDelete}
+                disabled={selectedPaxIdsToDelete.length === 0}
+                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5 ${
+                  selectedPaxIdsToDelete.length > 0
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer active:scale-95'
+                    : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                }`}
               >
-                <Trash2 className="w-3 h-3" />
-                <span>Delete / Remove Passengers</span>
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                <span>
+                  Save Changes {selectedPaxIdsToDelete.length > 0 ? `(${selectedPaxIdsToDelete.length})` : ''}
+                </span>
               </button>
-            </>
+            </div>
           )}
         </div>
 
@@ -691,7 +736,26 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50/90 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-200/80">
-                <th className="py-3 px-3.5 border-r border-slate-100 w-12 text-center">#</th>
+                <th className="py-3 px-3.5 border-r border-slate-100 w-12 text-center">
+                  {isDeleteMode ? (
+                    <div className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={displayPassengers.length > 0 && selectedPaxIdsToDelete.length === displayPassengers.length}
+                        ref={el => {
+                          if (el) {
+                            el.indeterminate = selectedPaxIdsToDelete.length > 0 && selectedPaxIdsToDelete.length < displayPassengers.length;
+                          }
+                        }}
+                        onChange={handleToggleSelectAll}
+                        className="w-4 h-4 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer accent-rose-600"
+                        title={selectedPaxIdsToDelete.length === displayPassengers.length ? "Deselect all" : "Select all"}
+                      />
+                    </div>
+                  ) : (
+                    '#'
+                  )}
+                </th>
                 <th className="py-3 px-3.5 border-r border-slate-100">Parent Family Group</th>
                 <th className="py-3 px-3.5 border-r border-slate-100">Role / Status</th>
                 <th className="py-3 px-3.5 border-r border-slate-100">Full Legal Name</th>
@@ -709,73 +773,105 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                   </td>
                 </tr>
               ) : (
-                displayPassengers.map((pax, idx) => (
-                  <tr key={pax.id || idx} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center font-mono font-semibold text-slate-400">
-                      {idx + 1}
-                    </td>
-                    <td className="py-2.5 px-3.5 border-r border-slate-100">
-                      <span className="font-mono font-bold text-slate-900 block text-[10px]">
-                        {pax.parentPartyUid}
-                      </span>
-                      <span className="font-semibold text-slate-700 text-xs">
-                        {pax.parentPartyName}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3.5 border-r border-slate-100">
-                      {pax.isPartyHead ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                          <Crown className="w-2.5 h-2.5 text-amber-600" />
-                          Family Head
+                displayPassengers.map((pax, idx) => {
+                  const isChecked = isDeleteMode && selectedPaxIdsToDelete.includes(pax.id);
+                  return (
+                    <tr 
+                      key={pax.id || idx} 
+                      onClick={() => {
+                        if (isDeleteMode) handleTogglePaxToDelete(pax.id);
+                      }}
+                      className={`transition-colors ${
+                        isChecked
+                          ? 'bg-rose-50/80 hover:bg-rose-100/70 cursor-pointer'
+                          : isDeleteMode
+                          ? 'hover:bg-slate-50 cursor-pointer'
+                          : 'hover:bg-slate-50/80'
+                      }`}
+                    >
+                      <td className="py-2.5 px-3.5 border-r border-slate-100 text-center">
+                        {isDeleteMode ? (
+                          <div className="flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleTogglePaxToDelete(pax.id);
+                              }}
+                              className="w-4 h-4 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer accent-rose-600"
+                            />
+                          </div>
+                        ) : (
+                          <span className="font-mono font-semibold text-slate-400">
+                            {idx + 1}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3.5 border-r border-slate-100">
+                        <span className="font-mono font-bold text-slate-900 block text-[10px]">
+                          {pax.parentPartyUid}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                          <Users className="w-2.5 h-2.5 text-slate-400" />
-                          {pax.relationship || 'Dependent'}
+                        <span className="font-semibold text-slate-700 text-xs">
+                          {pax.parentPartyName}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-2.5 px-3.5 border-r border-slate-100 font-bold text-slate-900">
-                      {pax.prefix && <span className="text-slate-400 text-[10px] mr-1">{pax.prefix}</span>}
-                      {pax.name}
-                    </td>
-                    <td className="py-2.5 px-3.5 border-r border-slate-100 font-mono font-semibold text-slate-700">
-                      {pax.passportNo || '—'}
-                    </td>
-                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center font-mono text-slate-500">
-                      {pax.dob || '—'}
-                    </td>
-                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full font-semibold text-[10px] ${
-                        pax.category === 'Child'
-                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                          : pax.category === 'Infant'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                          : 'bg-slate-100 text-slate-700 border border-slate-200'
-                      }`}>
-                        {pax.category || 'Adult'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => openAddToExistingModal(pax.parentPartyUid)}
-                          title="Add family member to this group"
-                          className="p-1 rounded-md text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                        >
-                          <UserPlus className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => openDeleteModal(pax.parentPartyUid, pax.id)}
-                          title="Select passenger(s) to delete"
-                          className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="py-2.5 px-3.5 border-r border-slate-100">
+                        {pax.isPartyHead ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                            <Crown className="w-2.5 h-2.5 text-amber-600" />
+                            Family Head
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                            <Users className="w-2.5 h-2.5 text-slate-400" />
+                            {pax.relationship || 'Dependent'}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3.5 border-r border-slate-100 font-bold text-slate-900">
+                        {pax.prefix && <span className="text-slate-400 text-[10px] mr-1">{pax.prefix}</span>}
+                        {pax.name}
+                        {isChecked && (
+                          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                            To Delete
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-3.5 border-r border-slate-100 font-mono font-semibold text-slate-700">
+                        {pax.passportNo || '—'}
+                      </td>
+                      <td className="py-2.5 px-3.5 border-r border-slate-100 text-center font-mono text-slate-500">
+                        {pax.dob || '—'}
+                      </td>
+                      <td className="py-2.5 px-3.5 border-r border-slate-100 text-center">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full font-semibold text-[10px] ${
+                          pax.category === 'Child'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : pax.category === 'Infant'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}>
+                          {pax.category || 'Adult'}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3.5 text-right">
+                        <div className="flex items-center justify-end">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openAddToExistingModal(pax.parentPartyUid);
+                            }}
+                            title="Add family member to this group"
+                            className="p-1 rounded-md text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -1123,236 +1219,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* SELECT PASSENGERS TO DELETE & SAVE CHANGES MODAL */}
-      {/* ============================================================== */}
-      {showDeleteModal && (() => {
-        const targetDeleteParty = parties.find(p => p.partyHeadUid === deletePartyUid) || parties[0];
-        const targetPassengers = targetDeleteParty?.passengers || [];
-        const allTargetPaxIds = targetPassengers.map(p => p.id);
-        const isAllSelected = targetPassengers.length > 0 && selectedPaxIdsToDelete.length === targetPassengers.length;
-        const isHeadSelected = selectedPaxIdsToDelete.includes(targetPassengers[0]?.id);
 
-        return (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-5 sm:p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150 my-6">
-              
-              {/* Header */}
-              <div className="flex items-start justify-between border-b border-slate-100 pb-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
-                    <Trash2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-100 text-rose-800">
-                        Delete Passengers
-                      </span>
-                      <span className="text-xs text-slate-400">•</span>
-                      <span className="text-xs font-semibold text-slate-600">
-                        {targetDeleteParty?.partyName || 'Family Group'}
-                      </span>
-                    </div>
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-1">
-                      Select Which Passenger to Delete
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Check the passenger(s) you wish to remove from this manifest, then click <strong>Save Changes</strong>.
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setSelectedPaxIdsToDelete([]);
-                  }}
-                  className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Target Family Group Switcher */}
-              <div className="bg-slate-50/70 p-3 rounded-xl border border-slate-200/80 space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-500">Target Family Group:</span>
-                  <span className="text-[11px] font-mono text-slate-400">UID: {deletePartyUid}</span>
-                </div>
-                <SearchablePartySelect
-                  parties={parties}
-                  value={deletePartyUid}
-                  onChange={(uid) => {
-                    setDeletePartyUid(uid);
-                    setSelectedPaxIdsToDelete([]);
-                  }}
-                  allowAll={false}
-                  placeholder="Choose Family Group"
-                />
-              </div>
-
-              {/* Selection Toolbar: Select All & Counters */}
-              <div className="flex items-center justify-between gap-3 text-xs border-b border-slate-100 pb-2">
-                <button
-                  type="button"
-                  onClick={() => handleSelectAllPaxToDelete(allTargetPaxIds)}
-                  className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 py-1 px-2 rounded-lg hover:bg-slate-100 transition-colors"
-                >
-                  <span className={`w-4 h-4 rounded border flex items-center justify-center ${
-                    isAllSelected 
-                      ? 'bg-rose-600 border-rose-600 text-white' 
-                      : selectedPaxIdsToDelete.length > 0 
-                      ? 'bg-rose-100 border-rose-400 text-rose-700' 
-                      : 'border-slate-300 bg-white'
-                  }`}>
-                    {isAllSelected ? <Check className="w-3 h-3 stroke-[3]" /> : selectedPaxIdsToDelete.length > 0 ? '—' : null}
-                  </span>
-                  <span>{isAllSelected ? 'Deselect All' : 'Select All Passengers'}</span>
-                </button>
-
-                <div className="text-right">
-                  {selectedPaxIdsToDelete.length > 0 ? (
-                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                      {selectedPaxIdsToDelete.length} of {targetPassengers.length} Selected to Delete
-                    </span>
-                  ) : (
-                    <span className="text-slate-400 text-xs italic">
-                      No passengers selected yet
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* List of Passengers with Checkboxes */}
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {targetPassengers.length === 0 ? (
-                  <div className="p-6 text-center text-slate-400 italic text-xs">
-                    No passengers found in this family manifest.
-                  </div>
-                ) : (
-                  targetPassengers.map((pax, index) => {
-                    const isChecked = selectedPaxIdsToDelete.includes(pax.id);
-                    const isHead = index === 0;
-                    return (
-                      <div
-                        key={pax.id || index}
-                        onClick={() => handleTogglePaxToDelete(pax.id)}
-                        className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between gap-3 select-none ${
-                          isChecked 
-                            ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-300/80 shadow-2xs' 
-                            : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          {/* Custom styled checkbox */}
-                          <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
-                            isChecked 
-                              ? 'bg-rose-600 border-rose-600 text-white shadow-xs' 
-                              : 'border-slate-300 bg-white hover:border-slate-400'
-                          }`}>
-                            {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                          </div>
-
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-xs text-slate-900">
-                                {pax.prefix && <span className="text-slate-400 mr-1 text-[11px]">{pax.prefix}</span>}
-                                {pax.name}
-                              </span>
-
-                              {isHead ? (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.2 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                                  <Crown className="w-2.5 h-2.5 text-amber-600" />
-                                  Family Head
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.2 rounded-full bg-slate-100 text-slate-600">
-                                  <Users className="w-2.5 h-2.5 text-slate-400" />
-                                  {pax.relationship || 'Dependent'}
-                                </span>
-                              )}
-
-                              <span className="text-[10px] px-1.5 py-0.2 rounded font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                {pax.category || 'Adult'}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono mt-0.5">
-                              <span>Passport: <strong className="text-slate-600">{pax.passportNo || '—'}</strong></span>
-                              {pax.dob && <span>DOB: <strong className="text-slate-600">{pax.dob}</strong></span>}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="shrink-0 text-right">
-                          {isChecked ? (
-                            <span className="text-[10px] font-bold text-rose-600 bg-rose-100/80 px-2 py-0.5 rounded-md">
-                              Will be deleted
-                            </span>
-                          ) : (
-                            <span className="text-[10px] font-semibold text-slate-400">
-                              Keep
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Warning if Head is selected */}
-              {isHeadSelected && (
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2.5">
-                  <span className="text-base shrink-0">⚠️</span>
-                  <div>
-                    <strong>Family Head Selected:</strong>{' '}
-                    {targetPassengers.length === selectedPaxIdsToDelete.length ? (
-                      <span>All passengers are selected. This will delete the entire family manifest.</span>
-                    ) : (
-                      <span>Removing the Family Head will automatically designate the next remaining passenger as the new Head.</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Modal Action Footer */}
-              <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setSelectedPaxIdsToDelete([]);
-                  }}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 rounded-xl hover:bg-slate-100 transition-colors"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSaveDeleteChanges}
-                  disabled={selectedPaxIdsToDelete.length === 0}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-2 ${
-                    selectedPaxIdsToDelete.length > 0
-                      ? 'bg-rose-600 hover:bg-rose-700 text-white cursor-pointer active:scale-95'
-                      : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                  }`}
-                >
-                  <Check className="w-4 h-4 stroke-[2.5]" />
-                  <span>
-                    {selectedPaxIdsToDelete.length > 0
-                      ? `Save Changes (Delete ${selectedPaxIdsToDelete.length} Passenger${selectedPaxIdsToDelete.length > 1 ? 's' : ''})`
-                      : 'Save Changes'}
-                  </span>
-                </button>
-              </div>
-
-            </div>
-          </div>
-        );
-      })()}
 
     </div>
   );
