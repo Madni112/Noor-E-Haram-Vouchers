@@ -118,26 +118,26 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
     <div className="space-y-4">
       
       {/* Module Title Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-100 text-amber-900 border border-amber-300">
+            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
               Module B
             </span>
-            <h2 className="text-base sm:text-lg font-black text-emerald-950 uppercase">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">
               Dynamic Multi-Stay Hotel Voucher Engine
             </h2>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1">
             Generates legal proof of accommodation with chronological Makkah &amp; Madinah blocks, dual English/Urdu compliance footer &amp; live QR verification.
           </p>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold shadow-md transition-all active:scale-95"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95"
         >
-          <PlusCircle className="w-4 h-4 stroke-[2.5]" />
+          <PlusCircle className="w-3.5 h-3.5 text-slate-300" />
           <span>Generate Hotel Voucher</span>
         </button>
       </div>
@@ -171,7 +171,7 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
             return (
               <div 
                 key={v.id} 
-                className="bg-white border border-slate-200 hover:border-emerald-700/60 rounded-xl p-4 shadow-sm hover:shadow-md transition-all space-y-3 flex flex-col justify-between"
+                className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all space-y-3 flex flex-col justify-between"
               >
                 <div>
                   {/* Card Header */}
@@ -432,7 +432,7 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold shadow"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-xs transition-all active:scale-95"
                 >
                   Confirm &amp; Generate Voucher
                 </button>

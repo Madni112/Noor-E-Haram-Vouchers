@@ -96,17 +96,17 @@ export default function InvoiceLedger({ invoices = [], onInvoicesUpdated }) {
     <div className="space-y-4">
       
       {/* Module Title Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-purple-100 text-purple-900 border border-purple-300">
+            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
               Module D
             </span>
-            <h2 className="text-base sm:text-lg font-black text-emerald-950 uppercase">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">
               Financial Ledger Billing &amp; Invoice Engine
             </h2>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1">
             Formal corporate invoices, payment receipt registers, and live debt collection balances.
           </p>
         </div>
@@ -117,9 +117,9 @@ export default function InvoiceLedger({ invoices = [], onInvoicesUpdated }) {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
-              className={`px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wider transition-all ${
                 statusFilter === s
-                  ? 'bg-purple-900 text-white shadow-sm'
+                  ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
@@ -130,7 +130,7 @@ export default function InvoiceLedger({ invoices = [], onInvoicesUpdated }) {
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input 
@@ -138,7 +138,7 @@ export default function InvoiceLedger({ invoices = [], onInvoicesUpdated }) {
             placeholder="Search invoices by invoice #, party, or UID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-700"
+            className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 bg-slate-50/50"
           />
         </div>
         <span className="text-xs text-slate-500 font-mono">
@@ -147,19 +147,19 @@ export default function InvoiceLedger({ invoices = [], onInvoicesUpdated }) {
       </div>
 
       {/* Invoices Spreadsheet Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-[11px]">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-emerald-950 text-white font-extrabold text-[10px] uppercase tracking-wider">
-                <th className="py-2.5 px-3 border-r border-emerald-900">Invoice Ref #</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900">Party Head (Debtor)</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900 text-center">Issue / Due Date</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900 text-right">Total Billed</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900 text-right">Paid Receipts</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900 text-right">Balance Due</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900 text-center">Financial Status</th>
-                <th className="py-2.5 px-3 text-right">Actions</th>
+              <tr className="bg-slate-50/90 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-200/80">
+                <th className="py-3 px-3.5 border-r border-slate-100">Invoice Ref #</th>
+                <th className="py-3 px-3.5 border-r border-slate-100">Party Head (Debtor)</th>
+                <th className="py-3 px-3.5 border-r border-slate-100 text-center">Issue / Due Date</th>
+                <th className="py-3 px-3.5 border-r border-slate-100 text-right">Total Billed</th>
+                <th className="py-3 px-3.5 border-r border-slate-100 text-right">Paid Receipts</th>
+                <th className="py-3 px-3.5 border-r border-slate-100 text-right">Balance Due</th>
+                <th className="py-3 px-3.5 border-r border-slate-100 text-center">Financial Status</th>
+                <th className="py-3 px-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 font-sans">
@@ -171,34 +171,34 @@ export default function InvoiceLedger({ invoices = [], onInvoicesUpdated }) {
                 </tr>
               ) : (
                 filteredInvoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-2 px-3 border-r border-slate-200 font-mono font-bold text-purple-900">
+                  <tr key={inv.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 font-mono font-bold text-slate-900">
                       {inv.invoiceNo}
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200">
-                      <span className="font-bold text-slate-900 block uppercase">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100">
+                      <span className="font-bold text-slate-900 block">
                         {inv.partyName}
                       </span>
-                      <span className="font-mono text-[9px] text-slate-500">
+                      <span className="font-mono text-[10px] text-slate-400">
                         {inv.partyHeadUid}
                       </span>
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-center font-mono text-[10px] text-slate-600">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center font-mono text-xs text-slate-500">
                       {inv.issueDate} ➔ {inv.dueDate}
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-right font-mono font-bold text-slate-900">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-right font-mono font-bold text-slate-900">
                       {inv.currency} {(inv.totalAmount || 0).toLocaleString()}
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-right font-mono font-bold text-emerald-800">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-right font-mono font-bold text-emerald-600">
                       {inv.currency} {(inv.paidAmount || 0).toLocaleString()}
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-right font-mono font-black text-rose-800">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-right font-mono font-bold text-rose-600">
                       {inv.currency} {(inv.balanceDue || 0).toLocaleString()}
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-center">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center">
                       {getStatusChip(inv.status)}
                     </td>
-                    <td className="py-2 px-3 text-right">
+                    <td className="py-2.5 px-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {inv.balanceDue > 0 && (
                           <button
@@ -206,7 +206,7 @@ export default function InvoiceLedger({ invoices = [], onInvoicesUpdated }) {
                               setActiveInvoiceForPay(inv);
                               setPayAmount(String(inv.balanceDue));
                             }}
-                            className="px-2 py-0.5 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[10px] shadow-sm transition-all"
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-xs transition-all active:scale-95"
                           >
                             +Pay
                           </button>
@@ -308,7 +308,7 @@ export default function InvoiceLedger({ invoices = [], onInvoicesUpdated }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold shadow"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-xs transition-all active:scale-95"
                 >
                   Post Payment to Ledger
                 </button>

@@ -195,27 +195,27 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     <div className="space-y-4">
       
       {/* Module Title & Quick Action Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-emerald-100 text-emerald-900 border border-emerald-300">
+            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
               Module A
             </span>
-            <h2 className="text-base sm:text-lg font-black text-emerald-950 uppercase">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">
               Unified Passenger &amp; Group Profile Manager
             </h2>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Strict parent-child registry mapping all downstream vouchers &amp; manifests to <strong className="text-slate-800">Party Head UID</strong>.
+          <p className="text-xs text-slate-500 mt-1">
+            Strict parent-child registry mapping all downstream vouchers &amp; manifests to <strong className="text-slate-700">Party Head UID</strong>.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => setShowNewPartyModal(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold border border-slate-300 transition-all shadow-sm"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-200/90 transition-all shadow-xs"
           >
-            <Users className="w-3.5 h-3.5 text-slate-600" />
+            <Users className="w-3.5 h-3.5 text-slate-500" />
             <span>New Party Group</span>
           </button>
 
@@ -224,23 +224,23 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
               setTargetPartyUid(selectedPartyUid !== 'ALL' ? selectedPartyUid : (parties[0]?.partyHeadUid || ''));
               setShowAddPaxModal(true);
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold shadow-md transition-all active:scale-95"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95"
           >
-            <PlusCircle className="w-4 h-4 stroke-[2.5]" />
+            <PlusCircle className="w-3.5 h-3.5 text-slate-300" />
             <span>Add Pilgrim (PAX)</span>
           </button>
         </div>
       </div>
 
       {/* Filter and Selector Controls */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Parent Party Dropdown */}
         <div className="flex items-center gap-2">
-          <label className="text-xs font-bold text-slate-600 shrink-0">Filter by Party Head:</label>
+          <label className="text-xs font-semibold text-slate-500 shrink-0">Filter by Party Head:</label>
           <select 
             value={selectedPartyUid}
             onChange={(e) => setSelectedPartyUid(e.target.value)}
-            className="px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold bg-slate-50 text-slate-800 outline-none focus:ring-2 focus:ring-emerald-700"
+            className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold bg-slate-50/70 text-slate-800 outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
           >
             <option value="ALL">Show All Parties ({parties.length} Groups)</option>
             {parties.map(p => (
@@ -259,25 +259,25 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             placeholder="Search by name, passport #, visa #..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-emerald-700"
+            className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 bg-slate-50/50"
           />
         </div>
       </div>
 
-      {/* Spreadsheet-Style Passenger Matrix Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      {/* Modern Light Passenger Matrix Table */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-[11px]">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-emerald-950 text-white font-extrabold text-[10px] uppercase tracking-wider">
-                <th className="py-2.5 px-3 border-r border-emerald-900 w-12 text-center">#</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900">Parent Party Head</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900">Full Legal Name</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900">Valid Passport Hash</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900 text-center">DOB &amp; Gender</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900 text-center">Age Demographics</th>
-                <th className="py-2.5 px-3 border-r border-emerald-900 text-center">Bed Allotment</th>
-                <th className="py-2.5 px-3">Saudi Visa #</th>
+              <tr className="bg-slate-50/90 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-200/80">
+                <th className="py-3 px-3.5 border-r border-slate-100 w-12 text-center">#</th>
+                <th className="py-3 px-3.5 border-r border-slate-100">Parent Party Head</th>
+                <th className="py-3 px-3.5 border-r border-slate-100">Full Legal Name</th>
+                <th className="py-3 px-3.5 border-r border-slate-100">Passport #</th>
+                <th className="py-3 px-3.5 border-r border-slate-100 text-center">DOB &amp; Gender</th>
+                <th className="py-3 px-3.5 border-r border-slate-100 text-center">Demographics</th>
+                <th className="py-3 px-3.5 border-r border-slate-100 text-center">Bed</th>
+                <th className="py-3 px-3.5">Saudi Visa #</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 font-sans">
@@ -289,47 +289,47 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                 </tr>
               ) : (
                 displayPassengers.map((pax, idx) => (
-                  <tr key={pax.id || idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-2 px-3 border-r border-slate-200 text-center font-mono font-bold text-slate-400">
+                  <tr key={pax.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center font-mono font-semibold text-slate-400">
                       {idx + 1}
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200">
-                      <span className="font-mono font-bold text-emerald-800 block text-[10px]">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100">
+                      <span className="font-mono font-bold text-slate-900 block text-[10px]">
                         {pax.parentPartyUid}
                       </span>
-                      <span className="font-bold text-slate-800 text-[10.5px] uppercase">
+                      <span className="font-semibold text-slate-700 text-xs">
                         {pax.parentPartyName}
                       </span>
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200 font-black text-slate-900 uppercase">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 font-bold text-slate-900">
                       {pax.prefix && <span className="text-slate-400 text-[10px] mr-1">{pax.prefix}</span>}
                       {pax.name}
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200 font-mono font-bold text-slate-700">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 font-mono font-semibold text-slate-700">
                       {pax.passportNo || '—'}
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-center font-mono text-slate-600">
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center font-mono text-slate-500">
                       {pax.dob || '—'} ({pax.gender || 'M'})
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-center">
-                      <span className={`inline-block px-2 py-0.5 rounded-full font-bold text-[9px] uppercase ${
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center">
+                      <span className={`inline-block px-2.5 py-0.5 rounded-full font-semibold text-[10px] ${
                         pax.category === 'Child'
-                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
                           : pax.category === 'Infant'
-                          ? 'bg-blue-100 text-blue-900 border border-blue-300'
-                          : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200'
                       }`}>
                         {pax.category || 'Adult'}
                       </span>
                     </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-center">
-                      <span className={`font-mono font-bold text-[9.5px] px-1.5 py-0.5 rounded ${
-                        pax.hasBed !== false ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center">
+                      <span className={`font-mono font-bold text-[10px] px-2 py-0.5 rounded-md ${
+                        pax.hasBed !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
                       }`}>
                         {pax.hasBed !== false ? 'YES' : 'NO'}
                       </span>
                     </td>
-                    <td className="py-2 px-3 font-mono font-bold text-emerald-900">
+                    <td className="py-2.5 px-3.5 font-mono font-semibold text-slate-800">
                       {pax.visaNo || 'VERIFIED'}
                     </td>
                   </tr>
@@ -477,7 +477,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold shadow"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-xs transition-all active:scale-95"
                 >
                   Save Pilgrim Record
                 </button>
@@ -542,7 +542,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold shadow"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold shadow-xs transition-all active:scale-95"
                 >
                   Create Sovereign Party
                 </button>

@@ -123,26 +123,26 @@ export default function CostEstimator({ estimates = [], parties = [], onEstimate
     <div className="space-y-4">
       
       {/* Module Header */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-blue-100 text-blue-900 border border-blue-300">
+            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase bg-slate-100 text-slate-700">
               Module C
             </span>
-            <h2 className="text-base sm:text-lg font-black text-emerald-950 uppercase">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900">
               Pipeline Package Cost Estimator (Pre-Sales)
             </h2>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-1">
             Custom holiday package pricing with variable markup overrides, customer draft quotes &amp; 1-Click invoice conversion.
           </p>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg text-xs font-bold shadow-md transition-all active:scale-95"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95"
         >
-          <PlusCircle className="w-4 h-4 stroke-[2.5]" />
+          <PlusCircle className="w-3.5 h-3.5 text-slate-300" />
           <span>New Cost Proposal</span>
         </button>
       </div>
@@ -374,20 +374,20 @@ export default function CostEstimator({ estimates = [], parties = [], onEstimate
               </div>
 
               {/* Dynamic Live Calculation Preview */}
-              <div className="p-3 bg-emerald-950 text-white rounded-lg text-xs space-y-1">
-                <div className="flex justify-between text-emerald-300">
+              <div className="p-4 bg-slate-900 text-white rounded-xl text-xs space-y-1.5 shadow-xs">
+                <div className="flex justify-between text-slate-300">
                   <span>Net Subtotal:</span>
                   <span className="font-mono">PKR {subtotal.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-amber-300">
+                <div className="flex justify-between text-emerald-400 font-semibold">
                   <span>Markup ({markupPercent}%):</span>
                   <span className="font-mono">+PKR {marginAmt.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-white font-black text-sm border-t border-emerald-800 pt-1">
+                <div className="flex justify-between text-white font-bold text-sm border-t border-slate-800 pt-1.5">
                   <span>Grand Total Quote:</span>
-                  <span className="text-amber-300 font-mono">PKR {grandTotal.toLocaleString()}</span>
+                  <span className="text-amber-400 font-mono">PKR {grandTotal.toLocaleString()}</span>
                 </div>
-                <div className="text-[10px] text-emerald-200 text-right">
+                <div className="text-[10px] text-slate-400 text-right">
                   Per PAX: PKR {perPax.toLocaleString()}
                 </div>
               </div>
@@ -396,13 +396,13 @@ export default function CostEstimator({ estimates = [], parties = [], onEstimate
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-3 py-1.5 text-slate-600 hover:text-slate-800 font-semibold"
+                  className="px-3 py-1.5 text-slate-600 hover:text-slate-800 font-semibold text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-800 hover:bg-emerald-900 text-white rounded-lg font-bold shadow"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-xs transition-all active:scale-95"
                 >
                   Save Pre-Sales Proposal
                 </button>

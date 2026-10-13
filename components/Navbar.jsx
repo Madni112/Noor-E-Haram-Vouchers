@@ -12,6 +12,11 @@ export default function Navbar() {
   const pathname = usePathname();
   const { isAdmin, logout } = useAuth();
 
+  // If inside ERP Portal, let the dedicated Left Sidebar ERP layout manage its own header
+  if (pathname && pathname.startsWith('/erp')) {
+    return null;
+  }
+
   return (
     <header className="sticky top-0 z-50 bg-emerald-950/90 backdrop-blur-md border-b border-emerald-800/40 text-white no-print">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -27,7 +32,7 @@ export default function Navbar() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-heading font-bold text-lg tracking-wide text-white group-hover:text-amber-300 transition-colors">
-                  NOOR E HARAM TRAVELS & TOURS
+                  CHEEPA FJ TRAVELS
                 </span>
                 <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-emerald-800/80 text-amber-300 border border-amber-400/20">
                   {isAdmin ? 'Admin Portal' : 'Official Voucher'}
