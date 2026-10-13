@@ -24,7 +24,7 @@ import {
   Sparkles,
   ChevronDown
 } from 'lucide-react';
-import { saveParty, deleteParty, getAllParties } from '../../lib/erpData';
+import { saveParty, deleteParty, getAllParties, updatePassenger } from '../../lib/erpData';
 
 // Searchable SKU-style Family Group Dropdown Combobox
 function SearchablePartySelect({ 
@@ -286,6 +286,42 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isDeleteMode]);
+
+  // Edit Single Passenger Modal State
+  const [showEditPaxModal, setShowEditPaxModal] = useState(false);
+  const [editingPax, setEditingPax] = useState(null);
+
+  const openEditPassengerModal = (pax) => {
+    cancelDelete();
+    setEditingPax({
+      ...pax,
+      prefix: pax.prefix || 'MR',
+      name: pax.name || '',
+      passportNo: pax.passportNo || '',
+      dob: pax.dob || '',
+      gender: pax.gender || (pax.prefix === 'MRS' || pax.prefix === 'MS' ? 'F' : 'M'),
+      category: pax.category || 'Adult',
+      hasBed: pax.hasBed !== false,
+      visaNo: pax.visaNo || '',
+      relationship: pax.relationship || (pax.isPartyHead ? 'Family Head / Lead Pilgrim' : 'Family Member'),
+    });
+    setShowEditPaxModal(true);
+  };
+
+  const handleSaveEditedPassenger = (e) => {
+    if (e) e.preventDefault();
+    if (!editingPax || !editingPax.name.trim()) {
+      alert('Passenger full legal name is required');
+      return;
+    }
+
+    const updatedList = updatePassenger(editingPax.parentPartyUid, editingPax.id, editingPax);
+    if (onPartiesUpdated) {
+      onPartiesUpdated(updatedList);
+    }
+    setShowEditPaxModal(false);
+    setEditingPax(null);
+  };
 
   // Family Group Information
   const [familyName, setFamilyName] = useState('');
@@ -897,14 +933,15 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                       <td className="py-2.5 px-3.5 text-right">
                         <div className="flex items-center justify-end">
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              openAddToExistingModal(pax.parentPartyUid);
+                              openEditPassengerModal(pax);
                             }}
-                            title="Add family member to this group"
-                            className="p-1 rounded-md text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                            title={`Edit details for ${pax.name}`}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all cursor-pointer shadow-2xs group"
                           >
-                            <UserPlus className="w-3.5 h-3.5" />
+                            <Edit3 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
                           </button>
                         </div>
                       </td>
@@ -1255,6 +1292,238 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* 4. EDIT PASSENGER DETAILS MODAL */}
+      {showEditPaxModal && editingPax && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-100/80 border border-emerald-200 text-emerald-800 flex items-center justify-center shrink-0">
+                  <Edit3 className="w-5 h-5 text-emerald-700" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    Edit Passenger Details
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
+                      {editingPax.voucherRefNo || editingPax.parentPartyUid}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-600 truncate max-w-[200px] sm:max-w-xs">
+                      {editingPax.parentPartyName}
+                    </span>
+                    {editingPax.isPartyHead ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                        <Crown className="w-2.5 h-2.5 text-amber-600" />
+                        Family Head
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                        <Users className="w-2.5 h-2.5 text-slate-400" />
+                        Family Member
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditPaxModal(false);
+                  setEditingPax(null);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form onSubmit={handleSaveEditedPassenger} className="p-6 space-y-4 overflow-y-auto">
+              
+              {editingPax.isPartyHead && (
+                <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900">
+                  <Crown className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Lead Pilgrim &amp; Family Head:</span>
+                    <p className="text-[11px] text-amber-700 mt-0.5">
+                      Updating this passenger's legal name will automatically update the Family Group name and the main Transport &amp; Hotel Voucher header across the entire system.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                
+                {/* Prefix */}
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Honorific / Prefix
+                  </label>
+                  <select
+                    value={editingPax.prefix || 'MR'}
+                    onChange={(e) => setEditingPax({ ...editingPax, prefix: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
+                  >
+                    <option value="MR">MR</option>
+                    <option value="MRS">MRS</option>
+                    <option value="MS">MS</option>
+                    <option value="MSTR">MSTR</option>
+                    <option value="CHD">CHD</option>
+                    <option value="INF">INF</option>
+                  </select>
+                </div>
+
+                {/* Demographics Category */}
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Demographics Category
+                  </label>
+                  <select
+                    value={editingPax.category || 'Adult'}
+                    onChange={(e) => setEditingPax({ ...editingPax, category: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
+                  >
+                    <option value="Adult">Adult</option>
+                    <option value="Child">Child</option>
+                    <option value="Infant">Infant</option>
+                  </select>
+                </div>
+
+                {/* Full Legal Name (Col-Span 2) */}
+                <div className="sm:col-span-2">
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Full Legal Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. SAFWAN KHAN BURFAT"
+                    value={editingPax.name || ''}
+                    onChange={(e) => setEditingPax({ ...editingPax, name: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl uppercase font-bold text-slate-900 outline-none focus:ring-1 focus:ring-slate-900 shadow-2xs"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Matches passport exactly. Changes sync directly to vouchers, tickets &amp; hotel manifests.
+                  </p>
+                </div>
+
+                {/* Passport Number */}
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Passport Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. AB3989501"
+                    value={editingPax.passportNo || ''}
+                    onChange={(e) => setEditingPax({ ...editingPax, passportNo: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl uppercase font-mono font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
+                  />
+                </div>
+
+                {/* Date of Birth */}
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    value={editingPax.dob || ''}
+                    onChange={(e) => setEditingPax({ ...editingPax, dob: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-800 text-xs outline-none focus:ring-1 focus:ring-slate-900"
+                  />
+                </div>
+
+                {/* Gender */}
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Gender
+                  </label>
+                  <select
+                    value={editingPax.gender || 'M'}
+                    onChange={(e) => setEditingPax({ ...editingPax, gender: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
+                  >
+                    <option value="M">Male (M)</option>
+                    <option value="F">Female (F)</option>
+                  </select>
+                </div>
+
+                {/* Relationship / Manifest Role */}
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Relationship / Manifest Role
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Family Member, Spouse, Son"
+                    value={editingPax.relationship || ''}
+                    onChange={(e) => setEditingPax({ ...editingPax, relationship: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
+                  />
+                </div>
+
+                {/* Visa Number */}
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Saudi Visa # <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 6178829102"
+                    value={editingPax.visaNo || ''}
+                    onChange={(e) => setEditingPax({ ...editingPax, visaNo: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
+                  />
+                </div>
+
+                {/* Bed Allocation */}
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">
+                    Bed Allocation
+                  </label>
+                  <select
+                    value={editingPax.hasBed !== false ? 'YES' : 'NO'}
+                    onChange={(e) => setEditingPax({ ...editingPax, hasBed: e.target.value === 'YES' })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
+                  >
+                    <option value="YES">Bed Included (Adult / Child with Bed)</option>
+                    <option value="NO">No Bed (Infant / Sharing Child)</option>
+                  </select>
+                </div>
+
+              </div>
+
+              {/* Action Buttons Footer */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditPaxModal(false);
+                    setEditingPax(null);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-all shadow-md flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                >
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Save Passenger Changes</span>
+                </button>
+              </div>
+
+            </form>
           </div>
         </div>
       )}
