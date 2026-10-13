@@ -27,13 +27,21 @@ import {
 import { saveParty, deleteParty, deletePassenger } from '../../lib/erpData';
 
 // Searchable SKU-style Family Group Dropdown Combobox
-function SearchablePartySelect({ parties = [], value, onChange }) {
+function SearchablePartySelect({ 
+  parties = [], 
+  value, 
+  onChange, 
+  allowAll = false,
+  allLabel = 'All Family Groups',
+  placeholder = 'Select Family Group' 
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const dropdownRef = useRef(null);
   const searchInputRef = useRef(null);
 
-  const selectedParty = parties.find(p => p.partyHeadUid === value) || parties[0];
+  const isAllSelected = allowAll && (value === 'ALL' || !value);
+  const selectedParty = parties.find(p => p.partyHeadUid === value);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -62,31 +70,53 @@ function SearchablePartySelect({ parties = [], value, onChange }) {
     );
   });
 
+  const showAllOption = allowAll && (!query || 'all family groups'.includes(query.toLowerCase().trim()));
+
   return (
     <div className="relative w-full" ref={dropdownRef}>
       {/* Trigger Button */}
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-xl hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 transition-all text-left shadow-2xs"
+        className="w-full flex items-center justify-between px-3 py-1.5 bg-white border border-slate-200 rounded-xl hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 transition-all text-left shadow-2xs"
       >
         <div className="flex items-center gap-2 min-w-0">
-          <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0 border border-slate-200">
-            {selectedParty?.partyHeadUid || '—'}
-          </span>
-          <span className="font-bold text-slate-900 text-xs truncate">
-            {selectedParty?.partyName || 'Select Family Group'}
-          </span>
-          <span className="text-[10px] font-semibold text-slate-400 shrink-0">
-            ({selectedParty?.passengers?.length || selectedParty?.totalPax || 0} existing members)
-          </span>
+          {isAllSelected ? (
+            <>
+              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white shrink-0">
+                ALL
+              </span>
+              <span className="font-bold text-slate-900 text-xs truncate">
+                {allLabel}
+              </span>
+              <span className="text-[10px] font-semibold text-slate-400 shrink-0">
+                ({parties.length} Manifests)
+              </span>
+            </>
+          ) : selectedParty ? (
+            <>
+              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0 border border-slate-200">
+                {selectedParty.partyHeadUid}
+              </span>
+              <span className="font-bold text-slate-900 text-xs truncate">
+                {selectedParty.partyName}
+              </span>
+              <span className="text-[10px] font-semibold text-slate-400 shrink-0">
+                ({selectedParty.passengers?.length || selectedParty.totalPax || 0} PAX)
+              </span>
+            </>
+          ) : (
+            <span className="text-slate-400 text-xs font-medium truncate">
+              {placeholder}
+            </span>
+          )}
         </div>
-        <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 ml-2 transition-transform duration-150 ${isOpen ? 'rotate-180 text-slate-700' : ''}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 ml-2 transition-transform duration-150 ${isOpen ? 'rotate-180 text-slate-700' : ''}`} />
       </button>
 
       {/* Popover Dropdown Panel */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 min-w-[280px]">
           {/* Search Box Header */}
           <div className="p-2 border-b border-slate-100 bg-slate-50/80">
             <div className="relative">
@@ -94,7 +124,7 @@ function SearchablePartySelect({ parties = [], value, onChange }) {
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search by family name, UID, or pilgrim..."
+                placeholder="Search by family, UID, or pilgrim..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-400 text-slate-800 placeholder:text-slate-400"
@@ -113,7 +143,45 @@ function SearchablePartySelect({ parties = [], value, onChange }) {
 
           {/* Options List */}
           <div className="max-h-56 overflow-y-auto divide-y divide-slate-100">
-            {filteredParties.length === 0 ? (
+            {/* "All Family Groups" Option if allowAll is true */}
+            {showAllOption && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange('ALL');
+                  setIsOpen(false);
+                  setQuery('');
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs transition-colors ${
+                  isAllSelected 
+                    ? 'bg-emerald-50/80 text-emerald-950 font-semibold' 
+                    : 'hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
+                    isAllSelected 
+                      ? 'bg-emerald-600 text-white border-emerald-600' 
+                      : 'bg-slate-900 text-white border-slate-900'
+                  }`}>
+                    ALL
+                  </span>
+                  <span className="font-bold text-slate-900 truncate">
+                    {allLabel}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                    {parties.length} Manifests
+                  </span>
+                  {isAllSelected && (
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  )}
+                </div>
+              </button>
+            )}
+
+            {filteredParties.length === 0 && !showAllOption ? (
               <div className="p-4 text-center text-xs text-slate-400 italic">
                 No matching family groups found
               </div>
@@ -519,20 +587,17 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       {/* Filter and Selector Controls */}
       <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Parent Party Dropdown */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
           <label className="text-xs font-semibold text-slate-500 shrink-0">Family Group Filter:</label>
-          <select 
-            value={selectedPartyUid}
-            onChange={(e) => setSelectedPartyUid(e.target.value)}
-            className="px-3 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold bg-slate-50/70 text-slate-800 outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400"
-          >
-            <option value="ALL">All Family Groups ({parties.length} Manifests)</option>
-            {parties.map(p => (
-              <option key={p.partyHeadUid} value={p.partyHeadUid}>
-                {p.partyHeadUid}: {p.partyName} ({p.passengers?.length || p.totalPax} PAX)
-              </option>
-            ))}
-          </select>
+          <div className="w-72 sm:w-80 max-w-full">
+            <SearchablePartySelect
+              parties={parties}
+              value={selectedPartyUid}
+              onChange={(uid) => setSelectedPartyUid(uid)}
+              allowAll={true}
+              allLabel="All Family Groups"
+            />
+          </div>
 
           {selectedPartyUid !== 'ALL' && (
             <>
