@@ -143,7 +143,7 @@ export default function ErpPortalPage() {
     },
     {
       id: 'PASSENGERS',
-      label: 'Passengers & Manifests',
+      label: 'Passengers',
       subtitle: 'Module A',
       icon: Users,
       badge: parties.length,
