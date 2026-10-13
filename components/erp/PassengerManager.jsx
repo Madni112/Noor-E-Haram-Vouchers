@@ -377,9 +377,27 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
           </select>
 
           {selectedPartyUid !== 'ALL' && (
-            <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              {parties.find(p => p.partyHeadUid === selectedPartyUid)?.passengers?.length || 0} Family Members
-            </span>
+            <>
+              <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                {parties.find(p => p.partyHeadUid === selectedPartyUid)?.passengers?.length || 0} Family Members
+              </span>
+
+              <button
+                onClick={() => {
+                  const p = parties.find(party => party.partyHeadUid === selectedPartyUid);
+                  if (window.confirm(`Are you sure you want to delete the entire party "${p?.partyName || selectedPartyUid}" and all its pilgrims? This will sync to Supabase cloud.`)) {
+                    const updated = deleteParty(selectedPartyUid);
+                    setSelectedPartyUid('ALL');
+                    if (onPartiesUpdated) onPartiesUpdated(updated);
+                  }
+                }}
+                title="Delete this entire family group"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-2.5 py-0.5 rounded-full border border-rose-200 transition-colors"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Delete Group</span>
+              </button>
+            </>
           )}
         </div>
 
