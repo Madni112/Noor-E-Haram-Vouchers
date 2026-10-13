@@ -90,27 +90,11 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   };
 
   // Add another family member row
-  const handleAddMemberRow = (type = 'member') => {
-    let newMember;
-    if (type === 'child') {
-      newMember = {
-        ...createDefaultAdditionalMember('Child / Dependent', 'MSTR', 'M'),
-        category: 'Child',
-        dob: '2016-05-10',
-        hasBed: true,
-      };
-    } else if (type === 'infant') {
-      newMember = {
-        ...createDefaultAdditionalMember('Infant', 'INF', 'M'),
-        category: 'Infant',
-        dob: '2025-01-15',
-        hasBed: false,
-      };
-    } else {
-      newMember = createDefaultAdditionalMember('Family Member / Relative', 'MRS', 'F');
-    }
-
-    setFamilyMembers([...familyMembers, newMember]);
+  const handleAddMember = () => {
+    setFamilyMembers([
+      ...familyMembers,
+      createDefaultAdditionalMember('Family Member', 'MRS', 'F')
+    ]);
   };
 
   // Remove member row
@@ -329,9 +313,8 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     if (curr.category === 'Child') acc.children++;
     else if (curr.category === 'Infant') acc.infants++;
     else acc.adults++;
-    if (curr.hasBed) acc.beds++;
     return acc;
-  }, { total: 0, adults: 0, children: 0, infants: 0, beds: 0 });
+  }, { total: 0, adults: 0, children: 0, infants: 0 });
 
   return (
     <div className="space-y-4">
@@ -426,15 +409,13 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                 <th className="py-3 px-3.5 border-r border-slate-100">Passport #</th>
                 <th className="py-3 px-3.5 border-r border-slate-100 text-center">DOB &amp; Gender</th>
                 <th className="py-3 px-3.5 border-r border-slate-100 text-center">Demographics</th>
-                <th className="py-3 px-3.5 border-r border-slate-100 text-center">Bed</th>
-                <th className="py-3 px-3.5 border-r border-slate-100">Saudi Visa #</th>
                 <th className="py-3 px-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-sans">
               {displayPassengers.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-10 text-center text-slate-400 font-medium italic">
+                  <td colSpan={8} className="py-10 text-center text-slate-400 font-medium italic">
                     No passenger records found. Click "Add Family / Passenger Manifest" above to create one.
                   </td>
                 </tr>
@@ -485,16 +466,6 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                       }`}>
                         {pax.category || 'Adult'}
                       </span>
-                    </td>
-                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center">
-                      <span className={`font-mono font-bold text-[10px] px-2 py-0.5 rounded-md ${
-                        pax.hasBed !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {pax.hasBed !== false ? 'YES' : 'NO'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3.5 border-r border-slate-100 font-mono font-semibold text-slate-800">
-                      {pax.visaNo || 'VERIFIED'}
                     </td>
                     <td className="py-2.5 px-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
@@ -674,33 +645,15 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                     </span>
                   </div>
 
-                  {/* Add Member Quick Buttons */}
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleAddMemberRow('member')}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                    >
-                      <UserPlus className="w-3 h-3 text-slate-600" />
-                      <span>+ Member / Spouse</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddMemberRow('child')}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 transition-colors"
-                    >
-                      <Heart className="w-3 h-3 text-amber-600" />
-                      <span>+ Child</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddMemberRow('infant')}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-800 transition-colors"
-                    >
-                      <Baby className="w-3 h-3 text-blue-600" />
-                      <span>+ Infant</span>
-                    </button>
-                  </div>
+                  {/* Add Member Quick Button */}
+                  <button
+                    type="button"
+                    onClick={handleAddMember}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-all active:scale-95"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5 text-slate-300" />
+                    <span>+ Add Family Member</span>
+                  </button>
                 </div>
 
                 {/* List of Member Cards */}
@@ -731,7 +684,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
                                 <Users className="w-3 h-3 text-slate-500" />
-                                {member.category === 'Child' ? 'Child Dependent' : member.category === 'Infant' ? 'Infant' : 'Family Member / Dependent'}
+                                Family Member / Dependent #{index + 1}
                               </span>
                             )}
                           </div>
@@ -748,15 +701,15 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                           )}
                         </div>
 
-                        {/* Fields Grid */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 text-xs">
+                        {/* Fields Grid (Clean 6-Field Layout: No Bed, No Visa #) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-6 gap-3 text-xs">
                           {/* Prefix */}
                           <div className="col-span-1">
-                            <label className="block text-slate-500 text-[10px] font-semibold mb-0.5">Prefix</label>
+                            <label className="block text-slate-500 text-[10px] font-semibold mb-1">Prefix</label>
                             <select
                               value={member.prefix}
                               onChange={(e) => handleUpdateMember(index, 'prefix', e.target.value)}
-                              className="w-full px-2 py-1.5 border border-slate-200 rounded-lg bg-white font-semibold text-slate-800 outline-none"
+                              className="w-full px-2.5 py-2 border border-slate-200 rounded-xl bg-white font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
                             >
                               <option value="MR">MR</option>
                               <option value="MRS">MRS</option>
@@ -768,8 +721,8 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                           </div>
 
                           {/* Full Name */}
-                          <div className="col-span-2 sm:col-span-3">
-                            <label className="block text-slate-500 text-[10px] font-semibold mb-0.5">
+                          <div className="col-span-1 sm:col-span-2 md:col-span-2">
+                            <label className="block text-slate-500 text-[10px] font-semibold mb-1">
                               Full Legal Name *
                             </label>
                             <input 
@@ -778,87 +731,56 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                               placeholder="e.g. ABDUL KARIM"
                               value={member.name}
                               onChange={(e) => handleUpdateMember(index, 'name', e.target.value)}
-                              className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white uppercase font-bold text-slate-900 outline-none focus:border-slate-400"
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white uppercase font-bold text-slate-900 outline-none focus:ring-1 focus:ring-slate-900"
                             />
                           </div>
 
                           {/* Passport Number */}
-                          <div className="col-span-2 sm:col-span-2">
-                            <label className="block text-slate-500 text-[10px] font-semibold mb-0.5">Passport #</label>
+                          <div className="col-span-1 sm:col-span-1 md:col-span-1">
+                            <label className="block text-slate-500 text-[10px] font-semibold mb-1">Passport #</label>
                             <input 
                               type="text"
                               placeholder="e.g. PK9928172"
                               value={member.passportNo}
                               onChange={(e) => handleUpdateMember(index, 'passportNo', e.target.value)}
-                              className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white uppercase font-mono text-slate-800 outline-none"
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white uppercase font-mono text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
                             />
                           </div>
 
                           {/* Demographics Category */}
-                          <div className="col-span-1 sm:col-span-2">
-                            <label className="block text-slate-500 text-[10px] font-semibold mb-0.5">Demographics</label>
+                          <div className="col-span-1 sm:col-span-1 md:col-span-1">
+                            <label className="block text-slate-500 text-[10px] font-semibold mb-1">Demographics</label>
                             <select
                               value={member.category}
                               onChange={(e) => handleUpdateMember(index, 'category', e.target.value)}
-                              className="w-full px-2 py-1.5 border border-slate-200 rounded-lg bg-white font-semibold text-slate-800 outline-none"
+                              className="w-full px-2.5 py-2 border border-slate-200 rounded-xl bg-white font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
                             >
-                              <option value="Adult">Adult (Adult PAX)</option>
-                              <option value="Child">Child (2 - 11 Yrs)</option>
-                              <option value="Infant">Infant (&lt; 2 Yrs)</option>
+                              <option value="Adult">Adult</option>
+                              <option value="Child">Child</option>
+                              <option value="Infant">Infant</option>
                             </select>
                           </div>
 
-                          {/* Date of Birth */}
-                          <div className="col-span-2 sm:col-span-2">
-                            <label className="block text-slate-500 text-[10px] font-semibold mb-0.5">DOB</label>
-                            <input 
-                              type="date"
-                              value={member.dob}
-                              onChange={(e) => handleUpdateMember(index, 'dob', e.target.value)}
-                              className="w-full px-2 py-1.5 border border-slate-200 rounded-lg bg-white font-mono text-slate-800 outline-none"
-                            />
+                          {/* Date of Birth & Gender */}
+                          <div className="col-span-1 sm:col-span-1 md:col-span-1">
+                            <label className="block text-slate-500 text-[10px] font-semibold mb-1">DOB &amp; Gender</label>
+                            <div className="flex items-center gap-1.5">
+                              <input 
+                                type="date"
+                                value={member.dob}
+                                onChange={(e) => handleUpdateMember(index, 'dob', e.target.value)}
+                                className="w-full px-2 py-2 border border-slate-200 rounded-xl bg-white font-mono text-slate-800 text-[11px] outline-none"
+                              />
+                              <select
+                                value={member.gender}
+                                onChange={(e) => handleUpdateMember(index, 'gender', e.target.value)}
+                                className="px-2 py-2 border border-slate-200 rounded-xl bg-white font-semibold text-slate-800 outline-none"
+                              >
+                                <option value="M">M</option>
+                                <option value="F">F</option>
+                              </select>
+                            </div>
                           </div>
-
-                          {/* Gender */}
-                          <div className="col-span-1">
-                            <label className="block text-slate-500 text-[10px] font-semibold mb-0.5">Gender</label>
-                            <select
-                              value={member.gender}
-                              onChange={(e) => handleUpdateMember(index, 'gender', e.target.value)}
-                              className="w-full px-2 py-1.5 border border-slate-200 rounded-lg bg-white font-semibold text-slate-800 outline-none"
-                            >
-                              <option value="M">Male (M)</option>
-                              <option value="F">Female (F)</option>
-                            </select>
-                          </div>
-
-                          {/* Bed Allotment */}
-                          <div className="col-span-1">
-                            <label className="block text-slate-500 text-[10px] font-semibold mb-0.5">Bed?</label>
-                            <select
-                              value={member.hasBed ? 'yes' : 'no'}
-                              onChange={(e) => handleUpdateMember(index, 'hasBed', e.target.value === 'yes')}
-                              className={`w-full px-2 py-1.5 border rounded-lg font-bold outline-none ${
-                                member.hasBed ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-slate-50 text-slate-600 border-slate-200'
-                              }`}
-                            >
-                              <option value="yes">YES</option>
-                              <option value="no">NO</option>
-                            </select>
-                          </div>
-
-                          {/* Saudi Visa # */}
-                          <div className="col-span-2 sm:col-span-4">
-                            <label className="block text-slate-500 text-[10px] font-semibold mb-0.5">Saudi Visa #</label>
-                            <input 
-                              type="text"
-                              placeholder="e.g. 6178829102"
-                              value={member.visaNo}
-                              onChange={(e) => handleUpdateMember(index, 'visaNo', e.target.value)}
-                              className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white font-mono text-slate-800 outline-none"
-                            />
-                          </div>
-
                         </div>
                       </div>
                     );
@@ -869,11 +791,11 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                 <div className="flex items-center justify-center pt-2">
                   <button
                     type="button"
-                    onClick={() => handleAddMemberRow('member')}
+                    onClick={handleAddMember}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-dashed border-slate-300 transition-all shadow-2xs hover:border-slate-400"
                   >
                     <PlusCircle className="w-3.5 h-3.5 text-slate-500" />
-                    <span>+ Add Another Family Member / Dependent</span>
+                    <span>+ Add Another Family Member</span>
                   </button>
                 </div>
               </div>
@@ -884,20 +806,17 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                   <span className="font-bold text-slate-900">
                     Manifest Summary:
                   </span>
-                  <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 font-semibold text-slate-800">
+                  <span className="px-2.5 py-0.5 rounded-md bg-white border border-slate-200 font-semibold text-slate-800">
                     Total: <strong>{modalSummary.total} PAX</strong>
                   </span>
-                  <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600">
+                  <span className="px-2.5 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600">
                     Adults: <strong>{modalSummary.adults}</strong>
                   </span>
-                  <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-amber-700">
+                  <span className="px-2.5 py-0.5 rounded-md bg-white border border-slate-200 text-amber-700">
                     Children: <strong>{modalSummary.children}</strong>
                   </span>
-                  <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-blue-700">
+                  <span className="px-2.5 py-0.5 rounded-md bg-white border border-slate-200 text-blue-700">
                     Infants: <strong>{modalSummary.infants}</strong>
-                  </span>
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold">
-                    Beds: <strong>{modalSummary.beds}</strong>
                   </span>
                 </div>
 
