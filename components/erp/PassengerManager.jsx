@@ -1549,7 +1549,13 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                   </label>
                   <select
                     value={editingPax.prefix || 'MR'}
-                    onChange={(e) => setEditingPax({ ...editingPax, prefix: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      let newGender = editingPax.gender || 'M';
+                      if (val === 'MRS' || val === 'MS') newGender = 'F';
+                      else if (val === 'MR' || val === 'MSTR') newGender = 'M';
+                      setEditingPax({ ...editingPax, prefix: val, gender: newGender });
+                    }}
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
                   >
                     <option value="MR">MR</option>
@@ -1568,7 +1574,12 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                   </label>
                   <select
                     value={editingPax.category || 'Adult'}
-                    onChange={(e) => setEditingPax({ ...editingPax, category: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      let hasBed = editingPax.hasBed !== false;
+                      if (val === 'Infant') hasBed = false;
+                      setEditingPax({ ...editingPax, category: val, hasBed });
+                    }}
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
                   >
                     <option value="Adult">Adult</option>
@@ -1620,64 +1631,6 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                     onChange={(e) => setEditingPax({ ...editingPax, dob: e.target.value })}
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-800 text-xs outline-none focus:ring-1 focus:ring-slate-900"
                   />
-                </div>
-
-                {/* Gender */}
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">
-                    Gender
-                  </label>
-                  <select
-                    value={editingPax.gender || 'M'}
-                    onChange={(e) => setEditingPax({ ...editingPax, gender: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
-                  >
-                    <option value="M">Male (M)</option>
-                    <option value="F">Female (F)</option>
-                  </select>
-                </div>
-
-                {/* Relationship / Manifest Role */}
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">
-                    Relationship / Manifest Role
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Family Member, Spouse, Son"
-                    value={editingPax.relationship || ''}
-                    onChange={(e) => setEditingPax({ ...editingPax, relationship: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
-                  />
-                </div>
-
-                {/* Visa Number */}
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">
-                    Saudi Visa # <span className="text-slate-400 font-normal">(Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 6178829102"
-                    value={editingPax.visaNo || ''}
-                    onChange={(e) => setEditingPax({ ...editingPax, visaNo: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-800 outline-none focus:ring-1 focus:ring-slate-900"
-                  />
-                </div>
-
-                {/* Bed Allocation */}
-                <div>
-                  <label className="block text-slate-700 font-semibold mb-1">
-                    Bed Allocation
-                  </label>
-                  <select
-                    value={editingPax.hasBed !== false ? 'YES' : 'NO'}
-                    onChange={(e) => setEditingPax({ ...editingPax, hasBed: e.target.value === 'YES' })}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
-                  >
-                    <option value="YES">Bed Included (Adult / Child with Bed)</option>
-                    <option value="NO">No Bed (Infant / Sharing Child)</option>
-                  </select>
                 </div>
 
               </div>
