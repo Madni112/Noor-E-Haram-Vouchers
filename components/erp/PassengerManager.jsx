@@ -26,9 +26,14 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  ShieldAlert,
+  AlertTriangle,
+  Building2,
+  Bus,
+  FileText
 } from 'lucide-react';
-import { saveParty, deleteParty, getAllParties, updatePassenger } from '../../lib/erpData';
+import { saveParty, deleteParty, getAllParties, updatePassenger, checkPassengerDependencies } from '../../lib/erpData';
 
 // Searchable SKU-style Family Group Dropdown Combobox
 function SearchablePartySelect({ 
@@ -264,6 +269,10 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [selectedPaxIdsToDelete, setSelectedPaxIdsToDelete] = useState([]);
   const deleteContainerRef = useRef(null);
+
+  // Dependency Protection Alert Modal State
+  const [showDependencyModal, setShowDependencyModal] = useState(false);
+  const [dependencyBlockInfo, setDependencyBlockInfo] = useState([]);
 
   const cancelDelete = () => {
     setIsDeleteMode(false);
@@ -598,6 +607,14 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   // Save changes: delete selected passengers, persist to storage & cloud, exit mode
   const handleSaveDelete = () => {
     if (selectedPaxIdsToDelete.length === 0) return;
+
+    // Safety Dependency Protection: Check if any selected passenger is used in Hotel Vouchers, Bills, or Transport Vouchers
+    const blocked = checkPassengerDependencies(selectedPaxIdsToDelete);
+    if (blocked && blocked.length > 0) {
+      setDependencyBlockInfo(blocked);
+      setShowDependencyModal(true);
+      return;
+    }
 
     let allParties = getAllParties();
     const idsSet = new Set(selectedPaxIdsToDelete);
@@ -1690,8 +1707,171 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
           </div>
         </div>
       )}
+      {/* Dependency Protection Alert Popup Modal */}
+      {showDependencyModal && dependencyBlockInfo.length > 0 && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => {
+            setShowDependencyModal(false);
+            setDependencyBlockInfo([]);
+          }}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl border border-rose-200 max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-rose-50 via-rose-50/50 to-white border-b border-rose-100 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-300 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
+                  <ShieldAlert className="w-5 h-5 text-rose-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    <span>Passenger Deletion Blocked</span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200">
+                      Protection Active
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    ERP Integrity Engine detected active linked vouchers or bills
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDependencyModal(false);
+                  setDependencyBlockInfo([]);
+                }}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto space-y-4">
+              {dependencyBlockInfo.map((item, idx) => (
+                <div 
+                  key={item.paxId || idx}
+                  className="rounded-2xl border border-rose-200/90 bg-rose-50/50 p-4 sm:p-5 space-y-3.5 shadow-sm"
+                >
+                  {/* Passenger identification badge */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rose-200/60 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <div className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-2">
+                          <span>{item.paxName}</span>
+                          {item.passportNo && (
+                            <span className="font-mono text-[11px] font-semibold text-slate-600 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                              {item.passportNo}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          Family Group: <span className="font-medium text-slate-700">{item.parentPartyName}</span> (#{item.voucherRefNo})
+                        </div>
+                      </div>
+                    </div>
+                    {item.isHead && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full">
+                        <Crown className="w-3 h-3 text-amber-600" />
+                        Family Head
+                      </span>
+                    )}
+                  </div>
 
+                  {/* Required Exact Error Message */}
+                  <div className="p-3.5 bg-white rounded-xl border border-rose-200 shadow-xs flex items-start gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div className="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed">
+                      the passenger name can&apos;t be deleted as it is currently using in{' '}
+                      <span className="font-bold text-rose-700 underline decoration-rose-300 underline-offset-2">
+                        {item.dependencies.map(d => d.label).join(', ')}
+                      </span>
+                      , first remove the name from there.
+                    </div>
+                  </div>
+
+                  {/* Document Breakdown List */}
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                      Active Linked Documents ({item.dependencies.length})
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {item.dependencies.map((dep, dIdx) => {
+                        let IconComp = FileText;
+                        let iconBg = 'bg-slate-100 text-slate-700 border-slate-200';
+                        if (dep.type === 'Hotel Voucher') {
+                          IconComp = Building2;
+                          iconBg = 'bg-amber-50 text-amber-700 border-amber-200';
+                        } else if (dep.type === 'Transport Voucher') {
+                          IconComp = Bus;
+                          iconBg = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                        } else if (dep.type === 'Bill / Invoice') {
+                          IconComp = CreditCard;
+                          iconBg = 'bg-blue-50 text-blue-700 border-blue-200';
+                        }
+
+                        return (
+                          <div 
+                            key={dIdx}
+                            className="flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 text-xs hover:border-slate-300 transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${iconBg}`}>
+                                <IconComp className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="truncate">
+                                <div className="font-bold text-slate-800 truncate">
+                                  {dep.label}
+                                </div>
+                                <div className="text-[11px] text-slate-500 truncate">
+                                  {dep.detail}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md shrink-0 ml-2">
+                              {dep.type}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Informative Guidance note */}
+              <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl text-[11px] text-slate-600 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  This safety restriction protects your operations from orphaned transport manifests, invalid hotel check-ins, or broken accounting balances.
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDependencyModal(false);
+                  setDependencyBlockInfo([]);
+                }}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <Check className="w-4 h-4 text-emerald-400" />
+                <span>Understood / Keep Safe</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
