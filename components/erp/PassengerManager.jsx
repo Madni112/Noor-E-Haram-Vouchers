@@ -36,8 +36,8 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
 
   // Family Group Information
   const [familyName, setFamilyName] = useState('');
-  const [familyPhone, setFamilyPhone] = useState('0311-2324764');
-  const [packageTitle, setPackageTitle] = useState('18 Days Standard Umrah');
+  const [familyPhone, setFamilyPhone] = useState('');
+  const [packageTitle, setPackageTitle] = useState('');
 
   // Dynamic Multi-Passenger Family Members Array
   const createDefaultHeadMember = () => ({
@@ -47,7 +47,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     prefix: 'MR',
     name: '',
     passportNo: '',
-    dob: '1985-06-15',
+    dob: '',
     gender: 'M',
     category: 'Adult', // Adult | Child | Infant
     hasBed: true,
@@ -61,7 +61,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     prefix: pref,
     name: '',
     passportNo: '',
-    dob: '1990-01-01',
+    dob: '',
     gender: gen,
     category: 'Adult',
     hasBed: true,
@@ -74,8 +74,8 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   const openNewFamilyModal = () => {
     setModalMode('NEW_FAMILY');
     setFamilyName('');
-    setFamilyPhone('0311-2324764');
-    setPackageTitle('18 Days Standard Umrah');
+    setFamilyPhone('');
+    setPackageTitle('');
     setFamilyMembers([createDefaultHeadMember()]);
     setShowFamilyModal(true);
   };
@@ -159,7 +159,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
 
     if (modalMode === 'NEW_FAMILY') {
       const headName = familyMembers[0].name.trim().toUpperCase();
-      const resolvedFamilyName = (familyName.trim() || headName).toUpperCase();
+      const resolvedFamilyName = headName || 'UNNAMED GROUP';
 
       const newUid = `PHU-${String(parties.length + 1).padStart(4, '0')}`;
       const now = new Date().toISOString();
@@ -169,12 +169,12 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
         sNo: String(idx + 1),
         name: m.name.trim().toUpperCase(),
         prefix: m.prefix,
-        passportNo: m.passportNo.trim().toUpperCase() || `PK${Math.floor(1000000 + Math.random() * 9000000)}`,
-        dob: m.dob || '1990-01-01',
-        gender: m.gender || 'M',
+        passportNo: m.passportNo.trim().toUpperCase() || '',
+        dob: m.dob || '',
+        gender: m.gender || (m.prefix === 'MRS' || m.prefix === 'MS' ? 'F' : 'M'),
         category: m.category || 'Adult',
         hasBed: Boolean(m.hasBed),
-        visaNo: m.visaNo.trim() || `617${Math.floor(1000000 + Math.random() * 9000000)}`,
+        visaNo: m.visaNo.trim() || '',
         relationship: m.relationship || (idx === 0 ? 'Family Head' : 'Family Member'),
         contactPhone: familyPhone.trim(),
       }));
@@ -184,11 +184,11 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
         voucherRefNo: `UB-${String(parties.length + 1).padStart(4, '0')}`,
         partyName: resolvedFamilyName,
         companyName: 'CHEEPA FJ TRAVELS',
-        contactPhone: familyPhone.trim() || '0311-2324764',
-        backupPhone: '0312-3608683',
+        contactPhone: familyPhone.trim(),
+        backupPhone: '',
         totalPax: synthesizedPax.length,
         isSelfVisa: true,
-        packageTitle: packageTitle.trim() || '18 Days Standard Umrah',
+        packageTitle: packageTitle.trim() || '',
         status: 'Active Operations',
         createdAt: now,
         updatedAt: now,
@@ -257,14 +257,14 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
           sNo: String(currentCount + idx + 1),
           name: m.name.trim().toUpperCase(),
           prefix: m.prefix,
-          passportNo: m.passportNo.trim().toUpperCase() || `PK${Math.floor(1000000 + Math.random() * 9000000)}`,
-          dob: m.dob || '1990-01-01',
-          gender: m.gender || 'M',
+          passportNo: m.passportNo.trim().toUpperCase() || '',
+          dob: m.dob || '',
+          gender: m.gender || (m.prefix === 'MRS' || m.prefix === 'MS' ? 'F' : 'M'),
           category: m.category || 'Adult',
           hasBed: Boolean(m.hasBed),
-          visaNo: m.visaNo.trim() || `617${Math.floor(1000000 + Math.random() * 9000000)}`,
+          visaNo: m.visaNo.trim() || '',
           relationship: m.relationship || 'Family Member',
-          contactPhone: party.contactPhone || '0311-2324764',
+          contactPhone: party.contactPhone || '',
         };
         party.passengers.push(newPax);
       });
@@ -306,6 +306,9 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       (pax.parentPartyUid || '').toLowerCase().includes(q)
     );
   });
+
+  // Auto-mirror Party Head name as Family/Group Name (read-only)
+  const effectiveFamilyName = (familyMembers[0]?.name || '').trim().toUpperCase();
 
   // Dynamic Demographics Count inside Modal
   const modalSummary = familyMembers.reduce((acc, curr) => {
@@ -584,28 +587,27 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
               {modalMode === 'NEW_FAMILY' ? (
                 <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">
-                      Family / Group Name *
+                    <label className="block text-slate-700 font-semibold mb-1 flex items-center justify-between">
+                      <span>Family / Group Name *</span>
+                      <span className="text-[10px] font-normal text-slate-400">Party Head (Auto)</span>
                     </label>
                     <input 
                       type="text" 
-                      required
-                      placeholder="e.g. ABDUL KARIM & FAMILY"
-                      value={familyName}
-                      onChange={(e) => setFamilyName(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl uppercase text-slate-900 font-semibold focus:ring-1 focus:ring-slate-900 outline-none"
+                      readOnly
+                      placeholder="Displaying Party Head Name..."
+                      value={effectiveFamilyName}
+                      className="w-full px-3 py-1.5 bg-slate-100/90 border border-slate-200 rounded-xl uppercase text-slate-800 font-bold outline-none cursor-not-allowed select-none"
                     />
-                    <p className="text-[10px] text-slate-400 mt-0.5">Will be saved as Party Head UID name</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Mirrored from Lead Pilgrim (non-editable)</p>
                   </div>
 
                   <div>
                     <label className="block text-slate-700 font-semibold mb-1">
-                      Contact Phone *
+                      Contact Phone <span className="text-slate-400 font-normal">(Optional)</span>
                     </label>
                     <input 
                       type="text" 
-                      required
-                      placeholder="03XX-XXXXXXX"
+                      placeholder="e.g. 03XX-XXXXXXX"
                       value={familyPhone}
                       onChange={(e) => setFamilyPhone(e.target.value)}
                       className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl font-mono text-slate-900 focus:ring-1 focus:ring-slate-900 outline-none"
@@ -615,7 +617,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
 
                   <div>
                     <label className="block text-slate-700 font-semibold mb-1">
-                      Package Title
+                      Package Title <span className="text-slate-400 font-normal">(Optional)</span>
                     </label>
                     <input 
                       type="text" 
@@ -760,7 +762,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                             <input 
                               type="text"
                               required
-                              placeholder="e.g. ABDUL KARIM"
+                              placeholder={isHeadRow ? "e.g. ABDUL KARIM" : "e.g. HAJRA KARIM"}
                               value={member.name}
                               onChange={(e) => handleUpdateMember(index, 'name', e.target.value)}
                               className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white uppercase font-bold text-slate-900 outline-none focus:ring-1 focus:ring-slate-900"
