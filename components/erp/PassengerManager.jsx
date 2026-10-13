@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   Users, 
   PlusCircle, 
@@ -22,7 +22,11 @@ import {
   User,
   X,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { saveParty, deleteParty, getAllParties, updatePassenger } from '../../lib/erpData';
 
@@ -246,6 +250,10 @@ function SearchablePartySelect({
 export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   const [selectedPartyUid, setSelectedPartyUid] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Pagination State (entries per page, current page)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [entriesPerPage, setEntriesPerPage] = useState(10);
   
   // Unified Family & Passenger Builder Modal State
   const [showFamilyModal, setShowFamilyModal] = useState(false);
@@ -576,13 +584,14 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     );
   };
 
-  // Toggle select-all for visible passengers in the list
+  // Toggle select-all for visible passengers in the current page/view
   const handleToggleSelectAll = () => {
-    const allVisiblePaxIds = displayPassengers.map(p => p.id);
-    if (selectedPaxIdsToDelete.length === allVisiblePaxIds.length && allVisiblePaxIds.length > 0) {
-      setSelectedPaxIdsToDelete([]);
+    const pagePaxIds = paginatedPassengers.map(p => p.id);
+    const allOnPageSelected = pagePaxIds.length > 0 && pagePaxIds.every(id => selectedPaxIdsToDelete.includes(id));
+    if (allOnPageSelected) {
+      setSelectedPaxIdsToDelete(prev => prev.filter(id => !pagePaxIds.includes(id)));
     } else {
-      setSelectedPaxIdsToDelete(allVisiblePaxIds);
+      setSelectedPaxIdsToDelete(prev => Array.from(new Set([...prev, ...pagePaxIds])));
     }
   };
 
@@ -666,6 +675,28 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     );
   });
 
+  // Pagination Calculations
+  const totalItems = displayPassengers.length;
+  const totalPages = entriesPerPage === -1 ? 1 : Math.max(1, Math.ceil(totalItems / entriesPerPage));
+  const safeCurrentPage = Math.min(Math.max(currentPage, 1), totalPages);
+  const startIndex = entriesPerPage === -1 ? 0 : (safeCurrentPage - 1) * entriesPerPage;
+  const endIndex = entriesPerPage === -1 ? totalItems : Math.min(startIndex + entriesPerPage, totalItems);
+  const paginatedPassengers = entriesPerPage === -1 ? displayPassengers : displayPassengers.slice(startIndex, endIndex);
+
+  // Helper for generating pagination page numbers array with ellipses
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (safeCurrentPage <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages];
+    }
+    if (safeCurrentPage >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', safeCurrentPage - 1, safeCurrentPage, safeCurrentPage + 1, '...', totalPages];
+  }, [totalPages, safeCurrentPage]);
+
   // Auto-mirror Party Head name as Family/Group Name (read-only)
   const effectiveFamilyName = (familyMembers[0]?.name || '').trim().toUpperCase();
 
@@ -734,6 +765,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                 onChange={(uid) => {
                   cancelDelete();
                   setSelectedPartyUid(uid);
+                  setCurrentPage(1);
                 }}
                 allowAll={true}
                 allLabel="All Family Groups"
@@ -799,6 +831,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             onChange={(e) => {
               if (isDeleteMode) cancelDelete();
               setSearchTerm(e.target.value);
+              setCurrentPage(1);
             }}
             className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 bg-slate-50/50"
           />
@@ -816,15 +849,17 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                     <div className="flex items-center justify-center">
                       <input
                         type="checkbox"
-                        checked={displayPassengers.length > 0 && selectedPaxIdsToDelete.length === displayPassengers.length}
+                        checked={paginatedPassengers.length > 0 && paginatedPassengers.every(p => selectedPaxIdsToDelete.includes(p.id))}
                         ref={el => {
                           if (el) {
-                            el.indeterminate = selectedPaxIdsToDelete.length > 0 && selectedPaxIdsToDelete.length < displayPassengers.length;
+                            const someSelected = paginatedPassengers.some(p => selectedPaxIdsToDelete.includes(p.id));
+                            const allSelected = paginatedPassengers.length > 0 && paginatedPassengers.every(p => selectedPaxIdsToDelete.includes(p.id));
+                            el.indeterminate = someSelected && !allSelected;
                           }
                         }}
                         onChange={handleToggleSelectAll}
                         className="w-4 h-4 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer accent-rose-600"
-                        title={selectedPaxIdsToDelete.length === displayPassengers.length ? "Deselect all" : "Select all"}
+                        title={paginatedPassengers.length > 0 && paginatedPassengers.every(p => selectedPaxIdsToDelete.includes(p.id)) ? "Deselect page" : "Select page"}
                       />
                     </div>
                   ) : (
@@ -848,7 +883,8 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                   </td>
                 </tr>
               ) : (
-                displayPassengers.map((pax, idx) => {
+                paginatedPassengers.map((pax, idx) => {
+                  const globalIdx = startIndex + idx;
                   const isChecked = isDeleteMode && selectedPaxIdsToDelete.includes(pax.id);
                   return (
                     <tr 
@@ -879,7 +915,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                           </div>
                         ) : (
                           <span className="font-mono font-semibold text-slate-400">
-                            {idx + 1}
+                            {globalIdx + 1}
                           </span>
                         )}
                       </td>
@@ -951,6 +987,133 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Modern Pagination Controls Bar */}
+        <div className="border-t border-slate-200/90 bg-slate-50/70 px-4 py-3 sm:px-5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+          {/* Entries per page & Range Summary */}
+          <div className="flex flex-wrap items-center gap-3 text-slate-600">
+            <div className="flex items-center gap-1.5">
+              <span>Show</span>
+              <select
+                value={entriesPerPage}
+                onChange={(e) => {
+                  setEntriesPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-slate-200 text-slate-800 font-semibold rounded-lg px-2.5 py-1 text-xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 cursor-pointer shadow-2xs"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={-1}>All</option>
+              </select>
+              <span>entries per page</span>
+            </div>
+
+            <span className="text-slate-300 hidden sm:inline">|</span>
+
+            <div className="text-slate-500 font-medium">
+              Showing <span className="font-bold text-slate-900">{totalItems === 0 ? 0 : startIndex + 1}</span> to{' '}
+              <span className="font-bold text-slate-900">{endIndex}</span> of{' '}
+              <span className="font-bold text-slate-900">{totalItems}</span> passengers
+            </div>
+          </div>
+
+          {/* Navigation Controls: << First, < Previous, Page Numbers, Next >, Last >> */}
+          <div className="flex items-center gap-1 self-center md:self-auto">
+            {/* First Page << */}
+            <button
+              type="button"
+              onClick={() => setCurrentPage(1)}
+              disabled={safeCurrentPage <= 1 || totalPages <= 1}
+              title="First Page (<<)"
+              className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center justify-center transition-all ${
+                safeCurrentPage <= 1 || totalPages <= 1
+                  ? 'border-slate-200 text-slate-300 bg-slate-50/50 cursor-not-allowed'
+                  : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-100 hover:text-slate-900 cursor-pointer shadow-2xs'
+              }`}
+            >
+              <ChevronsLeft className="w-4 h-4" />
+            </button>
+
+            {/* Previous Page < */}
+            <button
+              type="button"
+              onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+              disabled={safeCurrentPage <= 1 || totalPages <= 1}
+              title="Previous Page"
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all ${
+                safeCurrentPage <= 1 || totalPages <= 1
+                  ? 'border-slate-200 text-slate-300 bg-slate-50/50 cursor-not-allowed'
+                  : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-100 hover:text-slate-900 cursor-pointer shadow-2xs'
+              }`}
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Previous</span>
+            </button>
+
+            {/* Page Number Pills */}
+            <div className="flex items-center gap-1 px-1">
+              {pageNumbers.map((page, pIdx) => {
+                if (page === '...') {
+                  return (
+                    <span key={`ellipsis-${pIdx}`} className="px-1 text-slate-400 font-bold select-none">
+                      …
+                    </span>
+                  );
+                }
+                const isActive = page === safeCurrentPage;
+                return (
+                  <button
+                    key={`page-${page}`}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`min-w-[28px] h-7 px-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center cursor-pointer ${
+                      isActive
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Next Page > */}
+            <button
+              type="button"
+              onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+              disabled={safeCurrentPage >= totalPages || totalPages <= 1}
+              title="Next Page"
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all ${
+                safeCurrentPage >= totalPages || totalPages <= 1
+                  ? 'border-slate-200 text-slate-300 bg-slate-50/50 cursor-not-allowed'
+                  : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-100 hover:text-slate-900 cursor-pointer shadow-2xs'
+              }`}
+            >
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Last Page >> */}
+            <button
+              type="button"
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={safeCurrentPage >= totalPages || totalPages <= 1}
+              title="Last Page (>>)"
+              className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center justify-center transition-all ${
+                safeCurrentPage >= totalPages || totalPages <= 1
+                  ? 'border-slate-200 text-slate-300 bg-slate-50/50 cursor-not-allowed'
+                  : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-100 hover:text-slate-900 cursor-pointer shadow-2xs'
+              }`}
+            >
+              <ChevronsRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
       </div>
