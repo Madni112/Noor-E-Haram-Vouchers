@@ -96,7 +96,7 @@ function SearchablePartySelect({
           ) : selectedParty ? (
             <>
               <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0 border border-slate-200">
-                {selectedParty.partyHeadUid}
+                {selectedParty.voucherRefNo || selectedParty.partyHeadUid}
               </span>
               <span className="font-bold text-slate-900 text-xs truncate">
                 {selectedParty.partyName}
@@ -207,19 +207,14 @@ function SearchablePartySelect({
                       <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
                         isSelected 
                           ? 'bg-emerald-100 border-emerald-300 text-emerald-800' 
-                          : 'bg-slate-100 border-slate-200 text-slate-600'
+                          : 'bg-slate-100 border-slate-200 text-slate-700'
                       }`}>
-                        {p.partyHeadUid}
+                        {p.voucherRefNo || p.partyHeadUid}
                       </span>
                       <div className="truncate">
                         <span className="font-bold text-slate-900 block truncate">
                           {p.partyName}
                         </span>
-                        {p.voucherRefNo && (
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            Ref: {p.voucherRefNo}
-                          </span>
-                        )}
                       </div>
                     </div>
 
@@ -611,6 +606,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       ...pax,
       isPartyHead: idx === 0,
       parentPartyUid: party.partyHeadUid,
+      voucherRefNo: party.voucherRefNo || party.partyHeadUid,
       parentPartyName: party.partyName,
       parentPhone: party.contactPhone,
       packageTitle: party.packageTitle,
@@ -622,6 +618,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       (pax.passportNo || '').toLowerCase().includes(q) ||
       (pax.visaNo || '').toLowerCase().includes(q) ||
       (pax.parentPartyName || '').toLowerCase().includes(q) ||
+      (pax.voucherRefNo || '').toLowerCase().includes(q) ||
       (pax.parentPartyUid || '').toLowerCase().includes(q)
     );
   });
@@ -844,10 +841,10 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                         )}
                       </td>
                       <td className="py-2.5 px-3.5 border-r border-slate-100">
-                        <span className="font-mono font-bold text-slate-900 block text-[10px]">
-                          {pax.parentPartyUid}
+                        <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-block text-[10px] mb-0.5">
+                          {pax.voucherRefNo || pax.parentPartyUid}
                         </span>
-                        <span className="font-semibold text-slate-700 text-xs">
+                        <span className="font-semibold text-slate-700 text-xs block">
                           {pax.parentPartyName}
                         </span>
                       </td>
