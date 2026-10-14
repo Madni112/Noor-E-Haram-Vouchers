@@ -253,6 +253,167 @@ function SearchablePartySelect({
   );
 }
 
+// Searchable Combobox for selecting Family Head / Lead Pilgrim from family members
+function SearchablePartyHeadSelect({ 
+  passengers = [], 
+  value, 
+  onChange,
+  placeholder = 'Select Family Head...' 
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const dropdownRef = useRef(null);
+  const searchInputRef = useRef(null);
+
+  const selectedPax = passengers.find(p => p.id === value) || passengers[0];
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  const filteredPax = passengers.filter(p => {
+    const q = query.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.passportNo || '').toLowerCase().includes(q) ||
+      (p.prefix || '').toLowerCase().includes(q) ||
+      (p.visaNo || '').toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      {/* Trigger Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-white border border-slate-200 rounded-xl hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 transition-all text-left shadow-2xs cursor-pointer"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          {selectedPax ? (
+            <>
+              <Crown className="w-4 h-4 text-amber-500 fill-amber-100 shrink-0" />
+              <span className="font-bold text-slate-900 text-xs truncate">
+                {selectedPax.prefix ? `${selectedPax.prefix} ` : ''}{selectedPax.name}
+              </span>
+              {selectedPax.passportNo && (
+                <span className="font-mono text-[10.5px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+                  Passport: {selectedPax.passportNo}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="text-slate-400 text-xs font-medium truncate">
+              {placeholder}
+            </span>
+          )}
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 ml-2 transition-transform duration-150 ${isOpen ? 'rotate-180 text-slate-700' : ''}`} />
+      </button>
+
+      {/* Popover Dropdown Panel */}
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+          {/* Search Box Header */}
+          <div className="p-2 border-b border-slate-100 bg-slate-50/90">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search name or passport #..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-400 text-slate-800 placeholder:text-slate-400"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Member List */}
+          <div className="max-h-56 overflow-y-auto divide-y divide-slate-100/60 p-1">
+            {filteredPax.length === 0 ? (
+              <div className="p-4 text-center text-xs text-slate-400 italic font-medium">
+                No member found matching &quot;{query}&quot;
+              </div>
+            ) : (
+              filteredPax.map((pax, idx) => {
+                const isSelected = selectedPax?.id === pax.id;
+                return (
+                  <button
+                    key={pax.id || idx}
+                    type="button"
+                    onClick={() => {
+                      onChange(pax.id);
+                      setIsOpen(false);
+                      setQuery('');
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-left rounded-lg transition-colors cursor-pointer ${
+                      isSelected ? 'bg-amber-50 text-amber-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="truncate">
+                        <div className="flex items-center gap-1.5">
+                          {isSelected ? (
+                            <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-100 shrink-0" />
+                          ) : (
+                            <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          )}
+                          <span className="text-xs truncate">
+                            {pax.prefix ? `${pax.prefix} ` : ''}{pax.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono mt-0.5">
+                          {pax.passportNo ? (
+                            <span className="font-semibold text-slate-700 bg-slate-100 px-1 py-0.2 rounded border border-slate-200">Passport: {pax.passportNo}</span>
+                          ) : (
+                            <span className="text-slate-400">No passport</span>
+                          )}
+                          {pax.category && (
+                            <span className="text-slate-400">• {pax.category}</span>
+                          )}
+                          {idx === 0 && (
+                            <span className="text-amber-600 font-sans font-bold text-[9px] bg-amber-100/70 px-1 rounded">👑 Head</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <Check className="w-4 h-4 text-amber-600 shrink-0 ml-2" />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   const [viewMode, setViewMode] = useState('HIERARCHY'); // 'HIERARCHY' | 'FLAT'
   const [selectedPartyUid, setSelectedPartyUid] = useState('ALL');
@@ -2129,11 +2290,11 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
           }}
         >
           <div 
-            className="bg-white rounded-3xl max-w-lg w-full border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
+            className="bg-white rounded-3xl max-w-lg w-full border border-slate-200/90 shadow-2xl flex flex-col animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 rounded-t-3xl">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-amber-100/80 border border-amber-200 text-amber-800 flex items-center justify-center shrink-0">
                   <Crown className="w-5 h-5 text-amber-600" />
@@ -2164,33 +2325,27 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             </div>
 
             {/* Modal Body / Form */}
-            <form onSubmit={handleSaveEditedFamily} className="p-6 space-y-4 overflow-y-auto">
+            <form onSubmit={handleSaveEditedFamily} className="p-6 space-y-4 overflow-visible rounded-b-3xl">
               
-              {/* Party Head Dropdown */}
+              {/* Party Head Searchable Combobox */}
               <div>
                 <label className="block text-slate-800 font-bold mb-1 text-xs flex items-center gap-1.5">
                   <Crown className="w-3.5 h-3.5 text-amber-500" />
                   <span>Family Head / Lead Pilgrim (Party Head) *</span>
                 </label>
                 {(editingFamily.passengers || []).length > 0 ? (
-                  <select
+                  <SearchablePartyHeadSelect
+                    passengers={editingFamily.passengers || []}
                     value={editFamilyHeadPaxId}
-                    onChange={(e) => setEditFamilyHeadPaxId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer text-xs"
-                  >
-                    {(editingFamily.passengers || []).map((pax, idx) => (
-                      <option key={pax.id || idx} value={pax.id}>
-                        {pax.prefix ? pax.prefix + ' ' : ''}{pax.name} {pax.passportNo ? `(Passport: ${pax.passportNo})` : ''} {idx === 0 ? '👑 [Current Head]' : ''}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(selectedId) => setEditFamilyHeadPaxId(selectedId)}
+                  />
                 ) : (
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-400 italic">
                     No family members currently registered.
                   </div>
                 )}
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Designating a new Family Head promotes them to lead pilgrim and updates the family profile title across the system.
+                  Search by pilgrim name or passport # to select the new Family Head.
                 </p>
               </div>
 
