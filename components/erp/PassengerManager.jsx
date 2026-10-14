@@ -34,7 +34,7 @@ import {
   FileText,
   Layers
 } from 'lucide-react';
-import { saveParty, deleteParty, getAllParties, updatePassenger, checkPassengerDependencies, getNextFidNumber } from '../../lib/erpData';
+import { saveParty, deleteParty, getAllParties, updatePassenger, checkPassengerDependencies, getNextFidNumber, isAgencyPhone } from '../../lib/erpData';
 
 // Searchable SKU-style Family Group Dropdown Combobox
 function SearchablePartySelect({ 
@@ -296,7 +296,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
         (party.partyName || '').toLowerCase().includes(q) ||
         (party.fid || '').toLowerCase().includes(q) ||
         (party.voucherRefNo || '').toLowerCase().includes(q) ||
-        (party.contactPhone || '').toLowerCase().includes(q) ||
+        (!isAgencyPhone(party.contactPhone) && (party.contactPhone || '').toLowerCase().includes(q)) ||
         (party.packageTitle || '').toLowerCase().includes(q);
 
       const paxMatch = (party.passengers || []).some(p => 
@@ -738,7 +738,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       fid: seqFid,
       voucherRefNo: party.voucherRefNo || party.partyHeadUid,
       parentPartyName: party.partyName,
-      parentPhone: party.contactPhone,
+      parentPhone: isAgencyPhone(party.contactPhone) ? '' : party.contactPhone,
       packageTitle: party.packageTitle,
     }));
   }).filter(pax => {
@@ -1040,7 +1040,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                         )}
 
                         {/* Contact Phone if present */}
-                        {party.contactPhone && (
+                        {party.contactPhone && !isAgencyPhone(party.contactPhone) && (
                           <span className="text-xs text-slate-500 shrink-0">
                             📞 {party.contactPhone}
                           </span>
