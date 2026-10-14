@@ -246,23 +246,23 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
       >
         {/* Brand & Top Header */}
         <div>
-          <div className="h-16 px-5 border-b border-slate-100 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center p-1 shadow-2xs group-hover:border-emerald-400 group-hover:scale-105 transition-all shrink-0 overflow-hidden">
+          <div className="min-h-[76px] px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-center p-1 shadow-xs group-hover:border-emerald-400 group-hover:shadow-md transition-all shrink-0 overflow-hidden">
                 <img 
                   src="/logo.png" 
                   alt="Noor E Haram Logo" 
                   className="w-full h-full object-contain" 
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-sm text-slate-900 tracking-tight">NOOR E HARAM TRAVELS</span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="font-bold text-sm text-slate-900 tracking-tight leading-tight">NOOR E HARAM TRAVELS</span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                     ERP
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400 font-medium -mt-0.5">Umrah Operations Suite</p>
+                <p className="text-[10px] text-slate-400 font-medium mt-0.5">Umrah Operations Suite</p>
               </div>
             </Link>
 
