@@ -172,9 +172,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
 
   const urgentTasksCount = tasks.filter(t => t.status === 'Urgent' || t.status === 'Overdue Warning').length;
 
-  const allReceiptsCount = useMemo(() => {
-    return invoices.reduce((acc, inv) => acc + (Array.isArray(inv.ledgerTransactions) ? inv.ledgerTransactions.length : 0), 0);
-  }, [invoices]);
+  const allReceiptsCount = invoices.reduce((acc, inv) => acc + (Array.isArray(inv.ledgerTransactions) ? inv.ledgerTransactions.length : 0), 0);
 
   const navItems = [
     {
