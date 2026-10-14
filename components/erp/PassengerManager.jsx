@@ -31,7 +31,8 @@ import {
   AlertTriangle,
   Building2,
   Bus,
-  FileText
+  FileText,
+  Layers
 } from 'lucide-react';
 import { saveParty, deleteParty, getAllParties, updatePassenger, checkPassengerDependencies, getNextFidNumber } from '../../lib/erpData';
 
@@ -253,8 +254,60 @@ function SearchablePartySelect({
 }
 
 export default function PassengerManager({ parties = [], onPartiesUpdated }) {
+  const [viewMode, setViewMode] = useState('HIERARCHY'); // 'HIERARCHY' | 'FLAT'
   const [selectedPartyUid, setSelectedPartyUid] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedFamilies, setExpandedFamilies] = useState(() => new Set(parties.map(p => p.partyHeadUid)));
+
+  useEffect(() => {
+    setExpandedFamilies(new Set(parties.map(p => p.partyHeadUid)));
+  }, [parties.length]);
+
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      setExpandedFamilies(new Set(parties.map(p => p.partyHeadUid)));
+    }
+  }, [searchTerm]);
+
+  const toggleFamilyExpand = (partyUid) => {
+    setExpandedFamilies(prev => {
+      const next = new Set(prev);
+      if (next.has(partyUid)) next.delete(partyUid);
+      else next.add(partyUid);
+      return next;
+    });
+  };
+
+  const toggleExpandAll = (expand) => {
+    if (expand) {
+      setExpandedFamilies(new Set(parties.map(p => p.partyHeadUid)));
+    } else {
+      setExpandedFamilies(new Set());
+    }
+  };
+
+  const filteredPartiesForHierarchy = useMemo(() => {
+    return parties.filter(party => {
+      if (selectedPartyUid !== 'ALL' && party.partyHeadUid !== selectedPartyUid) return false;
+      const q = searchTerm.toLowerCase().trim();
+      if (!q) return true;
+
+      const famMatch = 
+        (party.partyName || '').toLowerCase().includes(q) ||
+        (party.fid || '').toLowerCase().includes(q) ||
+        (party.voucherRefNo || '').toLowerCase().includes(q) ||
+        (party.contactPhone || '').toLowerCase().includes(q) ||
+        (party.packageTitle || '').toLowerCase().includes(q);
+
+      const paxMatch = (party.passengers || []).some(p => 
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.passportNo || '').toLowerCase().includes(q) ||
+        (p.visaNo || '').toLowerCase().includes(q)
+      );
+
+      return famMatch || paxMatch;
+    });
+  }, [parties, selectedPartyUid, searchTerm]);
   
   // Pagination State (entries per page, current page)
   const [currentPage, setCurrentPage] = useState(1);
@@ -846,6 +899,35 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
           )}
         </div>
 
+        {/* View Mode Switcher */}
+        <div className="flex items-center gap-1 p-1 bg-slate-100/90 rounded-xl border border-slate-200/90 shadow-2xs shrink-0">
+          <button
+            type="button"
+            onClick={() => setViewMode('HIERARCHY')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'HIERARCHY'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Layers className={`w-3.5 h-3.5 ${viewMode === 'HIERARCHY' ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span>Hierarchy</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode('FLAT')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'FLAT'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Users className={`w-3.5 h-3.5 ${viewMode === 'FLAT' ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <span>Flat List</span>
+          </button>
+        </div>
+
         {/* Search */}
         <div className="relative flex-1 max-w-sm">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -863,8 +945,287 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
         </div>
       </div>
 
-      {/* Modern Light Passenger Matrix Table */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+      {/* ============================================================== */}
+      {/* HIERARCHICAL FAMILY TREE ACCORDION VIEW */}
+      {/* ============================================================== */}
+      {viewMode === 'HIERARCHY' && (
+        <div className="space-y-3">
+          {/* Controls Bar for Hierarchy: Counts & Expand/Collapse All */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white border border-slate-200/90 rounded-2xl shadow-xs text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-emerald-600" />
+                <span>Family Hierarchy</span>
+              </span>
+              <span className="text-slate-300">|</span>
+              <span className="text-slate-500 font-medium">
+                Showing <strong className="text-slate-900 font-bold">{filteredPartiesForHierarchy.length}</strong> {filteredPartiesForHierarchy.length === 1 ? 'Family' : 'Families'}
+                {' '}(<strong className="text-slate-900 font-bold">{filteredPartiesForHierarchy.reduce((acc, p) => acc + (p.passengers?.length || 0), 0)}</strong> Pilgrims)
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => toggleExpandAll(true)}
+                className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 shadow-2xs transition-all cursor-pointer"
+              >
+                Expand All
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleExpandAll(false)}
+                className="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 shadow-2xs transition-all cursor-pointer"
+              >
+                Collapse All
+              </button>
+            </div>
+          </div>
+
+          {/* Families List */}
+          {filteredPartiesForHierarchy.length === 0 ? (
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-12 text-center text-slate-400 font-medium italic shadow-xs">
+              No family records found. Click &quot;Add Family / Group&quot; above to create one.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredPartiesForHierarchy.map((party) => {
+                const isExpanded = expandedFamilies.has(party.partyHeadUid);
+                const paxList = party.passengers || [];
+                const fid = party.fid || `FID-${String(party.voucherRefNo || '').replace(/\D/g, '').padStart(3, '0') || '001'}`;
+
+                return (
+                  <div
+                    key={party.partyHeadUid}
+                    className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden transition-all duration-150"
+                  >
+                    {/* Family Header Strip */}
+                    <div
+                      onClick={() => toggleFamilyExpand(party.partyHeadUid)}
+                      className="px-4 py-3 sm:px-5 bg-gradient-to-r from-slate-50 via-white to-slate-50/50 hover:bg-slate-50/90 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+                    >
+                      {/* Left: Expand Chevron, FID Badge, Family Name, Lead Pilgrim, Phone */}
+                      <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+                        <button
+                          type="button"
+                          className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-all shrink-0 cursor-pointer"
+                          aria-label={isExpanded ? 'Collapse Family' : 'Expand Family'}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-slate-700 stroke-[2.5]" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-slate-500 stroke-[2.5]" />
+                          )}
+                        </button>
+
+                        {/* FID Badge */}
+                        <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 text-xs shrink-0 tracking-wide">
+                          {fid}
+                        </span>
+
+                        {/* Crown & Family Name */}
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Crown className="w-4 h-4 text-amber-500 fill-amber-100 shrink-0" />
+                          <span className="font-bold text-slate-900 text-sm truncate">
+                            {party.partyName}
+                          </span>
+                        </div>
+
+                        {/* Package Title Badge if present */}
+                        {party.packageTitle && (
+                          <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200 shrink-0">
+                            {party.packageTitle}
+                          </span>
+                        )}
+
+                        {/* Contact Phone if present */}
+                        {party.contactPhone && (
+                          <span className="text-xs text-slate-500 shrink-0">
+                            📞 {party.contactPhone}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Right: PAX Count Badge & + Member Quick Button */}
+                      <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          {paxList.length} PAX
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => openAddToExistingModal(party.partyHeadUid)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-all shadow-2xs cursor-pointer"
+                          title="Add Member to this Family"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          <span>+ Member</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Collapsible Members Table */}
+                    {isExpanded && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="bg-slate-50/80 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-200/80">
+                              <th className="py-2.5 px-3.5 border-r border-slate-100 w-12 text-center">#</th>
+                              <th className="py-2.5 px-3.5 border-r border-slate-100 w-36">Role / Relation</th>
+                              <th className="py-2.5 px-3.5 border-r border-slate-100">Full Legal Name</th>
+                              <th className="py-2.5 px-3.5 border-r border-slate-100">Passport #</th>
+                              <th className="py-2.5 px-3.5 border-r border-slate-100 text-center">Date of Birth</th>
+                              <th className="py-2.5 px-3.5 border-r border-slate-100 text-center">Demographics</th>
+                              <th className="py-2.5 px-3.5 border-r border-slate-100">Visa #</th>
+                              <th className="py-2.5 px-3.5 text-right w-20">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-sans">
+                            {paxList.length === 0 ? (
+                              <tr>
+                                <td colSpan={8} className="py-6 text-center text-slate-400 font-medium italic">
+                                  No members registered under this family.
+                                </td>
+                              </tr>
+                            ) : (
+                              paxList.map((pax, pIdx) => {
+                                const isChecked = isDeleteMode && selectedPaxIdsToDelete.includes(pax.id);
+                                const isHead = pIdx === 0 || pax.relationship === 'Family Head' || pax.relationship === 'Family Head / Lead Pilgrim';
+                                const isLastChild = pIdx === paxList.length - 1;
+
+                                return (
+                                  <tr
+                                    key={pax.id || pIdx}
+                                    onClick={() => {
+                                      if (isDeleteMode) handleTogglePaxToDelete(pax.id);
+                                    }}
+                                    className={`transition-colors ${
+                                      isChecked
+                                        ? 'bg-rose-50/80 hover:bg-rose-100/70 cursor-pointer'
+                                        : isDeleteMode
+                                        ? 'hover:bg-slate-50 cursor-pointer'
+                                        : 'hover:bg-slate-50/70'
+                                    }`}
+                                  >
+                                    {/* Number / Connector */}
+                                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center">
+                                      {isDeleteMode ? (
+                                        <div className="flex items-center justify-center">
+                                          <input
+                                            type="checkbox"
+                                            checked={isChecked}
+                                            onChange={(e) => {
+                                              e.stopPropagation();
+                                              handleTogglePaxToDelete(pax.id);
+                                            }}
+                                            className="w-4 h-4 rounded text-rose-600 border-slate-300 focus:ring-rose-500 cursor-pointer accent-rose-600"
+                                          />
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center justify-center gap-1 font-mono text-[11px] text-slate-400">
+                                          <span className="text-slate-300 text-xs">{isLastChild ? '└──' : '├──'}</span>
+                                          <span className="font-semibold">{pIdx + 1}</span>
+                                        </div>
+                                      )}
+                                    </td>
+
+                                    {/* Role / Relation */}
+                                    <td className="py-2.5 px-3.5 border-r border-slate-100">
+                                      {isHead ? (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                          <Crown className="w-2.5 h-2.5 text-amber-600" />
+                                          Family Head
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                                          <Users className="w-2.5 h-2.5 text-slate-400" />
+                                          {pax.relationship || 'Family Member'}
+                                        </span>
+                                      )}
+                                    </td>
+
+                                    {/* Full Name */}
+                                    <td className="py-2.5 px-3.5 border-r border-slate-100 font-bold text-slate-900">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        {pax.prefix && <span className="text-slate-400 text-[10px] font-medium">{pax.prefix}</span>}
+                                        <span>{pax.name}</span>
+                                        {isChecked && (
+                                          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                                            To Delete
+                                          </span>
+                                        )}
+                                      </div>
+                                    </td>
+
+                                    {/* Passport # */}
+                                    <td className="py-2.5 px-3.5 border-r border-slate-100 font-mono font-semibold text-slate-700">
+                                      {pax.passportNo || '—'}
+                                    </td>
+
+                                    {/* DOB */}
+                                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center font-mono text-slate-500">
+                                      {pax.dob || '—'}
+                                    </td>
+
+                                    {/* Demographics / Category */}
+                                    <td className="py-2.5 px-3.5 border-r border-slate-100 text-center">
+                                      <span className={`inline-block px-2.5 py-0.5 rounded-full font-semibold text-[10px] ${
+                                        pax.category === 'Child'
+                                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                          : pax.category === 'Infant'
+                                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                          : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                      }`}>
+                                        {pax.category || 'Adult'} {pax.gender ? `• ${pax.gender === 'F' ? 'Female' : 'Male'}` : ''}
+                                      </span>
+                                    </td>
+
+                                    {/* Visa # */}
+                                    <td className="py-2.5 px-3.5 border-r border-slate-100 font-mono text-slate-600">
+                                      {pax.visaNo || '—'}
+                                    </td>
+
+                                    {/* Actions */}
+                                    <td className="py-2.5 px-3.5 text-right">
+                                      <div className="flex items-center justify-end">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openEditPassengerModal({
+                                              ...pax,
+                                              parentPartyUid: party.partyHeadUid,
+                                              fid: party.fid,
+                                              parentPartyName: party.partyName,
+                                              isPartyHead: isHead,
+                                            });
+                                          }}
+                                          title={`Edit details for ${pax.name}`}
+                                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all cursor-pointer shadow-2xs group"
+                                        >
+                                          <Edit3 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modern Light Passenger Matrix Table (Flat List View) */}
+      {viewMode === 'FLAT' && (
+        <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
@@ -1141,6 +1502,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
           </div>
         </div>
       </div>
+      )}
       </div>
 
       {/* ============================================================== */}
