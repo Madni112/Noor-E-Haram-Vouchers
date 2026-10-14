@@ -368,8 +368,8 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
         city: s.city || 'Makkah',
         hotelName: s.hotelName || '',
         distance: s.distance || '',
-        stars: s.stars || 5,
-        category: s.category || `${s.stars || 5} Star Hotel`,
+        stars: s.stars !== undefined && s.stars !== null ? parseInt(s.stars, 10) : 5,
+        category: s.stars > 0 ? (s.category || `${s.stars} Star Hotel`) : '',
         checkIn: s.checkIn || '2026-10-10',
         checkOut: s.checkOut || '2026-10-15',
         roomType: s.roomType || 'Quad',
@@ -428,7 +428,7 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
 
     const vId = editingVoucherId || `HV-${party.voucherRefNo || party.partyHeadUid}`;
     const compiledStays = stays.map((s, idx) => {
-      const starNum = parseInt(s.stars) || 5;
+      const starNum = (s.stars !== undefined && s.stars !== null) ? (parseInt(s.stars, 10) || 0) : 5;
       if (s.hotelName) {
         saveRegisteredHotelStar(s.hotelName, starNum);
       }
@@ -438,7 +438,7 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
         hotelName: s.hotelName.trim().toUpperCase(),
         distance: (s.distance || '').trim(),
         stars: starNum,
-        category: s.category || `${starNum} Star Hotel`,
+        category: starNum > 0 ? (s.category || `${starNum} Star Hotel`) : '',
         checkIn: s.checkIn,
         checkOut: s.checkOut,
         nights: calculateDays(s.checkIn, s.checkOut),
@@ -906,11 +906,12 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
                                 onChange={(val) => {
                                   const starMap = getRegisteredHotelStars();
                                   const clean = (val || '').trim().toUpperCase();
-                                  const detectedStars = starMap[clean] || (
+                                  const detectedStars = (starMap[clean] !== undefined && starMap[clean] !== null) ? starMap[clean] : (
                                     clean.includes('5 STAR') ? 5 :
                                     clean.includes('4 STAR') ? 4 :
                                     clean.includes('3 STAR') ? 3 :
-                                    clean.includes('2 STAR') ? 2 : (stay.stars || 5)
+                                    clean.includes('2 STAR') ? 2 :
+                                    clean.includes('1 STAR') ? 1 : (stay.stars !== undefined ? stay.stars : 5)
                                   );
                                   const regDist = getHotelDistance(clean);
                                   updateStay(idx, {
@@ -918,7 +919,7 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
                                     distance: regDist || stay.distance || '',
                                     distanceModified: false,
                                     stars: detectedStars,
-                                    category: `${detectedStars} Star Hotel`
+                                    category: detectedStars > 0 ? `${detectedStars} Star Hotel` : ''
                                   });
                                 }}
                                 placeholder={`Select or type ${stay.city} hotel...`}
@@ -990,18 +991,20 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
                                 <label className="block text-slate-700 font-bold text-[11px] uppercase tracking-wider">
                                   Star Rating *
                                 </label>
-                                <span className="text-[9.5px] text-amber-600 font-extrabold flex items-center gap-0.5">
-                                  <Star className="w-3 h-3 fill-amber-400 stroke-amber-500" />
-                                  <span>{stay.stars || 5}★</span>
-                                </span>
+                                {stay.stars > 0 && (
+                                  <span className="text-[9.5px] text-amber-600 font-extrabold flex items-center gap-0.5">
+                                    <Star className="w-3 h-3 fill-amber-400 stroke-amber-500" />
+                                    <span>{stay.stars}★</span>
+                                  </span>
+                                )}
                               </div>
                               <select
-                                value={stay.stars || 5}
+                                value={stay.stars !== undefined && stay.stars !== null ? stay.stars : 5}
                                 onChange={(e) => {
-                                  const s = parseInt(e.target.value) || 5;
+                                  const s = parseInt(e.target.value, 10);
                                   updateStay(idx, {
                                     stars: s,
-                                    category: `${s} Star Hotel`
+                                    category: s > 0 ? `${s} Star Hotel` : ''
                                   });
                                   if (stay.hotelName) {
                                     saveRegisteredHotelStar(stay.hotelName, s);
@@ -1014,6 +1017,7 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
                                 <option value={3}>★★★ 3 Star</option>
                                 <option value={2}>★★ 2 Star</option>
                                 <option value={1}>★ 1 Star</option>
+                                <option value={0}>No Star (Blank)</option>
                               </select>
                             </div>
 

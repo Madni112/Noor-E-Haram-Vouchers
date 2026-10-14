@@ -69,21 +69,31 @@ function formatCityDetails(city, index) {
 }
 
 function getStayStars(stay) {
-  if (stay?.stars) return parseInt(stay.stars) || 5;
-  if (stay?.starRating) return parseInt(stay.starRating) || 5;
+  if (stay?.stars !== undefined && stay?.stars !== null && stay?.stars !== '') {
+    const s = parseInt(stay.stars, 10);
+    return isNaN(s) ? 5 : s;
+  }
+  if (stay?.starRating !== undefined && stay?.starRating !== null && stay?.starRating !== '') {
+    const s = parseInt(stay.starRating, 10);
+    return isNaN(s) ? 5 : s;
+  }
+  if (stay?.noStar) return 0;
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = JSON.parse(localStorage.getItem('neh_erp_hotel_stars_v1') || '{}');
+      const key = (stay?.hotelName || '').trim().toUpperCase();
+      if (saved[key] !== undefined && saved[key] !== null && saved[key] !== '') {
+        const s = parseInt(saved[key], 10);
+        return isNaN(s) ? 5 : s;
+      }
+    } catch (e) {}
+  }
   const name = (stay?.hotelName || '').toLowerCase();
   if (name.includes('5 star') || name.includes('5★') || name.includes('5-star')) return 5;
   if (name.includes('4 star') || name.includes('4★') || name.includes('4-star')) return 4;
   if (name.includes('3 star') || name.includes('3★') || name.includes('3-star')) return 3;
   if (name.includes('2 star') || name.includes('2★') || name.includes('2-star')) return 2;
   if (name.includes('1 star') || name.includes('1★')) return 1;
-  if (typeof window !== 'undefined') {
-    try {
-      const saved = JSON.parse(localStorage.getItem('neh_erp_hotel_stars_v1') || '{}');
-      const key = (stay?.hotelName || '').trim().toUpperCase();
-      if (saved[key]) return parseInt(saved[key]) || 5;
-    } catch (e) {}
-  }
   if (name.includes('voco') || name.includes('fairmont') || name.includes('hilton') || name.includes('swissotel') || name.includes('clock tower') || name.includes('pullman') || name.includes('oberoi') || name.includes('dar al taqwa') || name.includes('dar al eman')) return 5;
   return 4;
 }
@@ -702,16 +712,18 @@ export default function HotelVoucherViewPage() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1 sm:self-start shrink-0">
-                        <div className="flex items-center text-amber-500">
-                          {Array.from({ length: starCount }).map((_, sIdx) => (
-                            <Star key={sIdx} className="w-3 h-3 print:w-3.5 print:h-3.5 fill-amber-400 stroke-amber-500" />
-                          ))}
+                      {starCount > 0 && (
+                        <div className="flex items-center gap-1 sm:self-start shrink-0">
+                          <div className="flex items-center text-amber-500">
+                            {Array.from({ length: starCount }).map((_, sIdx) => (
+                              <Star key={sIdx} className="w-3 h-3 print:w-3.5 print:h-3.5 fill-amber-400 stroke-amber-500" />
+                            ))}
+                          </div>
+                          <span className={`${isThreeOrMore ? 'text-[9.5px] print:text-[8.5pt]' : 'text-[10.5px] print:text-[9.5pt]'} font-bold text-slate-600`}>
+                            {stay.category || `${starCount} Star Hotel`}
+                          </span>
                         </div>
-                        <span className={`${isThreeOrMore ? 'text-[9.5px] print:text-[8.5pt]' : 'text-[10.5px] print:text-[9.5pt]'} font-bold text-slate-600`}>
-                          {stay.category || `${starCount} Star Hotel`}
-                        </span>
-                      </div>
+                      )}
                     </div>
 
                     {/* 4 Clean Metric Boxes for Stay Information */}
