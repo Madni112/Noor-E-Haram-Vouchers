@@ -113,12 +113,13 @@ export default function EditVoucherPage() {
         setPaxCounts(computePaxSummary(loadedPassengers));
 
         const loadedAccommodations = (found.accommodations && found.accommodations.length > 0 ? found.accommodations : [
-          { city: 'MAKKAH', hotelCode: '378', hotelName: '', view: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '5' }
+          { city: 'MAKKAH', hotelCode: '378', hotelName: '', view: '', meal: 'RO', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '5' }
         ]).map(acc => ({
           ...acc,
           city: acc.city || 'MAKKAH',
           hotelName: acc.hotelName || acc.hotel_name || '',
           view: acc.view || '',
+          meal: acc.meal || 'RO',
           ubNo: acc.ubNo !== undefined ? acc.ubNo : (acc.ub_no || acc.ubNumber || ''),
           hcn: acc.hcn !== undefined ? acc.hcn : (acc.hotelCode || acc.hcn_no || '378'),
           roomType: acc.roomType !== undefined ? acc.roomType : (acc.room_type || acc.rpp || acc.type || 'DOUBLE'),
@@ -198,7 +199,7 @@ export default function EditVoucherPage() {
   const addAccommodation = () => {
     setAccommodations([
       ...accommodations,
-      { city: 'MAKKAH', hotelCode: '378', hotelName: '', view: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '1' },
+      { city: 'MAKKAH', hotelCode: '378', hotelName: '', view: '', meal: 'RO', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '1' },
     ]);
   };
 
@@ -208,7 +209,7 @@ export default function EditVoucherPage() {
 
   const updateAccommodation = (index, field, value) => {
     const copy = [...accommodations];
-    const finalVal = (field === 'ubNo' || field === 'hcn' || field === 'hotelCode') && typeof value === 'string' 
+    const finalVal = (field === 'ubNo' || field === 'hcn' || field === 'hotelCode' || field === 'meal') && typeof value === 'string' 
       ? value.toUpperCase() 
       : value;
     copy[index] = { ...copy[index], [field]: finalVal };
@@ -746,6 +747,16 @@ export default function EditVoucherPage() {
                     <div className="col-span-1">
                       <input 
                         type="text"
+                        placeholder="Meal"
+                        value={acc.meal !== undefined ? acc.meal : 'RO'}
+                        onChange={(e) => updateAccommodation(idx, 'meal', e.target.value.toUpperCase())}
+                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-mono text-center text-[11px] uppercase font-bold text-slate-800"
+                        title="Meal Plan (e.g. RO, BB, HB, FB)"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <input 
+                        type="text"
                         placeholder="HCN#"
                         value={acc.hcn !== undefined ? acc.hcn : (acc.hotelCode || '')}
                         onChange={(e) => updateAccommodation(idx, 'hcn', e.target.value.toUpperCase())}
@@ -753,13 +764,13 @@ export default function EditVoucherPage() {
                         title="Hotel Confirmation / Contract Number (HCN#)"
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1">
                       <input 
                         type="text"
                         placeholder="Room Type"
                         value={acc.roomType !== undefined ? acc.roomType : (acc.room_type || acc.rpp || acc.type || '')}
                         onChange={(e) => updateAccommodation(idx, 'roomType', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-medium text-slate-900"
+                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-medium text-slate-900 text-[11px]"
                       />
                     </div>
                     <div className="col-span-1">

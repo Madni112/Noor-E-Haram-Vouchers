@@ -352,7 +352,7 @@ export default function VoucherView({ voucher, origin = '' }) {
                     {String(acc.ubNo || acc.ubNumber || voucher.ubNumber || '—').toUpperCase()}
                   </td>
                   <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-600 font-semibold whitespace-nowrap">
-                    RO
+                    {acc.meal || 'RO'}
                   </td>
                   <td className="border border-slate-300 py-1.5 px-2 text-center font-mono font-semibold text-slate-700 whitespace-nowrap">
                     {acc.hcn || acc.hotelCode || acc.confirmationNo || '378'}
