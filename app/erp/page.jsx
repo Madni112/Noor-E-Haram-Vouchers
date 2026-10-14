@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { 
   getAllParties, 
+  getAllGroups,
   getAllHotelVouchers, 
   getAllEstimates, 
   getAllInvoices, 
@@ -62,6 +63,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
   const { isAdmin, isLoaded, logout } = useAuth();
   const [activeTab, setActiveTab] = useState(initialTab || 'DASHBOARD');
   const [parties, setParties] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [hotelVouchers, setHotelVouchers] = useState([]);
   const [estimates, setEstimates] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -120,6 +122,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
 
   const loadAllErpData = () => {
     setParties(getAllParties());
+    setGroups(getAllGroups());
     setHotelVouchers(getAllHotelVouchers());
     setEstimates(getAllEstimates());
     setInvoices(getAllInvoices());
@@ -135,6 +138,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
       const cloudData = await fetchErpCloudData();
       if (cloudData) {
         if (cloudData.parties?.length) setParties(cloudData.parties);
+        if (cloudData.groups?.length) setGroups(cloudData.groups);
         if (cloudData.hotelVouchers?.length) setHotelVouchers(cloudData.hotelVouchers);
         if (cloudData.estimates?.length) setEstimates(cloudData.estimates);
         if (cloudData.invoices?.length) setInvoices(cloudData.invoices);
@@ -197,7 +201,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
           id: 'GROUPS',
           label: 'Group',
           icon: Users,
-          badge: parties.length,
+          badge: groups.length,
         },
         {
           id: 'PASSENGERS',
@@ -211,7 +215,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
       id: 'GROUPS',
       label: 'Group',
       icon: Users,
-      badge: parties.length,
+      badge: groups.length,
       hidden: true,
     },
     {
@@ -646,12 +650,13 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
 
           {activeTab === 'GROUPS' && (
             <GroupManager 
+              groups={groups}
               parties={parties} 
-              onPartiesUpdated={(updated) => {
-                setParties(updated);
+              onGroupsUpdated={(updated) => {
+                setGroups(updated);
                 loadAllErpData();
               }} 
-              onNavigateToPassengers={(partyUid) => {
+              onNavigateToPassengers={() => {
                 handleTabSwitch('PASSENGERS');
               }}
             />
