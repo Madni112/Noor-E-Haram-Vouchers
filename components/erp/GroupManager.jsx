@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Users, 
   PlusCircle, 
@@ -22,9 +22,221 @@ import {
   ChevronDown,
   Layers,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Crown,
+  User
 } from 'lucide-react';
 import { saveGroup, deleteGroup, getNextGidNumber } from '../../lib/erpData';
+
+// Searchable Combobox for selecting Registered Family or Walk-in in Group Manager
+function SearchableGroupFamilySelect({
+  parties = [],
+  value, // '__CUSTOM__' or partyHeadUid or ''
+  onChange,
+  placeholder = '-- Choose Registered Family --'
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const dropdownRef = useRef(null);
+  const searchInputRef = useRef(null);
+
+  const selectedParty = parties.find(p => p.partyHeadUid === value);
+  const isCustom = value === '__CUSTOM__';
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  const filteredParties = useMemo(() => {
+    const q = query.toLowerCase().trim();
+    if (!q) return parties;
+    return parties.filter(p => {
+      const famMatch = 
+        (p.partyName || '').toLowerCase().includes(q) ||
+        (p.fid || '').toLowerCase().includes(q) ||
+        (p.voucherRefNo || '').toLowerCase().includes(q) ||
+        (p.contactPhone || '').toLowerCase().includes(q);
+      const paxMatch = (p.passengers || []).some(m => 
+        (m.name || '').toLowerCase().includes(q) ||
+        (m.passportNo || '').toLowerCase().includes(q)
+      );
+      return famMatch || paxMatch;
+    });
+  }, [parties, query]);
+
+  const showCustomOption = !query || 'add walk-in family manual entry custom'.includes(query.toLowerCase().trim());
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      {/* Trigger Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3 py-2 bg-white border border-slate-200 rounded-xl hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900/10 transition-all text-left shadow-2xs cursor-pointer"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          {isCustom ? (
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 truncate">
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+              <span className="truncate">+ Walk-in Family (Manual Entry)</span>
+            </div>
+          ) : selectedParty ? (
+            <div className="flex items-center gap-1.5 min-w-0 truncate">
+              {selectedParty.fid && (
+                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
+                  {selectedParty.fid}
+                </span>
+              )}
+              <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-100 shrink-0" />
+              <span className="font-bold text-slate-900 text-xs truncate">
+                {selectedParty.partyName}
+              </span>
+              <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+                {selectedParty.passengers?.length || selectedParty.totalPax || 1} PAX
+              </span>
+            </div>
+          ) : (
+            <span className="text-slate-400 text-xs font-medium truncate">
+              {placeholder}
+            </span>
+          )}
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 ml-2 transition-transform duration-150 ${isOpen ? 'rotate-180 text-slate-700' : ''}`} />
+      </button>
+
+      {/* Popover Dropdown Panel */}
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 min-w-[300px]">
+          {/* Search Box Header */}
+          <div className="p-2 border-b border-slate-100 bg-slate-50/90">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search family name, FID, pilgrim or passport #..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="w-full pl-8 pr-7 py-1.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-slate-900 focus:border-slate-400 text-slate-800 placeholder:text-slate-400"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div className="max-h-60 overflow-y-auto divide-y divide-slate-100/70 p-1">
+            {/* Walk-in Manual Option */}
+            {showCustomOption && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange('__CUSTOM__');
+                  setIsOpen(false);
+                  setQuery('');
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 text-left rounded-lg transition-colors cursor-pointer mb-0.5 ${
+                  isCustom ? 'bg-amber-50 text-amber-900 font-bold' : 'hover:bg-amber-50/60 text-amber-800'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <UserPlus className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span className="text-xs font-bold">+ Add Walk-in Family (Manual Entry)</span>
+                </div>
+                {isCustom && <Check className="w-4 h-4 text-amber-600 shrink-0 ml-2" />}
+              </button>
+            )}
+
+            {filteredParties.length === 0 && !showCustomOption ? (
+              <div className="p-4 text-center text-xs text-slate-400 italic font-medium">
+                No family found matching &quot;{query}&quot;
+              </div>
+            ) : (
+              filteredParties.map(p => {
+                const isSelected = !isCustom && p.partyHeadUid === value;
+                const paxCount = (p.passengers?.length || p.totalPax || 1);
+                const q = query.toLowerCase().trim();
+                
+                // Find matching passenger if search was query-driven
+                const matchingPax = q ? (p.passengers || []).find(m => 
+                  (m.name || '').toLowerCase().includes(q) ||
+                  (m.passportNo || '').toLowerCase().includes(q)
+                ) : null;
+
+                return (
+                  <button
+                    key={p.partyHeadUid}
+                    type="button"
+                    onClick={() => {
+                      onChange(p.partyHeadUid);
+                      setIsOpen(false);
+                      setQuery('');
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-left rounded-lg transition-colors cursor-pointer ${
+                      isSelected ? 'bg-emerald-50 text-emerald-950 font-bold' : 'hover:bg-slate-50 text-slate-800'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="truncate">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {p.fid && (
+                            <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-100/80 text-emerald-800 border border-emerald-200 shrink-0">
+                              {p.fid}
+                            </span>
+                          )}
+                          <Crown className="w-3 h-3 text-amber-500 fill-amber-100 shrink-0" />
+                          <span className="text-xs font-bold truncate">
+                            {p.partyName}
+                          </span>
+                          <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 shrink-0">
+                            {paxCount} PAX
+                          </span>
+                        </div>
+
+                        {/* Show matching pilgrim subtext if matched by passenger */}
+                        {matchingPax && (
+                          <div className="flex items-center gap-1.5 text-[10.5px] text-emerald-700 font-mono mt-0.5">
+                            <span>↳ Pilgrim: {matchingPax.prefix ? `${matchingPax.prefix} ` : ''}{matchingPax.name}</span>
+                            {matchingPax.passportNo && (
+                              <span className="text-slate-500">({matchingPax.passportNo})</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {isSelected && (
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0 ml-2" />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function GroupManager({ 
   groups = [], 
@@ -712,6 +924,7 @@ export default function GroupManager({
                     return (
                       <div 
                         key={fam.id} 
+                        style={{ zIndex: Math.max(1, formFamilies.length - index) }}
                         className="p-3.5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-3 relative transition-all"
                       >
                         {/* Family Card Header */}
@@ -746,23 +959,11 @@ export default function GroupManager({
                             <label className="text-[10px] font-bold uppercase text-slate-500">
                               Select Family / Party Head
                             </label>
-                            <select
+                            <SearchableGroupFamilySelect
+                              parties={parties}
                               value={fam.isCustom ? '__CUSTOM__' : fam.partyHeadUid}
-                              onChange={(e) => handleFamilyPartyChange(fam.id, e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer shadow-2xs"
-                            >
-                              <option value="">-- Choose Registered Family --</option>
-                              {parties.map(p => {
-                                const paxCount = (p.passengers?.length || p.totalPax || 1);
-                                const fidTag = p.fid ? `${p.fid} • ` : '';
-                                return (
-                                  <option key={p.partyHeadUid} value={p.partyHeadUid}>
-                                    {fidTag}{p.partyName} ({paxCount} PAX)
-                                  </option>
-                                );
-                              })}
-                              <option value="__CUSTOM__">+ Add Walk-in Family (Manual Entry)</option>
-                            </select>
+                              onChange={(selectedUid) => handleFamilyPartyChange(fam.id, selectedUid)}
+                            />
                           </div>
 
                           {/* Family Pax Input (Editable if custom or manual override) */}
