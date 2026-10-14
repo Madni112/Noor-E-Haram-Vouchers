@@ -48,6 +48,7 @@ import {
 import { useAuth } from '../../lib/AuthContext';
 import AdminLoginForm from '../../components/AdminLoginForm';
 import DashboardAnalytics from '../../components/erp/DashboardAnalytics';
+import GroupManager from '../../components/erp/GroupManager';
 import PassengerManager from '../../components/erp/PassengerManager';
 import HotelVoucherManager from '../../components/erp/HotelVoucherManager';
 import CostEstimator from '../../components/erp/CostEstimator';
@@ -70,6 +71,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
   const [isArchModalOpen, setIsArchModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile drawer
+  const [passengerMenuOpen, setPassengerMenuOpen] = useState(true); // Dropdown for Passenger
   const [salesMenuOpen, setSalesMenuOpen] = useState(true); // Dropdown for Invoice / Sale
   const [cloudSyncStatus, setCloudSyncStatus] = useState('syncing'); // 'synced' | 'syncing' | 'offline'
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -173,6 +175,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
   const urgentTasksCount = tasks.filter(t => t.status === 'Urgent' || t.status === 'Overdue Warning').length;
 
   const allReceiptsCount = invoices.reduce((acc, inv) => acc + (Array.isArray(inv.ledgerTransactions) ? inv.ledgerTransactions.length : 0), 0);
+  const totalPassengersCount = parties.reduce((acc, p) => acc + (p.passengers?.length || parseInt(p.totalPax) || 1), 0);
 
   const navItems = [
     {
@@ -183,12 +186,40 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
       section: 'main'
     },
     {
-      id: 'PASSENGERS',
-      label: 'Passengers',
-      subtitle: 'Module A',
+      id: 'PASSENGER_DROPDOWN',
+      isDropdown: true,
+      label: 'Passenger',
       icon: Users,
       badge: parties.length,
-      section: 'modules'
+      section: 'modules',
+      subItems: [
+        {
+          id: 'GROUPS',
+          label: 'Group',
+          icon: Users,
+          badge: parties.length,
+        },
+        {
+          id: 'PASSENGERS',
+          label: 'Passengers',
+          icon: UserCheck,
+          badge: totalPassengersCount,
+        }
+      ]
+    },
+    {
+      id: 'GROUPS',
+      label: 'Group',
+      icon: Users,
+      badge: parties.length,
+      hidden: true,
+    },
+    {
+      id: 'PASSENGERS',
+      label: 'Passengers',
+      icon: UserCheck,
+      badge: totalPassengersCount,
+      hidden: true,
     },
     {
       id: 'HOTELS',
@@ -339,14 +370,19 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
                 if (item.hidden) return null;
 
                 if (item.isDropdown) {
-                  const isAnySubActive = activeTab === 'INVOICES' || activeTab === 'RECEIPTS';
+                  const isPassenger = item.id === 'PASSENGER_DROPDOWN';
+                  const isOpen = isPassenger ? passengerMenuOpen : salesMenuOpen;
+                  const setIsOpen = isPassenger ? setPassengerMenuOpen : setSalesMenuOpen;
+                  const isAnySubActive = item.subItems.some(sub => activeTab === sub.id);
+                  const DropIcon = item.icon;
+
                   return (
                     <div key={item.id} className="space-y-1">
                       <button
                         type="button"
-                        onClick={() => setSalesMenuOpen(!salesMenuOpen)}
+                        onClick={() => setIsOpen(!isOpen)}
                         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                          isAnySubActive && !salesMenuOpen
+                          isAnySubActive && !isOpen
                             ? 'bg-slate-900 text-white shadow-xs'
                             : isAnySubActive
                             ? 'bg-slate-100 text-slate-900 font-bold'
@@ -354,7 +390,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
                         }`}
                       >
                         <div className="flex items-center gap-2.5 text-left">
-                          <Receipt className={`w-4 h-4 shrink-0 ${isAnySubActive ? 'text-emerald-500' : 'text-slate-400'}`} />
+                          <DropIcon className={`w-4 h-4 shrink-0 ${isAnySubActive ? 'text-emerald-500' : 'text-slate-400'}`} />
                           <span>{item.label}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
@@ -363,11 +399,11 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
                               {item.badge}
                             </span>
                           )}
-                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${salesMenuOpen ? 'rotate-180' : ''}`} />
+                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                         </div>
                       </button>
 
-                      {salesMenuOpen && (
+                      {isOpen && (
                         <div className="ml-3.5 pl-3 border-l-2 border-slate-200 space-y-1 pt-0.5">
                           {item.subItems.map(sub => {
                             const SubIcon = sub.icon;
@@ -605,6 +641,19 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
               tasks={tasks}
               auditLogs={auditLogs}
               onNavigate={(tab) => handleTabSwitch(tab)}
+            />
+          )}
+
+          {activeTab === 'GROUPS' && (
+            <GroupManager 
+              parties={parties} 
+              onPartiesUpdated={(updated) => {
+                setParties(updated);
+                loadAllErpData();
+              }} 
+              onNavigateToPassengers={(partyUid) => {
+                handleTabSwitch('PASSENGERS');
+              }}
             />
           )}
 
