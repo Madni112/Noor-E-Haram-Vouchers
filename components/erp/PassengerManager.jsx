@@ -728,13 +728,14 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   };
 
   // Filtered passengers
-  const displayPassengers = parties.flatMap(party => {
+  const displayPassengers = parties.flatMap((party, pIdx) => {
     if (selectedPartyUid !== 'ALL' && party.partyHeadUid !== selectedPartyUid) return [];
+    const seqFid = party.fid || `FID-${String(pIdx + 1).padStart(3, '0')}`;
     return (party.passengers || []).map((pax, idx) => ({
       ...pax,
       isPartyHead: idx === 0,
       parentPartyUid: party.partyHeadUid,
-      fid: party.fid || `FID-${String(party.voucherRefNo || '').replace(/\D/g, '').padStart(3, '0') || '001'}`,
+      fid: seqFid,
       voucherRefNo: party.voucherRefNo || party.partyHeadUid,
       parentPartyName: party.partyName,
       parentPhone: party.contactPhone,
@@ -989,10 +990,10 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredPartiesForHierarchy.map((party) => {
+              {filteredPartiesForHierarchy.map((party, partyIdx) => {
                 const isExpanded = expandedFamilies.has(party.partyHeadUid);
                 const paxList = party.passengers || [];
-                const fid = party.fid || `FID-${String(party.voucherRefNo || '').replace(/\D/g, '').padStart(3, '0') || '001'}`;
+                const fid = party.fid || `FID-${String(partyIdx + 1).padStart(3, '0')}`;
 
                 return (
                   <div
@@ -1071,7 +1072,6 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                           <thead>
                             <tr className="bg-slate-50/80 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-200/80">
                               <th className="py-2.5 px-3.5 border-r border-slate-100 w-12 text-center">#</th>
-                              <th className="py-2.5 px-3.5 border-r border-slate-100 w-36">Role / Relation</th>
                               <th className="py-2.5 px-3.5 border-r border-slate-100">Full Legal Name</th>
                               <th className="py-2.5 px-3.5 border-r border-slate-100">Passport #</th>
                               <th className="py-2.5 px-3.5 border-r border-slate-100 text-center">Date of Birth</th>
@@ -1083,7 +1083,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                           <tbody className="divide-y divide-slate-100 font-sans">
                             {paxList.length === 0 ? (
                               <tr>
-                                <td colSpan={8} className="py-6 text-center text-slate-400 font-medium italic">
+                                <td colSpan={7} className="py-6 text-center text-slate-400 font-medium italic">
                                   No members registered under this family.
                                 </td>
                               </tr>
@@ -1129,24 +1129,12 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                                       )}
                                     </td>
 
-                                    {/* Role / Relation */}
-                                    <td className="py-2.5 px-3.5 border-r border-slate-100">
-                                      {isHead ? (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                                          <Crown className="w-2.5 h-2.5 text-amber-600" />
-                                          Family Head
-                                        </span>
-                                      ) : (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                                          <Users className="w-2.5 h-2.5 text-slate-400" />
-                                          {pax.relationship || 'Family Member'}
-                                        </span>
-                                      )}
-                                    </td>
-
                                     {/* Full Name */}
                                     <td className="py-2.5 px-3.5 border-r border-slate-100 font-bold text-slate-900">
                                       <div className="flex items-center gap-1.5 flex-wrap">
+                                        {isHead && (
+                                          <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-100 shrink-0" title="Family Head" />
+                                        )}
                                         {pax.prefix && <span className="text-slate-400 text-[10px] font-medium">{pax.prefix}</span>}
                                         <span>{pax.name}</span>
                                         {isChecked && (
@@ -1253,7 +1241,6 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                   )}
                 </th>
                 <th className="py-3 px-3.5 border-r border-slate-100">Parent Family Group</th>
-                <th className="py-3 px-3.5 border-r border-slate-100">Role / Status</th>
                 <th className="py-3 px-3.5 border-r border-slate-100">Full Legal Name</th>
                 <th className="py-3 px-3.5 border-r border-slate-100">Passport #</th>
                 <th className="py-3 px-3.5 border-r border-slate-100 text-center">Date of Birth</th>
@@ -1264,7 +1251,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             <tbody className="divide-y divide-slate-100 font-sans">
               {displayPassengers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-slate-400 font-medium italic">
+                  <td colSpan={7} className="py-10 text-center text-slate-400 font-medium italic">
                     No passenger records found. Click "Add Family / Group" above to create one.
                   </td>
                 </tr>
@@ -1313,27 +1300,19 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                           {pax.parentPartyName}
                         </span>
                       </td>
-                      <td className="py-2.5 px-3.5 border-r border-slate-100">
-                        {pax.isPartyHead ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                            <Crown className="w-2.5 h-2.5 text-amber-600" />
-                            Family Head
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                            <Users className="w-2.5 h-2.5 text-slate-400" />
-                            {pax.relationship || 'Dependent'}
-                          </span>
-                        )}
-                      </td>
                       <td className="py-2.5 px-3.5 border-r border-slate-100 font-bold text-slate-900">
-                        {pax.prefix && <span className="text-slate-400 text-[10px] mr-1">{pax.prefix}</span>}
-                        {pax.name}
-                        {isChecked && (
-                          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
-                            To Delete
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {pax.isPartyHead && (
+                            <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-100 shrink-0" title="Family Head" />
+                          )}
+                          {pax.prefix && <span className="text-slate-400 text-[10px] mr-1">{pax.prefix}</span>}
+                          <span>{pax.name}</span>
+                          {isChecked && (
+                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                              To Delete
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-2.5 px-3.5 border-r border-slate-100 font-mono font-semibold text-slate-700">
                         {pax.passportNo || '—'}
