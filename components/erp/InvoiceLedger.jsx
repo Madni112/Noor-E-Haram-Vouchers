@@ -403,12 +403,12 @@ export default function InvoiceLedger({
               Module D
             </span>
             <h2 className="text-base sm:text-lg font-bold text-slate-900">
-              {viewMode === 'INVOICES' ? 'Invoices & Billing Manager' : 'Party & Customer Accounts Ledger'}
+              {viewMode === 'INVOICES' ? 'Bill & Invoices Manager' : 'Party & Customer Accounts Ledger'}
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
             {viewMode === 'INVOICES' 
-              ? 'Issue corporate invoices, track payment status, and manage client billings.'
+              ? 'Issue client bills, track payment status, and manage client billings.'
               : 'Complete running debit/credit statements, payment receipts history, and customer accounts.'}
           </p>
         </div>
@@ -426,7 +426,7 @@ export default function InvoiceLedger({
               }`}
             >
               <Receipt className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Invoices ({invoices.length})</span>
+              <span>Bill ({invoices.length})</span>
             </button>
 
             <button
@@ -455,7 +455,7 @@ export default function InvoiceLedger({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
             >
               <Plus className="w-4 h-4" />
-              <span>Create Invoice</span>
+              <span>+ Create Bill</span>
             </button>
           ) : (
             <button
@@ -481,7 +481,7 @@ export default function InvoiceLedger({
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search invoices by invoice #, party, or UID..."
+                placeholder="Search bills by bill #, party, or UID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-xl text-xs outline-none focus:border-slate-800"
@@ -511,7 +511,7 @@ export default function InvoiceLedger({
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-mono text-[10px]">
                   <tr>
-                    <th className="py-3 px-4 font-bold">Invoice Ref #</th>
+                    <th className="py-3 px-4 font-bold">Bill Ref #</th>
                     <th className="py-3 px-4 font-bold">Party Head (Debtor)</th>
                     <th className="py-3 px-4 font-bold">Issue / Due Date</th>
                     <th className="py-3 px-4 font-bold text-right">Total Billed</th>

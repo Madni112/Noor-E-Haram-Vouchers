@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { 
   Network, 
@@ -22,6 +22,7 @@ import {
   Lock,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Menu,
   X,
   Search,
@@ -51,6 +52,7 @@ import PassengerManager from '../../components/erp/PassengerManager';
 import HotelVoucherManager from '../../components/erp/HotelVoucherManager';
 import CostEstimator from '../../components/erp/CostEstimator';
 import InvoiceLedger from '../../components/erp/InvoiceLedger';
+import BillReceiptManager from '../../components/erp/BillReceiptManager';
 import RemindersPanel from '../../components/erp/RemindersPanel';
 import SystemArchitectureModal from '../../components/erp/SystemArchitectureModal';
 import { resolveTabFromSlug, getRouteForTab } from '../../lib/erpRouting';
@@ -68,6 +70,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
   const [isArchModalOpen, setIsArchModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile drawer
+  const [salesMenuOpen, setSalesMenuOpen] = useState(true); // Dropdown for Invoice / Sale
   const [cloudSyncStatus, setCloudSyncStatus] = useState('syncing'); // 'synced' | 'syncing' | 'offline'
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -169,6 +172,10 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
 
   const urgentTasksCount = tasks.filter(t => t.status === 'Urgent' || t.status === 'Overdue Warning').length;
 
+  const allReceiptsCount = useMemo(() => {
+    return invoices.reduce((acc, inv) => acc + (Array.isArray(inv.ledgerTransactions) ? inv.ledgerTransactions.length : 0), 0);
+  }, [invoices]);
+
   const navItems = [
     {
       id: 'DASHBOARD',
@@ -202,12 +209,33 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
       section: 'modules'
     },
     {
-      id: 'INVOICES',
-      label: 'Invoices',
-      subtitle: 'Module D1',
+      id: 'SALES_DROPDOWN',
+      isDropdown: true,
+      label: 'Invoice / Sale',
       icon: Receipt,
       badge: invoices.length,
-      section: 'modules'
+      section: 'modules',
+      subItems: [
+        {
+          id: 'INVOICES',
+          label: 'Bill',
+          icon: FileText,
+          badge: invoices.length,
+        },
+        {
+          id: 'RECEIPTS',
+          label: 'Bill Receipt',
+          icon: Receipt,
+          badge: allReceiptsCount,
+        }
+      ]
+    },
+    {
+      id: 'RECEIPTS',
+      label: 'Bill Receipt',
+      icon: Receipt,
+      badge: allReceiptsCount,
+      hidden: true,
     },
     {
       id: 'LEDGER',
@@ -310,13 +338,80 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
                 Operations Modules
               </span>
               {navItems.filter(i => i.section === 'modules').map(item => {
+                if (item.hidden) return null;
+
+                if (item.isDropdown) {
+                  const isAnySubActive = activeTab === 'INVOICES' || activeTab === 'RECEIPTS';
+                  return (
+                    <div key={item.id} className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => setSalesMenuOpen(!salesMenuOpen)}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                          isAnySubActive && !salesMenuOpen
+                            ? 'bg-slate-900 text-white shadow-xs'
+                            : isAnySubActive
+                            ? 'bg-slate-100 text-slate-900 font-bold'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 text-left">
+                          <Receipt className={`w-4 h-4 shrink-0 ${isAnySubActive ? 'text-emerald-500' : 'text-slate-400'}`} />
+                          <span>{item.label}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {item.badge !== null && (
+                            <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-slate-200/80 text-slate-700">
+                              {item.badge}
+                            </span>
+                          )}
+                          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${salesMenuOpen ? 'rotate-180' : ''}`} />
+                        </div>
+                      </button>
+
+                      {salesMenuOpen && (
+                        <div className="ml-3.5 pl-3 border-l-2 border-slate-200 space-y-1 pt-0.5">
+                          {item.subItems.map(sub => {
+                            const SubIcon = sub.icon;
+                            const isSubActive = activeTab === sub.id;
+                            return (
+                              <button
+                                key={sub.id}
+                                type="button"
+                                onClick={() => handleTabSwitch(sub.id)}
+                                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                  isSubActive
+                                    ? 'bg-slate-900 text-white shadow-xs'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <SubIcon className={`w-3.5 h-3.5 shrink-0 ${isSubActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+                                  <span>{sub.label}</span>
+                                </div>
+                                {sub.badge !== null && (
+                                  <span className={`px-1.5 py-0.2 rounded text-[9.5px] font-bold ${
+                                    isSubActive ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+                                  }`}>
+                                    {sub.badge}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleTabSwitch(item.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                       isActive 
                         ? 'bg-slate-900 text-white shadow-xs' 
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
@@ -557,6 +652,17 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
               parties={parties}
               initialView={activeTab === 'LEDGER' ? 'LEDGER' : 'INVOICES'}
               onViewChange={(newView) => handleTabSwitch(newView)}
+              onInvoicesUpdated={(updated) => {
+                setInvoices(updated);
+                loadAllErpData();
+              }}
+            />
+          )}
+
+          {activeTab === 'RECEIPTS' && (
+            <BillReceiptManager 
+              invoices={invoices}
+              parties={parties}
               onInvoicesUpdated={(updated) => {
                 setInvoices(updated);
                 loadAllErpData();
