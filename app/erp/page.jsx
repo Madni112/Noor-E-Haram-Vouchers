@@ -248,8 +248,12 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
         <div>
           <div className="h-16 px-5 border-b border-slate-100 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-sm tracking-tighter shadow-xs group-hover:bg-emerald-600 transition-colors">
-                NH
+              <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-center p-1 shadow-2xs group-hover:border-emerald-400 group-hover:scale-105 transition-all shrink-0 overflow-hidden">
+                <img 
+                  src="/logo.png" 
+                  alt="Noor E Haram Logo" 
+                  className="w-full h-full object-contain" 
+                />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
