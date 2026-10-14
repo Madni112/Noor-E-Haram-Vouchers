@@ -1037,7 +1037,7 @@ export default function CostEstimator({
       estimateNo: estId,
       partyHeadUid: selectedPartyUid,
       partyName: partyName,
-      companyName: 'CHEEPA TRAVELS',
+      companyName: 'NOOR E HARAM TRAVELS & TOURS',
       contactPhone: contactPhone,
       paxCount: totalPax || 1,
       packageDuration: `${calculations.effectiveDurationNights} Nights`,

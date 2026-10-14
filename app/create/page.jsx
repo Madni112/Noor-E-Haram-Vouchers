@@ -25,7 +25,7 @@ export default function CreateVoucherPage() {
   const router = useRouter();
   const { isAdmin, isLoaded } = useAuth();
 
-  const [companyName, setCompanyName] = useState('CHEEPA FJ TRAVELS');
+  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVEL & TOURS');
   const [phone, setPhone] = useState('MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
   const [emergencyContact, setEmergencyContact] = useState('+966 50 627 7492');
   const [party, setParty] = useState('');

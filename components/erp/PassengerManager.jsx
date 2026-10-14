@@ -491,7 +491,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
         partyHeadUid: newUid,
         voucherRefNo: `UB-${String(parties.length + 1).padStart(4, '0')}`,
         partyName: resolvedFamilyName,
-        companyName: 'CHEEPA FJ TRAVELS',
+        companyName: 'NOOR E HARAM TRAVELS & TOURS',
         contactPhone: familyPhone.trim(),
         backupPhone: '',
         totalPax: synthesizedPax.length,

@@ -92,13 +92,13 @@ export default function HomePage() {
             <div className="space-y-2 max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/80 text-amber-300 text-xs font-semibold border border-amber-400/20 backdrop-blur-sm">
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Cheepa FJ Travels Portal</span>
+                <span>Noor E Haram Travel & Tours Portal</span>
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold font-heading tracking-tight text-white">
                 Umrah Package Vouchers &amp; QR Verification
               </h1>
               <p className="text-emerald-200/90 text-sm sm:text-base leading-relaxed">
-                Complete digitised Umrah vouchers for <strong>Cheepa FJ Travels</strong>. Each voucher is linked with dynamic live QR codes for instant mobile viewing and print handover.
+                Complete digitised Umrah vouchers for <strong>Noor E Haram Travel & Tours</strong>. Each voucher is linked with dynamic live QR codes for instant mobile viewing and print handover.
               </p>
             </div>
 
@@ -188,7 +188,7 @@ export default function HomePage() {
                           {ubBadge}
                         </span>
                         <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider truncate max-w-[140px]">
-                          CHEEPA FJ
+                          NOOR E HARAM
                         </span>
                       </div>
                       <h3 className="font-heading font-bold text-slate-900 text-base sm:text-lg group-hover:text-emerald-800 transition-colors mt-1 uppercase truncate max-w-[200px]">
@@ -290,7 +290,7 @@ export default function HomePage() {
                   <PlusCircle className="w-6 h-6" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="font-bold text-slate-800 text-lg">No Vouchers in Cheepa FJ Travels Portal Yet</h3>
+                  <h3 className="font-bold text-slate-800 text-lg">No Vouchers in Noor E Haram Travel & Tours Portal Yet</h3>
                   <p className="text-slate-500 text-xs sm:text-sm">Get started by creating your first digital Umrah package voucher.</p>
                 </div>
                 <Link

@@ -73,7 +73,7 @@ export default function InvoiceLedger({
   const [selectedPartyUid, setSelectedPartyUid] = useState(parties[0]?.partyHeadUid || 'CUSTOM');
   const [customPartyName, setCustomPartyName] = useState('');
   const [customPhone, setCustomPhone] = useState('');
-  const [customCompany, setCustomCompany] = useState('CHEEPA TRAVELS');
+  const [customCompany, setCustomCompany] = useState('NOOR E HARAM TRAVELS & TOURS');
   const [invoiceNo, setInvoiceNo] = useState(nextInvoiceNum);
   const [packageTitle, setPackageTitle] = useState('15 Days Executive Umrah Package');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
@@ -133,7 +133,7 @@ export default function InvoiceLedger({
       if (p) {
         setCustomPartyName(p.partyName || '');
         setCustomPhone(p.contactPhone || '');
-        setCustomCompany(p.companyName || 'CHEEPA TRAVELS');
+        setCustomCompany(p.companyName || 'NOOR E HARAM TRAVELS & TOURS');
         setPackageTitle(p.packageTitle || `${p.totalPax || 2} PAX Umrah Package`);
       }
     }
@@ -144,7 +144,7 @@ export default function InvoiceLedger({
     e.preventDefault();
     const finalPartyName = selectedPartyUid === 'CUSTOM' ? (customPartyName || 'WALK-IN CLIENT') : customPartyName;
     const finalPhone = selectedPartyUid === 'CUSTOM' ? customPhone : (parties.find(p => p.partyHeadUid === selectedPartyUid)?.contactPhone || '');
-    const cleanCompany = customCompany || 'CHEEPA TRAVELS';
+    const cleanCompany = customCompany || 'NOOR E HARAM TRAVELS & TOURS';
 
     const transactions = [];
     if (hasInitialPayment && initialPaidNum > 0) {
@@ -615,7 +615,7 @@ export default function InvoiceLedger({
             <div className="flex items-start justify-between">
               <div>
                 <h1 className="text-xl font-black text-[#0a192f] uppercase tracking-tight">
-                  CHEEPA TRAVELS
+                  NOOR E HARAM TRAVELS & TOURS
                 </h1>
                 <p className="text-xs text-slate-600">
                   Customer Account Ledger &bull; Statement of Account

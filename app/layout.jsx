@@ -4,8 +4,8 @@ import Footer from '../components/Footer';
 import { AuthProvider } from '../lib/AuthContext';
 
 export const metadata = {
-  title: 'Cheepa FJ Travels — Umrah Package Vouchers & QR Portal',
-  description: 'Official Umrah Package Vouchers with instant QR code verification and redirect portal.',
+  title: 'Noor E Haram Travel & Tours — Umrah Package Vouchers & QR Portal',
+  description: 'Official Umrah Package Vouchers with instant QR code verification and redirect portal for Noor E Haram Travel & Tours.',
 };
 
 export default function RootLayout({ children }) {

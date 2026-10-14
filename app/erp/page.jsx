@@ -249,11 +249,11 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
           <div className="h-16 px-5 border-b border-slate-100 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2.5 group">
               <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-sm tracking-tighter shadow-xs group-hover:bg-emerald-600 transition-colors">
-                CF
+                NH
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-sm text-slate-900 tracking-tight">CHEEPA TRAVELS</span>
+                  <span className="font-bold text-sm text-slate-900 tracking-tight">NOOR E HARAM TRAVELS</span>
                   <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                     ERP
                   </span>

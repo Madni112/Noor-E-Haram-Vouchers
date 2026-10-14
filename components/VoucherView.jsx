@@ -151,7 +151,7 @@ export default function VoucherView({ voucher, origin = '' }) {
         <div className="space-y-2 print:space-y-1 flex-[1.3] text-center sm:text-left shrink-0 order-2 sm:order-1">
           <div>
             <h1 className="text-[17px] sm:text-[20px] print:text-[15.5pt] font-black tracking-tight text-[#0a192f] uppercase sm:whitespace-nowrap leading-tight">
-              {voucher.companyName || 'CHEEPA FJ TRAVELS'}
+              {voucher.companyName || 'NOOR E HARAM TRAVELS & TOURS'}
             </h1>
             <p className="text-[11px] sm:text-[12px] print:text-[8.5pt] text-slate-500 font-bold tracking-wide">
               Official Umrah Portal
@@ -177,7 +177,7 @@ export default function VoucherView({ voucher, origin = '' }) {
         <div className="flex flex-col items-center justify-center text-center space-y-2 print:space-y-1 flex-[1.4] order-1 sm:order-2">
           <img 
             src="/logo.png" 
-            alt="Cheepa Travels Logo" 
+            alt="Noor E Haram Travels Logo" 
             className="h-28 sm:h-40 max-w-[280px] sm:max-w-[340px] w-auto object-contain print:h-28 drop-shadow-md transition-all" 
           />
           <div className="flex items-center gap-1.5">
@@ -676,7 +676,7 @@ export default function VoucherView({ voucher, origin = '' }) {
           <div className="flex items-center justify-between pb-2 border-b-2 border-[#0a192f]">
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-sm text-[#0a192f] uppercase tracking-wide">
-                {voucher.companyName || 'CHEEPA FJ TRAVELS'}
+                {voucher.companyName || 'NOOR E HARAM TRAVELS & TOURS'}
               </span>
               <span className="text-[10px] text-slate-500 font-semibold">• TERMS &amp; IMPORTANT GUIDELINES</span>
             </div>
@@ -758,7 +758,7 @@ export default function VoucherView({ voucher, origin = '' }) {
         {/* Agency Contact & Address Footer (Page 2 Bottom) */}
         <div className="border-t-2 border-slate-300 pt-2.5 text-center text-[9.5px] print:text-[8pt] text-slate-700 bg-slate-50/90 rounded-lg py-2 px-3 mt-4 print:mt-auto">
           <p className="font-extrabold text-[#0a192f] uppercase tracking-wide text-[11px]">
-            {voucher.companyName || 'CHEEPA FJ TRAVELS'}
+            {voucher.companyName || 'NOOR E HARAM TRAVELS & TOURS'}
           </p>
           <p className="font-mono font-bold text-slate-800 mt-0.5 text-[10px]">
             {formatPakistaniPhone(voucher.address || voucher.phone || 'MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683')}

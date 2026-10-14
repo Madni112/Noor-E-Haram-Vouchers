@@ -65,7 +65,7 @@ export default function EstimateViewPage() {
       const quoteUrl = `${origin}/estimate/${estimate.id || id}`;
       const items = estimate.items || {};
       const bDetails = estimate.breakdownDetails || {};
-      const company = estimate.companyName || 'Cheepa Travels';
+      const company = estimate.companyName || 'Noor E Haram Travel & Tours';
 
       let computedDur = '';
       if (bDetails.flightDateFrom && bDetails.flightDateTo) {
@@ -303,7 +303,7 @@ export default function EstimateViewPage() {
                 </div>
 
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
-                  {estimate.companyName || 'CHEEPA TRAVELS'}
+                  {estimate.companyName || 'NOOR E HARAM TRAVELS & TOURS'}
                 </h1>
                 
                 <p className="text-xs text-slate-500 font-medium">
@@ -525,10 +525,10 @@ export default function EstimateViewPage() {
               </div>
               <div className="border-t border-slate-200 pt-3 text-center space-y-0.5">
                 <p className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                  {estimate.companyName || 'CHEEPA TRAVELS'}
+                  {estimate.companyName || 'NOOR E HARAM TRAVELS & TOURS'}
                 </p>
                 <p className="text-slate-500 font-mono text-[10.5px]">
-                  Helpline: 0311-2264567 / 0312-8039911 • Email: operations@cheepatravels.com
+                  Helpline: 0311-2324764 / 0312-3608683 • Email: info@nooreharam.com
                 </p>
               </div>
             </div>
@@ -555,7 +555,7 @@ export default function EstimateViewPage() {
               </div>
 
               <h2 className="text-xl font-black text-slate-900 uppercase">
-                {estimate.companyName || 'CHEEPA TRAVELS'}
+                {estimate.companyName || 'NOOR E HARAM TRAVELS & TOURS'}
               </h2>
               <p className="text-xs text-slate-600">
                 Internal Operations Cost Ledger • Itemized Unit Allocations &amp; Margins
