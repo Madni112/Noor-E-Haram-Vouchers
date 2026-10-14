@@ -753,13 +753,17 @@ export default function GroupManager({
                               <option value="">-- Choose Registered Family --</option>
                               {parties.map(p => {
                                 const paxCount = (p.passengers?.length || p.totalPax || 1);
+                                const hasVoucher = p.voucherRefNo && !p.voucherRefNo.startsWith('custom-');
+                                const label = hasVoucher 
+                                  ? `${p.voucherRefNo} • ${p.partyName} (${paxCount} PAX)`
+                                  : `${p.partyName} (${paxCount} PAX)`;
                                 return (
                                   <option key={p.partyHeadUid} value={p.partyHeadUid}>
-                                    {p.partyHeadUid} - {p.partyName} ({paxCount} PAX)
+                                    {label}
                                   </option>
                                 );
                               })}
-                              <option value="__CUSTOM__">+ Custom Family / Manual PAX</option>
+                              <option value="__CUSTOM__">+ Add Walk-in Family (Manual Entry)</option>
                             </select>
                           </div>
 
@@ -782,11 +786,11 @@ export default function GroupManager({
                           </div>
                         </div>
 
-                        {/* If Custom Family: allow entering name */}
+                        {/* If Manual Entry: allow entering name */}
                         {fam.isCustom && (
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold uppercase text-slate-500">
-                              Custom Family / Lead Name
+                              Family / Pilgrim Name
                             </label>
                             <input
                               type="text"
