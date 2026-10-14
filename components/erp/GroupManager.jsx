@@ -41,6 +41,7 @@ export default function GroupManager({
   // Form State
   const [formGidNumber, setFormGidNumber] = useState('');
   const [formGroupName, setFormGroupName] = useState('');
+  const [formPackageTitle, setFormPackageTitle] = useState('15 Days Economy Umrah');
   const [formFamilies, setFormFamilies] = useState([]);
   const [formError, setFormError] = useState('');
 
@@ -70,6 +71,7 @@ export default function GroupManager({
     setEditingGroup(null);
     setFormGidNumber(getNextGidNumber());
     setFormGroupName('');
+    setFormPackageTitle('15 Days Economy Umrah');
     setFormError('');
     // Start with 1 empty family row
     setFormFamilies([
@@ -92,6 +94,7 @@ export default function GroupManager({
     const match = (group.gid || '').replace(/^GID-?/i, '');
     setFormGidNumber(match || group.gid || '');
     setFormGroupName(group.groupName || '');
+    setFormPackageTitle(group.packageTitle || '');
     setFormError('');
     
     // Pre-populate families
@@ -292,6 +295,7 @@ export default function GroupManager({
       id: editingGroup?.id || `group_${Date.now()}`,
       gid: fullGid,
       groupName: formGroupName.trim(), // Optional
+      packageTitle: formPackageTitle.trim(), // Package Title
       totalPax: calculatedTotalPax,
       families: resolvedFamilies,
       createdAt: editingGroup?.createdAt || new Date().toISOString(),
@@ -321,8 +325,9 @@ export default function GroupManager({
       if (!q) return true;
       const gid = (g.gid || '').toLowerCase();
       const name = (g.groupName || '').toLowerCase();
+      const pkg = (g.packageTitle || '').toLowerCase();
       const famMatch = (g.families || []).some(f => (f.familyName || '').toLowerCase().includes(q));
-      return gid.includes(q) || name.includes(q) || famMatch;
+      return gid.includes(q) || name.includes(q) || pkg.includes(q) || famMatch;
     });
   }, [groups, searchTerm]);
 
@@ -461,12 +466,19 @@ export default function GroupManager({
                         </span>
                       </td>
 
-                      {/* Group / Lead Pilgrim Name */}
+                      {/* Group / Lead Pilgrim Name & Package */}
                       <td className="py-3.5 px-4 font-semibold text-slate-900">
                         {group.groupName ? (
-                          <span>{group.groupName}</span>
+                          <div className="font-bold text-slate-900">{group.groupName}</div>
                         ) : (
-                          <span className="text-slate-400 italic font-normal">(Optional / Unnamed)</span>
+                          <div className="text-slate-400 italic font-normal text-xs">(Optional / Unnamed)</div>
+                        )}
+                        {group.packageTitle && (
+                          <div className="text-[10.5px] font-medium text-slate-500 mt-1 flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200/80 font-medium">
+                              {group.packageTitle}
+                            </span>
+                          </div>
                         )}
                       </td>
 
@@ -616,6 +628,31 @@ export default function GroupManager({
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 shadow-2xs"
                   />
                   <p className="text-[10px] text-slate-400">Optional reference name</p>
+                </div>
+
+                {/* Package Title */}
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                    <span>Package Title</span>
+                    <span className="text-[10px] text-slate-400 font-normal">e.g. 15 Days Economy Umrah</span>
+                  </label>
+                  <input 
+                    type="text"
+                    list="package-title-suggestions"
+                    value={formPackageTitle}
+                    onChange={(e) => setFormPackageTitle(e.target.value)}
+                    placeholder="e.g. 15 Days Economy Umrah, 18 Days Star Package, VIP Ramadan"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 shadow-2xs"
+                  />
+                  <datalist id="package-title-suggestions">
+                    <option value="15 Days Economy Umrah Package" />
+                    <option value="18 Days Standard Star Umrah" />
+                    <option value="21 Days Premium Umrah Package" />
+                    <option value="14 Days Executive VIP Umrah" />
+                    <option value="Ramadan 1st Ashra Package" />
+                    <option value="Ramadan Last 10 Days Package" />
+                    <option value="Custom Family Umrah Package" />
+                  </datalist>
                 </div>
 
               </div>
@@ -864,9 +901,16 @@ export default function GroupManager({
                   <h3 className="text-base font-bold text-slate-900">
                     {selectedGroupForView.groupName || 'Umrah Group Manifest'}
                   </h3>
-                  <p className="text-xs text-slate-400">
-                    Total {selectedGroupForView.totalPax} Pilgrims • {(selectedGroupForView.families || []).length} Families
-                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {selectedGroupForView.packageTitle && (
+                      <span className="text-[10.5px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        {selectedGroupForView.packageTitle}
+                      </span>
+                    )}
+                    <p className="text-xs text-slate-400">
+                      Total {selectedGroupForView.totalPax} Pilgrims • {(selectedGroupForView.families || []).length} Families
+                    </p>
+                  </div>
                 </div>
               </div>
 
