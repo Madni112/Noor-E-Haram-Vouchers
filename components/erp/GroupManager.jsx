@@ -263,11 +263,6 @@ export default function GroupManager({
     return groups.reduce((acc, g) => acc + (parseInt(g.totalPax, 10) || 0), 0);
   }, [groups]);
 
-  const averageGroupSize = useMemo(() => {
-    if (totalGroups === 0) return 0;
-    return (totalPilgrims / totalGroups).toFixed(1);
-  }, [totalGroups, totalPilgrims]);
-
   // Live Dynamic Passenger Count in Modal
   const calculatedTotalPax = useMemo(() => {
     return formFamilies.reduce((acc, fam) => {
@@ -573,7 +568,7 @@ export default function GroupManager({
       </div>
 
       {/* KPI Statistic Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         
         <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
           <div className="flex items-center justify-between text-slate-400 mb-2">
@@ -591,15 +586,6 @@ export default function GroupManager({
           </div>
           <div className="text-2xl font-black text-emerald-600 font-mono">{totalPilgrims} PAX</div>
           <p className="text-[11px] text-slate-400 mt-0.5">Pilgrims assigned to groups</p>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Average Group Size</span>
-            <Layers className="w-4 h-4 text-slate-500" />
-          </div>
-          <div className="text-2xl font-black text-slate-900">{averageGroupSize} <span className="text-xs text-slate-500 font-normal">Pax/Group</span></div>
-          <p className="text-[11px] text-slate-400 mt-0.5">Pax distribution per GID</p>
         </div>
 
       </div>
