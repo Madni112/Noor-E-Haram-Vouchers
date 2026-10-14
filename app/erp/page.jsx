@@ -453,22 +453,10 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
                   {navItems.find(i => i.id === activeTab)?.label || 'Operations ERP'}
                 </h2>
                 
-                {cloudSyncStatus === 'synced' && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Cloud Synced (Supabase)
-                  </span>
-                )}
                 {cloudSyncStatus === 'syncing' && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                     <div className="w-2 h-2 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
-                    Syncing Cloud...
-                  </span>
-                )}
-                {cloudSyncStatus === 'offline' && (
-                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                    Local Mode
+                    Syncing...
                   </span>
                 )}
 
