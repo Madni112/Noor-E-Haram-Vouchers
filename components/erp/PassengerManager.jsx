@@ -393,6 +393,83 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     setEditingPax(null);
   };
 
+  // 5. Edit Family Group (Party Head, Package Title, Mobile Phone) Modal State
+  const [showEditFamilyModal, setShowEditFamilyModal] = useState(false);
+  const [editingFamily, setEditingFamily] = useState(null);
+  const [editFamilyHeadPaxId, setEditFamilyHeadPaxId] = useState('');
+  const [editFamilyPackageTitle, setEditFamilyPackageTitle] = useState('');
+  const [editFamilyPhone, setEditFamilyPhone] = useState('');
+
+  const openEditFamilyModal = (party) => {
+    cancelDelete();
+    setEditingFamily(party);
+    const paxList = party.passengers || [];
+    const headPax = paxList.find(p => p.relationship === 'Family Head' || p.relationship === 'Family Head / Lead Pilgrim') || paxList[0];
+    setEditFamilyHeadPaxId(headPax?.id || (paxList[0]?.id || ''));
+    setEditFamilyPackageTitle(party.packageTitle || '');
+    setEditFamilyPhone(isAgencyPhone(party.contactPhone) ? '' : (party.contactPhone || ''));
+    setShowEditFamilyModal(true);
+  };
+
+  const handleSaveEditedFamily = (e) => {
+    if (e) e.preventDefault();
+    if (!editingFamily) return;
+
+    const currentPassengers = [...(editingFamily.passengers || [])];
+    let updatedPartyName = editingFamily.partyName;
+
+    if (editFamilyHeadPaxId && currentPassengers.length > 0) {
+      const selectedHeadIdx = currentPassengers.findIndex(p => p.id === editFamilyHeadPaxId);
+      if (selectedHeadIdx !== -1) {
+        const selectedHead = currentPassengers[selectedHeadIdx];
+        updatedPartyName = selectedHead.name;
+
+        // Reorder passengers so the designated Family Head is placed at index 0
+        const reordered = [
+          selectedHead,
+          ...currentPassengers.filter((_, idx) => idx !== selectedHeadIdx)
+        ];
+
+        // Update sequence numbers and relationships
+        reordered.forEach((p, idx) => {
+          p.sNo = String(idx + 1);
+          if (idx === 0) {
+            p.relationship = 'Family Head';
+            if (editFamilyPhone.trim()) {
+              p.contactPhone = editFamilyPhone.trim();
+            }
+          } else if (p.relationship === 'Family Head' || p.relationship === 'Family Head / Lead Pilgrim') {
+            p.relationship = 'Family Member';
+          }
+        });
+
+        currentPassengers.length = 0;
+        currentPassengers.push(...reordered);
+      }
+    }
+
+    const cleanPhone = isAgencyPhone(editFamilyPhone.trim()) ? '' : editFamilyPhone.trim();
+
+    const updatedParty = {
+      ...editingFamily,
+      partyName: updatedPartyName,
+      packageTitle: editFamilyPackageTitle.trim(),
+      contactPhone: cleanPhone,
+      passengers: currentPassengers,
+      updatedAt: new Date().toISOString(),
+    };
+
+    saveParty(updatedParty);
+
+    const refreshedList = getAllParties();
+    if (onPartiesUpdated) {
+      onPartiesUpdated(refreshedList);
+    }
+
+    setShowEditFamilyModal(false);
+    setEditingFamily(null);
+  };
+
   // Family Group Information
   const [familyFidNumber, setFamilyFidNumber] = useState('');
   const [familyName, setFamilyName] = useState('');
@@ -1047,11 +1124,21 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                         )}
                       </div>
 
-                      {/* Right: PAX Count Badge & + Member Quick Button */}
+                      {/* Right: PAX Count Badge, Edit Family Button & + Member Quick Button */}
                       <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
                           {paxList.length} PAX
                         </span>
+
+                        <button
+                          type="button"
+                          onClick={() => openEditFamilyModal(party)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-100 rounded-lg border border-slate-300 hover:border-slate-400 transition-all shadow-2xs cursor-pointer"
+                          title="Edit Family Head, Package Title & Phone"
+                        >
+                          <Edit3 className="w-3.5 h-3.5 text-slate-600" />
+                          <span>Edit</span>
+                        </button>
 
                         <button
                           type="button"
@@ -2024,6 +2111,141 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                 >
                   <Check className="w-4 h-4 text-emerald-400" />
                   <span>Save Passenger Changes</span>
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. EDIT FAMILY GROUP & PARTY HEAD MODAL */}
+      {showEditFamilyModal && editingFamily && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => {
+            setShowEditFamilyModal(false);
+            setEditingFamily(null);
+          }}
+        >
+          <div 
+            className="bg-white rounded-3xl max-w-lg w-full border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100/80 border border-amber-200 text-amber-800 flex items-center justify-center shrink-0">
+                  <Crown className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <span>Edit Family Group</span>
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      {editingFamily.fid}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Modify Family Head, package title, and contact details
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditFamilyModal(false);
+                  setEditingFamily(null);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body / Form */}
+            <form onSubmit={handleSaveEditedFamily} className="p-6 space-y-4 overflow-y-auto">
+              
+              {/* Party Head Dropdown */}
+              <div>
+                <label className="block text-slate-800 font-bold mb-1 text-xs flex items-center gap-1.5">
+                  <Crown className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Family Head / Lead Pilgrim (Party Head) *</span>
+                </label>
+                {(editingFamily.passengers || []).length > 0 ? (
+                  <select
+                    value={editFamilyHeadPaxId}
+                    onChange={(e) => setEditFamilyHeadPaxId(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer text-xs"
+                  >
+                    {(editingFamily.passengers || []).map((pax, idx) => (
+                      <option key={pax.id || idx} value={pax.id}>
+                        {pax.prefix ? pax.prefix + ' ' : ''}{pax.name} {pax.passportNo ? `(Passport: ${pax.passportNo})` : ''} {idx === 0 ? '👑 [Current Head]' : ''}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-400 italic">
+                    No family members currently registered.
+                  </div>
+                )}
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Designating a new Family Head promotes them to lead pilgrim and updates the family profile title across the system.
+                </p>
+              </div>
+
+              {/* Package Title Input */}
+              <div>
+                <label className="block text-slate-800 font-bold mb-1 text-xs">
+                  Package Title
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 18 Standard Umrah, 21 Days Premium Umrah..."
+                  value={editFamilyPackageTitle}
+                  onChange={(e) => setEditFamilyPackageTitle(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 text-xs shadow-2xs"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Optional badge displayed next to family name (leave blank if none).
+                </p>
+              </div>
+
+              {/* Contact Phone Input */}
+              <div>
+                <label className="block text-slate-800 font-bold mb-1 text-xs">
+                  Mobile / Contact Phone
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 0300-1234567 or +92-300-1234567"
+                  value={editFamilyPhone}
+                  onChange={(e) => setEditFamilyPhone(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl font-medium text-slate-800 outline-none focus:ring-1 focus:ring-slate-900 text-xs shadow-2xs font-mono"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Personal phone number for this pilgrim family (leave blank if none).
+                </p>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditFamilyModal(false);
+                    setEditingFamily(null);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-all shadow-md flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                >
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Save Family Changes</span>
                 </button>
               </div>
 
