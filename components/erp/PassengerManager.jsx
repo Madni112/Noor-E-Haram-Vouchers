@@ -33,7 +33,7 @@ import {
   Bus,
   FileText
 } from 'lucide-react';
-import { saveParty, deleteParty, getAllParties, updatePassenger, checkPassengerDependencies } from '../../lib/erpData';
+import { saveParty, deleteParty, getAllParties, updatePassenger, checkPassengerDependencies, getNextFidNumber } from '../../lib/erpData';
 
 // Searchable SKU-style Family Group Dropdown Combobox
 function SearchablePartySelect({ 
@@ -104,8 +104,8 @@ function SearchablePartySelect({
             </>
           ) : selectedParty ? (
             <>
-              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0 border border-slate-200">
-                {selectedParty.voucherRefNo || selectedParty.partyHeadUid}
+              <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 shrink-0 border border-emerald-200">
+                {selectedParty.fid || selectedParty.voucherRefNo || selectedParty.partyHeadUid}
               </span>
               <span className="font-bold text-slate-900 text-xs truncate">
                 {selectedParty.partyName}
@@ -216,9 +216,9 @@ function SearchablePartySelect({
                       <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${
                         isSelected 
                           ? 'bg-emerald-100 border-emerald-300 text-emerald-800' 
-                          : 'bg-slate-100 border-slate-200 text-slate-700'
+                          : 'bg-emerald-50 border-emerald-200 text-emerald-800'
                       }`}>
-                        {p.voucherRefNo || p.partyHeadUid}
+                        {p.fid || p.voucherRefNo || p.partyHeadUid}
                       </span>
                       <div className="truncate">
                         <span className="font-bold text-slate-900 block truncate">
@@ -341,6 +341,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   };
 
   // Family Group Information
+  const [familyFidNumber, setFamilyFidNumber] = useState('');
   const [familyName, setFamilyName] = useState('');
   const [familyPhone, setFamilyPhone] = useState('');
   const [packageTitle, setPackageTitle] = useState('');
@@ -380,6 +381,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   const openNewFamilyModal = () => {
     cancelDelete();
     setModalMode('NEW_FAMILY');
+    setFamilyFidNumber(getNextFidNumber());
     setFamilyName('');
     setFamilyPhone('');
     setPackageTitle('');
@@ -487,9 +489,13 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
         contactPhone: familyPhone.trim(),
       }));
 
+      const rawFid = familyFidNumber.trim();
+      const resolvedFid = rawFid ? (rawFid.toUpperCase().startsWith('FID-') ? rawFid.toUpperCase() : `FID-${rawFid}`) : `FID-${getNextFidNumber()}`;
+
       const newParty = {
         partyHeadUid: newUid,
-        voucherRefNo: `UB-${String(parties.length + 1).padStart(4, '0')}`,
+        fid: resolvedFid,
+        voucherRefNo: resolvedFid,
         partyName: resolvedFamilyName,
         companyName: 'NOOR E HARAM TRAVELS & TOURS',
         contactPhone: familyPhone.trim(),
@@ -675,6 +681,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       ...pax,
       isPartyHead: idx === 0,
       parentPartyUid: party.partyHeadUid,
+      fid: party.fid || `FID-${String(party.voucherRefNo || '').replace(/\D/g, '').padStart(3, '0') || '001'}`,
       voucherRefNo: party.voucherRefNo || party.partyHeadUid,
       parentPartyName: party.partyName,
       parentPhone: party.contactPhone,
@@ -686,6 +693,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       (pax.name || '').toLowerCase().includes(q) ||
       (pax.passportNo || '').toLowerCase().includes(q) ||
       (pax.visaNo || '').toLowerCase().includes(q) ||
+      (pax.fid || '').toLowerCase().includes(q) ||
       (pax.parentPartyName || '').toLowerCase().includes(q) ||
       (pax.voucherRefNo || '').toLowerCase().includes(q) ||
       (pax.parentPartyUid || '').toLowerCase().includes(q)
@@ -937,8 +945,8 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                         )}
                       </td>
                       <td className="py-2.5 px-3.5 border-r border-slate-100">
-                        <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 inline-block text-[10px] mb-0.5">
-                          {pax.voucherRefNo || pax.parentPartyUid}
+                        <span className="font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block text-[10.5px] mb-0.5 tracking-wide">
+                          {pax.fid}
                         </span>
                         <span className="font-semibold text-slate-700 text-xs block">
                           {pax.parentPartyName}
@@ -1206,7 +1214,29 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
               
               {/* GROUP LEVEL SETTINGS */}
               {modalMode === 'NEW_FAMILY' ? (
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                  {/* FID (Family ID) */}
+                  <div>
+                    <label className="block text-slate-700 font-semibold mb-1 flex items-center justify-between">
+                      <span>FID (Family ID) <span className="text-rose-500">*</span></span>
+                      <span className="text-[10px] text-slate-400">e.g. 001</span>
+                    </label>
+                    <div className="flex rounded-xl overflow-hidden border border-slate-200 focus-within:ring-1 focus-within:ring-slate-900 bg-white shadow-2xs">
+                      <span className="bg-slate-100 text-slate-700 font-mono font-bold text-xs px-2.5 py-1.5 flex items-center border-r border-slate-200 select-none">
+                        FID-
+                      </span>
+                      <input 
+                        type="text"
+                        value={familyFidNumber}
+                        onChange={(e) => setFamilyFidNumber(e.target.value.replace(/[^0-9a-zA-Z_-]/g, ''))}
+                        placeholder="001"
+                        className="w-full px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 outline-none"
+                        required
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Full ID: FID-{familyFidNumber || '001'}</p>
+                  </div>
+
                   <div>
                     <label className="block text-slate-700 font-semibold mb-1 flex items-center justify-between">
                       <span>Family / Group Name *</span>

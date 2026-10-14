@@ -280,6 +280,7 @@ export default function GroupManager({
       return {
         id: fam.id,
         partyHeadUid: fam.partyHeadUid,
+        fid: party?.fid || fam.fid || '',
         familyName: fam.familyName || (party ? party.partyName : 'Unnamed Family'),
         pax: Array.isArray(fam.selectedPassengerIds) && fam.selectedPassengerIds.length > 0 
           ? fam.selectedPassengerIds.length 
@@ -753,13 +754,10 @@ export default function GroupManager({
                               <option value="">-- Choose Registered Family --</option>
                               {parties.map(p => {
                                 const paxCount = (p.passengers?.length || p.totalPax || 1);
-                                const hasVoucher = p.voucherRefNo && !p.voucherRefNo.startsWith('custom-');
-                                const label = hasVoucher 
-                                  ? `${p.voucherRefNo} • ${p.partyName} (${paxCount} PAX)`
-                                  : `${p.partyName} (${paxCount} PAX)`;
+                                const fidTag = p.fid ? `${p.fid} • ` : '';
                                 return (
                                   <option key={p.partyHeadUid} value={p.partyHeadUid}>
-                                    {label}
+                                    {fidTag}{p.partyName} ({paxCount} PAX)
                                   </option>
                                 );
                               })}
@@ -949,7 +947,9 @@ export default function GroupManager({
                   <div key={idx} className="p-4 rounded-2xl border border-slate-200 bg-white shadow-2xs space-y-3">
                     <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                       <div>
-                        <span className="text-[10px] font-bold uppercase text-slate-400">Family #{idx + 1}</span>
+                        <span className="text-[10px] font-mono font-bold uppercase text-slate-500">
+                          {fam.fid ? `${fam.fid} • ` : ''}Family #{idx + 1}
+                        </span>
                         <h4 className="text-xs font-bold text-slate-900">{fam.familyName}</h4>
                       </div>
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
