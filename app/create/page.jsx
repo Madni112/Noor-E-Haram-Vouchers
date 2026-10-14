@@ -25,15 +25,15 @@ export default function CreateVoucherPage() {
   const router = useRouter();
   const { isAdmin, isLoaded } = useAuth();
 
-  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVELS & TOURS');
-  const [phone, setPhone] = useState('UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911');
+  const [companyName, setCompanyName] = useState('CHEEPA FJ TRAVELS');
+  const [phone, setPhone] = useState('MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
   const [emergencyContact, setEmergencyContact] = useState('+966 50 627 7492');
   const [party, setParty] = useState('');
   const [ubNumber, setUbNumber] = useState('UB-0013');
   const [groundTransport, setGroundTransport] = useState('+92 328 8189989');
   const [makkahHelpline, setMakkahHelpline] = useState('+966 53 649 2846');
   const [madinahHelpline, setMadinahHelpline] = useState('+966 57 593 0550');
-  const [pakistanHelpline, setPakistanHelpline] = useState('UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911');
+  const [pakistanHelpline, setPakistanHelpline] = useState('MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
   const [ksaJeddahAirport, setKsaJeddahAirport] = useState('');
   const [ksaJeddahSpecial, setKsaJeddahSpecial] = useState('');
   const [ksaJeddahSharing, setKsaJeddahSharing] = useState('');
@@ -41,7 +41,7 @@ export default function CreateVoucherPage() {
   const [ksaMakkahSpecial, setKsaMakkahSpecial] = useState('');
   const [ksaMadinahSharing, setKsaMadinahSharing] = useState('');
   const [ksaMadinahSpecial, setKsaMadinahSpecial] = useState('');
-  const [executive, setExecutive] = useState('ADMIN');
+  const [executive, setExecutive] = useState('MUHAMMAD FAIZAN');
   const [isSelfVisa, setIsSelfVisa] = useState(true);
   const [passengers, setPassengers] = useState([
     { sNo: '1', prefix: 'MR', name: '', passportNo: '', group: '', visaNo: '', hasBed: true },

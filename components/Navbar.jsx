@@ -12,8 +12,8 @@ export default function Navbar() {
   const pathname = usePathname();
   const { isAdmin, logout } = useAuth();
 
-  // If inside ERP Portal, let the dedicated Left Sidebar ERP layout manage its own header
-  if (pathname && pathname.startsWith('/erp')) {
+  // If inside ERP Portal or Hotel Voucher View, let the dedicated layout manage its own header
+  if (pathname && (pathname.startsWith('/erp') || pathname.startsWith('/hotel-voucher'))) {
     return null;
   }
 
@@ -25,14 +25,14 @@ export default function Navbar() {
           <Link href={isAdmin ? '/' : pathname} className="flex items-center gap-3 group">
             <Image 
               src={whiteLogo} 
-              alt="Cheepa FJ Travels Logo" 
+              alt="NOOR E HARAM TRAVELS Logo" 
               className="h-10 w-auto object-contain drop-shadow" 
               priority
             />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-heading font-bold text-lg tracking-wide text-white group-hover:text-amber-300 transition-colors">
-                  CHEEPA FJ TRAVELS
+                  NOOR E HARAM TRAVELS
                 </span>
                 <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-emerald-800/80 text-amber-300 border border-amber-400/20">
                   {isAdmin ? 'Admin Portal' : 'Official Voucher'}

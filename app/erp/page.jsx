@@ -53,10 +53,11 @@ import CostEstimator from '../../components/erp/CostEstimator';
 import InvoiceLedger from '../../components/erp/InvoiceLedger';
 import RemindersPanel from '../../components/erp/RemindersPanel';
 import SystemArchitectureModal from '../../components/erp/SystemArchitectureModal';
+import { resolveTabFromSlug, getRouteForTab } from '../../lib/erpRouting';
 
-export default function ErpPortalPage() {
+export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
   const { isAdmin, isLoaded, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('DASHBOARD'); // DEFAULT: DASHBOARD
+  const [activeTab, setActiveTab] = useState(initialTab || 'DASHBOARD');
   const [parties, setParties] = useState([]);
   const [hotelVouchers, setHotelVouchers] = useState([]);
   const [estimates, setEstimates] = useState([]);
@@ -74,8 +75,43 @@ export default function ErpPortalPage() {
     if (typeof window !== 'undefined') {
       loadAllErpData();
       syncWithCloud();
+
+      // Check current URL pathname if direct navigation
+      const currentPath = window.location.pathname;
+      const resolved = resolveTabFromSlug(currentPath);
+      if (resolved && resolved !== 'DASHBOARD') {
+        setActiveTab(resolved);
+      } else if (initialTab) {
+        setActiveTab(initialTab);
+      }
+
+      // Handle browser back/forward buttons
+      const handlePopState = () => {
+        const tab = resolveTabFromSlug(window.location.pathname);
+        setActiveTab(tab);
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
     }
   }, []);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const handleTabSwitch = (tabId) => {
+    setActiveTab(tabId);
+    setSidebarOpen(false);
+    if (typeof window !== 'undefined') {
+      const targetRoute = getRouteForTab(tabId);
+      if (window.location.pathname !== targetRoute) {
+        window.history.pushState({ tabId }, '', targetRoute);
+      }
+    }
+  };
 
   const loadAllErpData = () => {
     setParties(getAllParties());
@@ -167,10 +203,18 @@ export default function ErpPortalPage() {
     },
     {
       id: 'INVOICES',
-      label: 'Invoices & Ledger',
-      subtitle: 'Module D',
+      label: 'Invoices',
+      subtitle: 'Module D1',
       icon: Receipt,
       badge: invoices.length,
+      section: 'modules'
+    },
+    {
+      id: 'LEDGER',
+      label: 'Accounts Ledger',
+      subtitle: 'Module D2',
+      icon: FileText,
+      badge: null,
       section: 'modules'
     },
     {
@@ -240,10 +284,7 @@ export default function ErpPortalPage() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => {
-                      setActiveTab(item.id);
-                      setSidebarOpen(false);
-                    }}
+                    onClick={() => handleTabSwitch(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                       isActive 
                         ? 'bg-slate-900 text-white shadow-xs' 
@@ -270,10 +311,7 @@ export default function ErpPortalPage() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => {
-                      setActiveTab(item.id);
-                      setSidebarOpen(false);
-                    }}
+                    onClick={() => handleTabSwitch(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                       isActive 
                         ? 'bg-slate-900 text-white shadow-xs' 
@@ -310,10 +348,7 @@ export default function ErpPortalPage() {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => {
-                      setActiveTab(item.id);
-                      setSidebarOpen(false);
-                    }}
+                    onClick={() => handleTabSwitch(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                       isActive 
                         ? 'bg-slate-900 text-white shadow-xs' 
@@ -484,7 +519,7 @@ export default function ErpPortalPage() {
               estimates={estimates}
               tasks={tasks}
               auditLogs={auditLogs}
-              onNavigate={(tab) => setActiveTab(tab)}
+              onNavigate={(tab) => handleTabSwitch(tab)}
             />
           )}
 
@@ -517,17 +552,19 @@ export default function ErpPortalPage() {
                 setEstimates(updated);
                 loadAllErpData();
               }}
-              onInvoiceGenerated={() => {
+              onInvoiceCreated={() => {
                 loadAllErpData();
-                setActiveTab('INVOICES');
+                handleTabSwitch('INVOICES');
               }}
             />
           )}
 
-          {activeTab === 'INVOICES' && (
+          {(activeTab === 'INVOICES' || activeTab === 'LEDGER') && (
             <InvoiceLedger 
               invoices={invoices}
               parties={parties}
+              initialView={activeTab === 'LEDGER' ? 'LEDGER' : 'INVOICES'}
+              onViewChange={(newView) => handleTabSwitch(newView)}
               onInvoicesUpdated={(updated) => {
                 setInvoices(updated);
                 loadAllErpData();

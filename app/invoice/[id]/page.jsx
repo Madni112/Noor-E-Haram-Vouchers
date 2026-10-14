@@ -148,7 +148,7 @@ export default function InvoiceViewPage() {
       {/* Top Action Bar (Screen Only) */}
       <div className="max-w-[850px] mx-auto px-4 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3 no-print">
         <Link 
-          href="/erp" 
+          href="/erp/invoices-ledger" 
           className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-900 hover:text-emerald-700 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -280,6 +280,49 @@ export default function InvoiceViewPage() {
             </span>
           </div>
         </div>
+
+        {/* Itemized Services Table */}
+        {invoice.lineItems && invoice.lineItems.length > 0 && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between border-b border-slate-300 pb-1.5 mb-2.5">
+              <h2 className="font-black text-xs sm:text-sm text-emerald-950 uppercase tracking-wide">
+                Billed Services &amp; Package Allocations
+              </h2>
+              <span className="text-[9.5px] font-bold text-slate-500">
+                {invoice.lineItems.length} Line Items
+              </span>
+            </div>
+
+            <table className="w-full text-left border-collapse border border-slate-300 text-[10.5px]">
+              <thead>
+                <tr className="bg-slate-100 text-slate-800 font-extrabold text-[10px] uppercase tracking-wider border-b border-slate-300">
+                  <th className="py-2 px-3 border-r border-slate-300">Description</th>
+                  <th className="py-2 px-3 border-r border-slate-300 text-center w-16">Qty</th>
+                  <th className="py-2 px-3 border-r border-slate-300 text-right w-24">Rate ({invoice.currency})</th>
+                  <th className="py-2 px-3 text-right w-32">Total ({invoice.currency})</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {invoice.lineItems.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50">
+                    <td className="py-2 px-3 border-r border-slate-200 font-medium text-slate-800">
+                      {item.description}
+                    </td>
+                    <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">
+                      {item.quantity}
+                    </td>
+                    <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
+                      {(item.rate || 0).toLocaleString()}
+                    </td>
+                    <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
+                      {(item.amount || 0).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Payment History / Ledger Transactions */}
         <div className="mb-4">

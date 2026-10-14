@@ -160,4 +160,23 @@ h1, h2, h3, .font-heading {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
+  /* Dedicated Hotel Voucher Print Rules */
+  .hotel-voucher-sheet {
+    box-shadow: none !important;
+    border: 2px solid #0a192f !important;
+    border-radius: 6px !important;
+    margin: 0 auto !important;
+    padding: 4mm 6mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    font-size: 10.5pt !important;
+    line-height: 1.35 !important;
+    color: #0f172a !important;
+    background: #ffffff !important;
+  }
 }

@@ -33,7 +33,7 @@ export default function AdminLoginForm({ onLoginSuccess }) {
             Admin Access Required
           </h2>
           <p className="text-emerald-200/80 text-xs mt-1">
-            Restricted portal for Noor E Haram Travel staff
+            Restricted portal for Noor E Haram Travels staff
           </p>
         </div>
 

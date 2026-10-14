@@ -35,7 +35,7 @@ export default function EditVoucherPage() {
   const [groundTransport, setGroundTransport] = useState('+92 328 8189989');
   const [makkahHelpline, setMakkahHelpline] = useState('+966 53 649 2846');
   const [madinahHelpline, setMadinahHelpline] = useState('+966 57 593 0550');
-  const [pakistanHelpline, setPakistanHelpline] = useState('UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911');
+  const [pakistanHelpline, setPakistanHelpline] = useState('MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
   const [ksaJeddahAirport, setKsaJeddahAirport] = useState('');
   const [ksaJeddahSpecial, setKsaJeddahSpecial] = useState('');
   const [ksaJeddahSharing, setKsaJeddahSharing] = useState('');
@@ -43,8 +43,8 @@ export default function EditVoucherPage() {
   const [ksaMakkahSpecial, setKsaMakkahSpecial] = useState('');
   const [ksaMadinahSharing, setKsaMadinahSharing] = useState('');
   const [ksaMadinahSpecial, setKsaMadinahSpecial] = useState('');
-  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVELS & TOURS');
-  const [executive, setExecutive] = useState('ADMIN');
+  const [companyName, setCompanyName] = useState('CHEEPA FJ TRAVELS');
+  const [executive, setExecutive] = useState('MUHAMMAD FAIZAN');
   const [isSelfVisa, setIsSelfVisa] = useState(true);
   const [paxCounts, setPaxCounts] = useState('GENT(S): 1  LAD(IES): 0  CHILD(REN): 0  INFANT(S): 0');
   const [passengers, setPassengers] = useState([]);
@@ -65,7 +65,7 @@ export default function EditVoucherPage() {
         setGroundTransport(found.groundTransport || found.ksaGroundTransport || '+92 328 8189989');
         setMakkahHelpline(found.makkahHelpline || found.ksaMakkah || '+966 53 649 2846');
         setMadinahHelpline(found.madinahHelpline || found.ksaMadinah || '+966 57 593 0550');
-        setPakistanHelpline(found.pakistanHelpline || 'UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911');
+        setPakistanHelpline(found.pakistanHelpline || 'MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
         setKsaJeddahAirport(found.ksaJeddahAirport ?? found.ksa_jeddah_airport ?? (found.passengers && found.passengers[0]?.ksaJeddahAirport) ?? '');
         setKsaJeddahSpecial(found.ksaJeddahSpecial ?? found.ksa_jeddah_special ?? (found.passengers && found.passengers[0]?.ksaJeddahSpecial) ?? '');
         setKsaJeddahSharing(found.ksaJeddahSharing ?? found.ksa_jeddah_sharing ?? (found.passengers && found.passengers[0]?.ksaJeddahSharing) ?? '');
@@ -73,8 +73,8 @@ export default function EditVoucherPage() {
         setKsaMakkahSpecial(found.ksaMakkahSpecial ?? found.ksa_makkah_special ?? (found.passengers && found.passengers[0]?.ksaMakkahSpecial) ?? '');
         setKsaMadinahSharing(found.ksaMadinahSharing ?? found.ksa_madinah_sharing ?? (found.passengers && found.passengers[0]?.ksaMadinahSharing) ?? '');
         setKsaMadinahSpecial(found.ksaMadinahSpecial ?? found.ksa_madinah_special ?? (found.passengers && found.passengers[0]?.ksaMadinahSpecial) ?? '');
-        setCompanyName(found.companyName || 'NOOR E HARAM TRAVELS & TOURS');
-        setExecutive(found.executive || 'ADMIN');
+        setCompanyName(found.companyName || 'CHEEPA FJ TRAVELS');
+        setExecutive(found.executive || 'MUHAMMAD FAIZAN');
         setIsSelfVisa(found.isSelfVisa !== false);
 
         const loadedPassengers = (found.passengers && found.passengers.length > 0 ? found.passengers : [
