@@ -455,7 +455,7 @@ export default function HotelVoucherViewPage() {
               <div className="flex items-center justify-start shrink-0 z-10">
                 <img 
                   src={voucher.logo || "/logo.png"} 
-                  alt={voucher.companyName || "Noor E Haram Travels Logo"} 
+                  alt={voucher.companyName || "noor e haram travels Logo"} 
                   className={`${
                     isThreeOrMore ? 'h-24 sm:h-28 print:h-[105px]' : 'h-28 sm:h-32 print:h-[112px]'
                   } max-w-[250px] sm:max-w-[300px] print:max-w-[300px] w-auto object-contain drop-shadow-sm`} 
@@ -687,6 +687,11 @@ export default function HotelVoucherViewPage() {
                         }`}>
                           {stay.hotelName}
                         </h4>
+                        {stay.view && (
+                          <span className="text-slate-500 font-medium text-[9px] print:text-[8pt] block">
+                            {stay.view}
+                          </span>
+                        )}
                         {stay.distance && (
                           <span className={`text-slate-600 font-semibold flex items-center gap-1 ${
                             isThreeOrMore ? 'text-[9px] print:text-[8pt]' : 'text-[10px] print:text-[8.5pt]'

@@ -43,7 +43,7 @@ export default function EditVoucherPage() {
   const [ksaMakkahSpecial, setKsaMakkahSpecial] = useState('');
   const [ksaMadinahSharing, setKsaMadinahSharing] = useState('');
   const [ksaMadinahSpecial, setKsaMadinahSpecial] = useState('');
-  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVEL & TOURS');
+  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVELS & TOURS');
   const [executive, setExecutive] = useState('MUHAMMAD FAIZAN');
   const [isSelfVisa, setIsSelfVisa] = useState(true);
   const [paxCounts, setPaxCounts] = useState('GENT(S): 1  LAD(IES): 0  CHILD(REN): 0  INFANT(S): 0');
@@ -73,7 +73,7 @@ export default function EditVoucherPage() {
         setKsaMakkahSpecial(found.ksaMakkahSpecial ?? found.ksa_makkah_special ?? (found.passengers && found.passengers[0]?.ksaMakkahSpecial) ?? '');
         setKsaMadinahSharing(found.ksaMadinahSharing ?? found.ksa_madinah_sharing ?? (found.passengers && found.passengers[0]?.ksaMadinahSharing) ?? '');
         setKsaMadinahSpecial(found.ksaMadinahSpecial ?? found.ksa_madinah_special ?? (found.passengers && found.passengers[0]?.ksaMadinahSpecial) ?? '');
-        setCompanyName(found.companyName || 'NOOR E HARAM TRAVEL & TOURS');
+        setCompanyName(found.companyName || 'NOOR E HARAM TRAVELS & TOURS');
         setExecutive(found.executive || 'MUHAMMAD FAIZAN');
         setIsSelfVisa(found.isSelfVisa !== false);
 
@@ -113,11 +113,12 @@ export default function EditVoucherPage() {
         setPaxCounts(computePaxSummary(loadedPassengers));
 
         const loadedAccommodations = (found.accommodations && found.accommodations.length > 0 ? found.accommodations : [
-          { city: 'MAKKAH', hotelCode: '378', hotelName: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '5' }
+          { city: 'MAKKAH', hotelCode: '378', hotelName: '', view: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '5' }
         ]).map(acc => ({
           ...acc,
           city: acc.city || 'MAKKAH',
           hotelName: acc.hotelName || acc.hotel_name || '',
+          view: acc.view || '',
           ubNo: acc.ubNo !== undefined ? acc.ubNo : (acc.ub_no || acc.ubNumber || ''),
           hcn: acc.hcn !== undefined ? acc.hcn : (acc.hotelCode || acc.hcn_no || '378'),
           roomType: acc.roomType !== undefined ? acc.roomType : (acc.room_type || acc.rpp || acc.type || 'DOUBLE'),
@@ -197,7 +198,7 @@ export default function EditVoucherPage() {
   const addAccommodation = () => {
     setAccommodations([
       ...accommodations,
-      { city: 'MAKKAH', hotelCode: '378', hotelName: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '1' },
+      { city: 'MAKKAH', hotelCode: '378', hotelName: '', view: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '1' },
     ]);
   };
 
@@ -725,6 +726,16 @@ export default function EditVoucherPage() {
                     <div className="col-span-1">
                       <input 
                         type="text"
+                        placeholder="View"
+                        value={acc.view || ''}
+                        onChange={(e) => updateAccommodation(idx, 'view', e.target.value)}
+                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-medium text-slate-800 text-[11px]"
+                        title="Hotel Room View (e.g. Haram View, Kaaba View, City View)"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <input 
+                        type="text"
                         placeholder="UB #"
                         value={acc.ubNo !== undefined ? acc.ubNo : ''}
                         onChange={(e) => updateAccommodation(idx, 'ubNo', e.target.value.toUpperCase())}
@@ -751,22 +762,22 @@ export default function EditVoucherPage() {
                         className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-medium text-slate-900"
                       />
                     </div>
-                    <div className="col-span-1.5">
+                    <div className="col-span-1">
                       <input 
                         type="text"
                         placeholder="Check-in"
                         value={acc.checkIn}
                         onChange={(e) => updateAccommodation(idx, 'checkIn', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
+                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
                       />
                     </div>
-                    <div className="col-span-1.5">
+                    <div className="col-span-1">
                       <input 
                         type="text"
                         placeholder="Check-out"
                         value={acc.checkOut}
                         onChange={(e) => updateAccommodation(idx, 'checkOut', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
+                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
                       />
                     </div>
                     <div className="col-span-1 flex items-center justify-end gap-1">

@@ -177,7 +177,7 @@ export default function VoucherView({ voucher, origin = '' }) {
         <div className="flex flex-col items-center justify-center text-center space-y-2 print:space-y-1 flex-[1.4] order-1 sm:order-2">
           <img 
             src="/logo.png" 
-            alt="Noor E Haram Travels Logo" 
+            alt="noor e haram travels Logo" 
             className="h-28 sm:h-40 max-w-[280px] sm:max-w-[340px] w-auto object-contain print:h-28 drop-shadow-md transition-all" 
           />
           <div className="flex items-center gap-1.5">
@@ -340,8 +340,13 @@ export default function VoucherView({ voucher, origin = '' }) {
                   <td className="border border-slate-300 py-1.5 px-3 font-bold text-[#0a192f] whitespace-nowrap">
                     {acc.city === 'MAKKAH' ? 'Makkah' : (acc.city === 'MADINAH' ? 'Medinah' : acc.city)}
                   </td>
-                  <td className="border border-slate-300 py-1.5 px-4 font-bold text-slate-900 whitespace-nowrap">
-                    {acc.hotelName}
+                  <td className="border border-slate-300 py-1 px-4 text-slate-900">
+                    <div className="font-bold whitespace-nowrap">{acc.hotelName}</div>
+                    {acc.view && (
+                      <div className="text-[9px] font-medium text-slate-500 print:text-gray-500 whitespace-nowrap">
+                        {acc.view}
+                      </div>
+                    )}
                   </td>
                   <td className="border border-slate-300 py-1.5 px-2.5 text-center font-mono font-bold text-[#0a192f] whitespace-nowrap">
                     {String(acc.ubNo || acc.ubNumber || voucher.ubNumber || '—').toUpperCase()}

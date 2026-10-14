@@ -25,7 +25,7 @@ export default function CreateVoucherPage() {
   const router = useRouter();
   const { isAdmin, isLoaded } = useAuth();
 
-  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVEL & TOURS');
+  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVELS & TOURS');
   const [phone, setPhone] = useState('MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
   const [emergencyContact, setEmergencyContact] = useState('+966 50 627 7492');
   const [party, setParty] = useState('');
@@ -49,8 +49,8 @@ export default function CreateVoucherPage() {
   const [paxCounts, setPaxCounts] = useState('GENT(S): 1  LAD(IES): 0  CHILD(REN): 0  INFANT(S): 0');
 
   const [accommodations, setAccommodations] = useState([
-    { city: 'MAKKAH', hotelCode: '378', hotelName: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '5' },
-    { city: 'MADINAH', hotelCode: '378', hotelName: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '5' },
+    { city: 'MAKKAH', hotelCode: '378', hotelName: '', view: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '5' },
+    { city: 'MADINAH', hotelCode: '378', hotelName: '', view: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '5' },
   ]);
   const [transports, setTransports] = useState([
     { sNo: '1', tnNo: '317', service: 'JED AIRPORT TO MAKKAH HOTEL', vehicle: 'BUS', pickupDate: '', contactPerson: '', bookingRefNo: '' },
@@ -119,7 +119,7 @@ export default function CreateVoucherPage() {
   const addAccommodation = () => {
     setAccommodations([
       ...accommodations,
-      { city: 'MAKKAH', hotelCode: '378', hotelName: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '1' },
+      { city: 'MAKKAH', hotelCode: '378', hotelName: '', view: '', roomType: 'DOUBLE', checkIn: '', checkOut: '', nights: '1' },
     ]);
   };
 
@@ -639,6 +639,16 @@ export default function CreateVoucherPage() {
                     <div className="col-span-1">
                       <input 
                         type="text"
+                        placeholder="View"
+                        value={acc.view || ''}
+                        onChange={(e) => updateAccommodation(idx, 'view', e.target.value)}
+                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white font-medium text-slate-800 text-[11px]"
+                        title="Hotel Room View (e.g. Haram View, Kaaba View, City View)"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <input 
+                        type="text"
                         placeholder="UB #"
                         value={acc.ubNo !== undefined ? acc.ubNo : ''}
                         onChange={(e) => updateAccommodation(idx, 'ubNo', e.target.value.toUpperCase())}
@@ -665,22 +675,22 @@ export default function CreateVoucherPage() {
                         className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white font-medium text-slate-900"
                       />
                     </div>
-                    <div className="col-span-1.5">
+                    <div className="col-span-1">
                       <input 
                         type="text"
                         placeholder="Check-in"
                         value={acc.checkIn}
                         onChange={(e) => updateAccommodation(idx, 'checkIn', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
+                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
                       />
                     </div>
-                    <div className="col-span-1.5">
+                    <div className="col-span-1">
                       <input 
                         type="text"
                         placeholder="Check-out"
                         value={acc.checkOut}
                         onChange={(e) => updateAccommodation(idx, 'checkOut', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
+                        className="w-full px-1.5 py-1.5 border border-slate-300 rounded bg-white text-[11px]"
                       />
                     </div>
                     <div className="col-span-1 flex items-center justify-end gap-1">
