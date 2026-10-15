@@ -44,6 +44,8 @@ import {
   getActiveRole, 
   setActiveRole, 
   fetchErpCloudData,
+  getRegisteredHotelStars,
+  getHotelDistance,
   USER_ROLES 
 } from '../../lib/erpData';
 import { useAuth } from '../../lib/AuthContext';
@@ -52,6 +54,7 @@ import DashboardAnalytics from '../../components/erp/DashboardAnalytics';
 import GroupManager from '../../components/erp/GroupManager';
 import PassengerManager from '../../components/erp/PassengerManager';
 import HotelVoucherManager from '../../components/erp/HotelVoucherManager';
+import TransportVoucherManager from '../../components/erp/TransportVoucherManager';
 import CostEstimator from '../../components/erp/CostEstimator';
 import InvoiceLedger from '../../components/erp/InvoiceLedger';
 import BillReceiptManager from '../../components/erp/BillReceiptManager';
@@ -77,6 +80,45 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
   const [salesMenuOpen, setSalesMenuOpen] = useState(true); // Dropdown for Invoice / Sale
   const [cloudSyncStatus, setCloudSyncStatus] = useState('syncing'); // 'synced' | 'syncing' | 'offline'
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hotelPrefillData, setHotelPrefillData] = useState(null);
+
+  const handleGenerateHotelFromTransport = (transportVoucher) => {
+    const matchingParty = parties.find(p => 
+      (p.voucherRefNo && p.voucherRefNo === (transportVoucher.ubNumber || transportVoucher.voucherRefNo)) ||
+      (p.partyName && p.partyName.toLowerCase() === (transportVoucher.party || '').toLowerCase())
+    ) || parties[0];
+    
+    const partyHeadUid = matchingParty?.partyHeadUid || parties[0]?.partyHeadUid || '';
+    
+    const starMap = getRegisteredHotelStars();
+    const mappedStays = (transportVoucher.accommodations || []).map((acc, idx) => {
+      const city = acc.city ? (acc.city.toLowerCase().includes('med') ? 'Medinah' : 'Makkah') : 'Makkah';
+      const hotelName = (acc.hotelName || '').trim().toUpperCase();
+      const stars = (starMap[hotelName] !== undefined && starMap[hotelName] !== null) ? starMap[hotelName] : 5;
+      const distance = getHotelDistance(hotelName) || '';
+      return {
+        id: `stay-${idx + 1}`,
+        city: city,
+        hotelName: hotelName || (city === 'Medinah' ? 'GULNAR HV' : 'VOCO 5 STAR'),
+        distance: distance,
+        stars: stars,
+        category: stars > 0 ? `${stars} Star Hotel` : '',
+        checkIn: acc.checkIn || '2026-10-10',
+        checkOut: acc.checkOut || '2026-10-15',
+        roomType: acc.roomType || 'Quad',
+        mealPlan: acc.meal || 'RO',
+        hcn: `HCN-${Math.floor(100000 + Math.random() * 900000)}`,
+        hotelPhone: city === 'Medinah' ? '+966 57 593 0550' : '+966 53 649 2846'
+      };
+    });
+
+    setHotelPrefillData({
+      partyHeadUid: partyHeadUid,
+      stays: mappedStays.length > 0 ? mappedStays : undefined
+    });
+
+    handleTabSwitch('HOTELS');
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -226,6 +268,14 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
       hidden: true,
     },
     {
+      id: 'TRANSPORTS',
+      label: 'Transport Vouchers',
+      subtitle: 'Module A',
+      icon: Bus,
+      badge: parties.length || null,
+      section: 'modules'
+    },
+    {
       id: 'HOTELS',
       label: 'Multi-Stay Hotel Vouchers',
       subtitle: 'Module B',
@@ -312,13 +362,13 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
               <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200/90 flex items-center justify-center p-1 shadow-xs group-hover:border-emerald-400 group-hover:shadow-md transition-all shrink-0 overflow-hidden">
                 <img 
                   src="/logo.png" 
-                  alt="Noor E Haram Logo" 
+                  alt="noor e haram travels Logo" 
                   className="w-full h-full object-contain" 
                 />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-sm text-slate-900 tracking-tight leading-tight">NOOR E HARAM TRAVELS</span>
+                  <span className="font-bold text-sm text-slate-900 tracking-tight leading-tight">CHEEPA TRAVELS</span>
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                     ERP
                   </span>
@@ -621,13 +671,17 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
               <span className="hidden sm:inline">New Voucher</span>
             </Link>
 
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 rounded-xl text-xs font-semibold shadow-xs transition-all"
+            <button
+              onClick={() => handleTabSwitch('TRANSPORTS')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer ${
+                activeTab === 'TRANSPORTS'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90'
+              }`}
             >
-              <Bus className="w-3.5 h-3.5 text-slate-500" />
-              <span className="hidden sm:inline">Transport Portal</span>
-            </Link>
+              <Bus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Transport Vouchers</span>
+            </button>
 
           </div>
 
@@ -672,10 +726,19 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
             />
           )}
 
+          {activeTab === 'TRANSPORTS' && (
+            <TransportVoucherManager 
+              parties={parties}
+              onGenerateHotelVoucher={handleGenerateHotelFromTransport}
+            />
+          )}
+
           {activeTab === 'HOTELS' && (
             <HotelVoucherManager 
               hotelVouchers={hotelVouchers}
               parties={parties}
+              prefillData={hotelPrefillData}
+              onClearPrefill={() => setHotelPrefillData(null)}
               onVouchersUpdated={(updated) => {
                 setHotelVouchers(updated);
                 loadAllErpData();

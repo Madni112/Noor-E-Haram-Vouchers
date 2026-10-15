@@ -137,7 +137,13 @@ import HotelCombobox from './HotelCombobox';
 // -------------------------------------------------------------
 // MAIN HOTEL VOUCHER MANAGER COMPONENT
 // -------------------------------------------------------------
-export default function HotelVoucherManager({ hotelVouchers = [], parties = [], onVouchersUpdated }) {
+export default function HotelVoucherManager({ 
+  hotelVouchers = [], 
+  parties = [], 
+  onVouchersUpdated,
+  prefillData = null,
+  onClearPrefill = null
+}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -157,6 +163,20 @@ export default function HotelVoucherManager({ hotelVouchers = [], parties = [], 
   const [emergencyKsaGround, setEmergencyKsaGround] = useState('+966 53 649 2846');
   const [emergencyMadinah, setEmergencyMadinah] = useState('+966 57 593 0550');
   const [emergencyPkHeadOffice, setEmergencyPkHeadOffice] = useState('MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
+
+  // Handle 1-Click Generate Hotel Voucher from Transport Voucher prefill
+  useEffect(() => {
+    if (prefillData && prefillData.partyHeadUid) {
+      setEditingVoucherId(null);
+      setTargetPartyUid(prefillData.partyHeadUid);
+      setIssueDate(new Date().toISOString().split('T')[0]);
+      if (Array.isArray(prefillData.stays) && prefillData.stays.length > 0) {
+        setStays(prefillData.stays);
+      }
+      setShowCreateModal(true);
+      if (onClearPrefill) onClearPrefill();
+    }
+  }, [prefillData, onClearPrefill]);
 
   // Sync paxList whenever target party or modal visibility changes
   useEffect(() => {

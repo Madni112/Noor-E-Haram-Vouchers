@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '../lib/AuthContext';
+import { isErpRoute } from '../lib/erpRouting';
 import { Compass, PlusCircle, Layers, Lock, LogOut, ShieldCheck, Building2 } from 'lucide-react';
 
 import whiteLogo from './White-Logo.png';

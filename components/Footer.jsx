@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { isErpRoute } from '../lib/erpRouting';
 
 export default function Footer() {
   const pathname = usePathname();
