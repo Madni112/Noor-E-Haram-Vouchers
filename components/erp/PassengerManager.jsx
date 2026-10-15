@@ -1447,7 +1447,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                                           <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-100 shrink-0" title="Family Head" />
                                         )}
                                         {pax.prefix && <span className="text-slate-400 text-[10px] font-medium">{pax.prefix}</span>}
-                                        <span>{pax.name}</span>
+                                        <span>{pax.name ? (pax.prefix && pax.name.toUpperCase().startsWith(`${pax.prefix.toUpperCase()} `) ? pax.name.slice(pax.prefix.length).trim() : pax.name) : 'Unnamed Pilgrim'}</span>
                                         {isChecked && (
                                           <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
                                             To Delete
@@ -1629,7 +1629,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                             <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-100 shrink-0" title="Family Head" />
                           )}
                           {pax.prefix && <span className="text-slate-400 text-[10px] mr-1">{pax.prefix}</span>}
-                          <span>{pax.name}</span>
+                          <span>{pax.name ? (pax.prefix && pax.name.toUpperCase().startsWith(`${pax.prefix.toUpperCase()} `) ? pax.name.slice(pax.prefix.length).trim() : pax.name) : 'Unnamed Pilgrim'}</span>
                           {isChecked && (
                             <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
                               To Delete
