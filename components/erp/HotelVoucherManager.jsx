@@ -527,7 +527,7 @@ export default function HotelVoucherManager({
               Module B
             </span>
             <h2 className="text-base sm:text-lg font-bold text-slate-900">
-              Dynamic Multi-Stay Hotel Voucher Engine
+              Hotel Vouchers
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-1">

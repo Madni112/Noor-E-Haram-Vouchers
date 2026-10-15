@@ -183,14 +183,14 @@ export default function TransportVoucherManager({ parties = [], onGenerateHotelV
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-black font-heading tracking-tight text-white">
-                Umrah Transport Vouchers
+                Transport + Hotel Vouchers
               </h2>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                 Live Cloud Sync
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              Official Umrah package vouchers with instant verified QR redirect links, ground transportation itineraries, hotel stay allocations, and passenger manifests.
+              Official Umrah package vouchers combining ground transportation itineraries, multi-stay hotel allocations, verified QR redirect links, and passenger manifests.
             </p>
           </div>
         </div>

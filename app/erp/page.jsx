@@ -37,6 +37,7 @@ import {
   getAllParties, 
   getAllGroups,
   getAllHotelVouchers, 
+  getAllTransportOnlyVouchers,
   getAllEstimates, 
   getAllInvoices, 
   getAllTasks, 
@@ -55,6 +56,7 @@ import GroupManager from '../../components/erp/GroupManager';
 import PassengerManager from '../../components/erp/PassengerManager';
 import HotelVoucherManager from '../../components/erp/HotelVoucherManager';
 import TransportVoucherManager from '../../components/erp/TransportVoucherManager';
+import TransportOnlyManager from '../../components/erp/TransportOnlyManager';
 import CostEstimator from '../../components/erp/CostEstimator';
 import InvoiceLedger from '../../components/erp/InvoiceLedger';
 import BillReceiptManager from '../../components/erp/BillReceiptManager';
@@ -77,10 +79,12 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile drawer
   const [passengerMenuOpen, setPassengerMenuOpen] = useState(true); // Dropdown for Passenger
+  const [voucherMenuOpen, setVoucherMenuOpen] = useState(true); // Dropdown for Vouchers
   const [salesMenuOpen, setSalesMenuOpen] = useState(true); // Dropdown for Invoice / Sale
   const [cloudSyncStatus, setCloudSyncStatus] = useState('syncing'); // 'synced' | 'syncing' | 'offline'
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hotelPrefillData, setHotelPrefillData] = useState(null);
+  const [transportOnlyVouchers, setTransportOnlyVouchers] = useState([]);
 
   const handleGenerateHotelFromTransport = (transportVoucher) => {
     const matchingParty = parties.find(p => 
@@ -166,6 +170,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
     setParties(getAllParties());
     setGroups(getAllGroups());
     setHotelVouchers(getAllHotelVouchers());
+    setTransportOnlyVouchers(getAllTransportOnlyVouchers());
     setEstimates(getAllEstimates());
     setInvoices(getAllInvoices());
     setTasks(getAllTasks());
@@ -268,20 +273,53 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
       hidden: true,
     },
     {
+      id: 'VOUCHER_DROPDOWN',
+      isDropdown: true,
+      label: 'Vouchers',
+      icon: Layers,
+      badge: 3,
+      section: 'modules',
+      subItems: [
+        {
+          id: 'TRANSPORTS',
+          label: 'Transport + Hotel',
+          icon: Bus,
+          badge: parties.length || null,
+        },
+        {
+          id: 'HOTELS',
+          label: 'Hotel Voucher',
+          icon: Building2,
+          badge: hotelVouchers.length || null,
+        },
+        {
+          id: 'TRANSPORT_ONLY',
+          label: 'Transport Voucher',
+          icon: Bus,
+          badge: transportOnlyVouchers.length || null,
+        }
+      ]
+    },
+    {
       id: 'TRANSPORTS',
-      label: 'Transport Vouchers',
-      subtitle: 'Module A',
+      label: 'Transport + Hotel',
       icon: Bus,
       badge: parties.length || null,
-      section: 'modules'
+      hidden: true,
     },
     {
       id: 'HOTELS',
-      label: 'Multi-Stay Hotel Vouchers',
-      subtitle: 'Module B',
+      label: 'Hotel Voucher',
       icon: Building2,
-      badge: hotelVouchers.length,
-      section: 'modules'
+      badge: hotelVouchers.length || null,
+      hidden: true,
+    },
+    {
+      id: 'TRANSPORT_ONLY',
+      label: 'Transport Voucher',
+      icon: Bus,
+      badge: transportOnlyVouchers.length || null,
+      hidden: true,
     },
     {
       id: 'ESTIMATES',
@@ -425,8 +463,9 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
 
                 if (item.isDropdown) {
                   const isPassenger = item.id === 'PASSENGER_DROPDOWN';
-                  const isOpen = isPassenger ? passengerMenuOpen : salesMenuOpen;
-                  const setIsOpen = isPassenger ? setPassengerMenuOpen : setSalesMenuOpen;
+                  const isVoucher = item.id === 'VOUCHER_DROPDOWN';
+                  const isOpen = isPassenger ? passengerMenuOpen : isVoucher ? voucherMenuOpen : salesMenuOpen;
+                  const setIsOpen = isPassenger ? setPassengerMenuOpen : isVoucher ? setVoucherMenuOpen : setSalesMenuOpen;
                   const isAnySubActive = item.subItems.some(sub => activeTab === sub.id);
                   const DropIcon = item.icon;
 
@@ -741,6 +780,15 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
               onClearPrefill={() => setHotelPrefillData(null)}
               onVouchersUpdated={(updated) => {
                 setHotelVouchers(updated);
+                loadAllErpData();
+              }}
+            />
+          )}
+
+          {activeTab === 'TRANSPORT_ONLY' && (
+            <TransportOnlyManager 
+              parties={parties}
+              onVouchersUpdated={() => {
                 loadAllErpData();
               }}
             />
