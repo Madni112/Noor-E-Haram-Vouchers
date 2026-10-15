@@ -154,21 +154,12 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
     setIssueDate(new Date().toISOString().split('T')[0]);
     setCompanyName('NOOR E HARAM TRAVELS');
 
-    // Auto-select first party head if available
-    const firstParty = parties[0];
-    if (firstParty) {
-      setCustomerName(firstParty.partyName || '');
-      setCustomerPhone(firstParty.contactPhone || '');
-      setTotalPax(firstParty.totalPax || firstParty.passengers?.length || 1);
-      setPartySearchQuery(firstParty.partyName || '');
-    } else {
-      setCustomerName('');
-      setCustomerPhone('');
-      setTotalPax(1);
-      setPartySearchQuery('');
-    }
+    setCustomerName('');
+    setCustomerPhone('');
+    setTotalPax(1);
+    setPartySearchQuery('');
 
-    // Default dynamic booking transfers
+    // Default dynamic booking transfer
     setBookings([
       {
         id: `b-${Date.now()}-1`,
@@ -177,48 +168,13 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
         time: '16:00',
         dropoffLocation: 'Makkah Hotel',
         vehicle: '50-Seater Luxury Bus',
-        details: 'Arrival Airport Transfer - Meet outside Gate 4',
-        resNo: `RES-${Math.floor(100000 + Math.random() * 900000)}`
-      },
-      {
-        id: `b-${Date.now()}-2`,
-        pickupDate: new Date(Date.now() + 5 * 86400000).toISOString().split('T')[0],
-        pickupLocation: 'Makkah Hotel',
-        time: '09:00',
-        dropoffLocation: 'Madinah Hotel',
-        vehicle: '50-Seater Luxury Bus',
-        details: 'Makkah to Madinah Intercity Transfer',
-        resNo: `RES-${Math.floor(100000 + Math.random() * 900000)}`
-      },
-      {
-        id: `b-${Date.now()}-3`,
-        pickupDate: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
-        pickupLocation: 'Madinah Hotel',
-        time: '14:00',
-        dropoffLocation: 'Madinah Airport (MED Terminal)',
-        vehicle: '50-Seater Luxury Bus',
-        details: 'Departure Transfer to Airport',
-        resNo: `RES-${Math.floor(100000 + Math.random() * 900000)}`
+        details: 'Arrival Airport Transfer',
+        resNo: ''
       }
     ]);
 
-    // Default connecting flights
-    setFlights([
-      {
-        id: `f-${Date.now()}-1`,
-        flightNo: 'SV-701',
-        date: new Date().toISOString().split('T')[0],
-        departure: 'KHI (Karachi) 13:15',
-        arrival: 'JED (Jeddah) 15:30'
-      },
-      {
-        id: `f-${Date.now()}-2`,
-        flightNo: 'PA-471',
-        date: new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0],
-        departure: 'MED (Madinah) 18:00',
-        arrival: 'KHI (Karachi) 23:45'
-      }
-    ]);
+    // Flights start empty until added
+    setFlights([]);
 
     setKsaHelpline('+966 53 649 2846 / +966 57 593 0550');
     setHeadOfficeHelpline('MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
