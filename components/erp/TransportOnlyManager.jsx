@@ -141,7 +141,7 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
       e.preventDefault();
       e.stopPropagation();
     }
-    const url = `${origin}/transport-voucher/${v.voucherNo || v.id}`;
+    const url = `${origin}/transport-only-voucher/${v.voucherNo || v.id}`;
     navigator.clipboard.writeText(url);
     setCopiedId(v.id || v.voucherNo);
     setTimeout(() => setCopiedId(null), 2000);
@@ -686,7 +686,7 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
 
                   <div className="flex items-center gap-1.5">
                     <Link
-                      href={`/transport-voucher/${v.voucherNo || v.id}`}
+                      href={`/transport-only-voucher/${v.voucherNo || v.id}`}
                       target="_blank"
                       className="px-3 py-1.5 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] rounded-lg text-xs font-bold flex items-center gap-1 shadow-2xs"
                     >
@@ -772,7 +772,7 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
                           </button>
 
                           <Link
-                            href={`/transport-voucher/${v.voucherNo || v.id}`}
+                            href={`/transport-only-voucher/${v.voucherNo || v.id}`}
                             target="_blank"
                             className="p-1 rounded-lg bg-[#0a192f] text-[#dfba73] hover:bg-slate-800"
                             title="View / Print"

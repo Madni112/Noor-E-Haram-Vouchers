@@ -1,7 +1,12 @@
 'use client';
 
-import ErpPortalPage from '../erp/page';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function TransportVoucherPage() {
-  return <ErpPortalPage initialTab="TRANSPORT_ONLY" />;
+export default function TransportVoucherRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace('/transport-only-voucher');
+  }, [router]);
+  return null;
 }
