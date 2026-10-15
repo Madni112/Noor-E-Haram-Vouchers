@@ -406,7 +406,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-sm text-slate-900 tracking-tight leading-tight">CHEEPA TRAVELS</span>
+                  <span className="font-bold text-sm text-slate-900 tracking-tight leading-tight">NOOR E HARAM TRAVELS</span>
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                     ERP
                   </span>
