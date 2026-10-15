@@ -204,6 +204,16 @@ export default function CreateVoucherPage() {
           passportNo: (p.passportNo || '').trim().toUpperCase(),
         };
       });
+    
+    if (formattedPassengers.length === 0 && cleanParty) {
+      formattedPassengers.push({
+        sNo: '1',
+        prefix: 'MR',
+        name: cleanParty,
+        passportNo: '',
+        hasBed: true,
+      });
+    }
 
     const newVoucher = {
       id: 'custom-' + Date.now(),

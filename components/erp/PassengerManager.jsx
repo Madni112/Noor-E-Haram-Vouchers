@@ -901,27 +901,23 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     }
   };
 
-  // Save changes: delete selected passengers, persist to storage & cloud, exit mode
-  const handleSaveDelete = () => {
-    if (selectedPaxIdsToDelete.length === 0) return;
-
-    // Safety Dependency Protection: Check if any selected passenger is used in Hotel Vouchers, Bills, or Transport Vouchers
-    const blocked = checkPassengerDependencies(selectedPaxIdsToDelete);
-    if (blocked && blocked.length > 0) {
-      setDependencyBlockInfo(blocked);
-      setShowDependencyModal(true);
-      return;
-    }
+  // Core passenger deletion logic
+  const executeDeletePassengers = (paxIds) => {
+    if (!paxIds || paxIds.length === 0) return;
 
     let allParties = getAllParties();
-    const idsSet = new Set(selectedPaxIdsToDelete);
+    const idsSet = new Set(paxIds.map(String));
     const completelyRemovedUids = [];
 
     allParties = allParties.map(party => {
-      const hasDeletions = (party.passengers || []).some(p => idsSet.has(p.id));
+      const hasDeletions = (party.passengers || []).some((p, idx) => 
+        idsSet.has(String(p.id)) || idsSet.has(`pax-${party.partyHeadUid}-${idx + 1}`)
+      );
       if (!hasDeletions) return party;
 
-      let remainingPax = (party.passengers || []).filter(p => !idsSet.has(p.id));
+      let remainingPax = (party.passengers || []).filter((p, idx) => 
+        !idsSet.has(String(p.id)) && !idsSet.has(`pax-${party.partyHeadUid}-${idx + 1}`)
+      );
 
       if (remainingPax.length === 0) {
         completelyRemovedUids.push(party.partyHeadUid);
@@ -931,6 +927,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       // Re-index serial numbers cleanly
       remainingPax = remainingPax.map((p, idx) => ({
         ...p,
+        id: p.id || `pax-${party.partyHeadUid}-${idx + 1}`,
         sNo: String(idx + 1),
         relationship: idx === 0 ? 'Head of Family' : (p.relationship === 'Head of Family' || p.relationship === 'Family Head / Lead Pilgrim' ? 'Family Member' : p.relationship),
       }));
@@ -943,12 +940,15 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       };
     }).filter(Boolean);
 
-    // Clean up completely removed parties from Supabase & storage
+    // 1. Clean up completely removed parties from Supabase & storage
     completelyRemovedUids.forEach(uid => {
       deleteParty(uid);
     });
 
-    // Save updated parties to Supabase & storage
+    // 2. Direct atomic save to local storage
+    writeStorage(ERP_STORAGE_KEYS.PARTIES, allParties);
+
+    // 3. Save partially updated parties to Supabase
     allParties.forEach(party => {
       saveParty(party);
     });
@@ -963,6 +963,59 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
 
     setIsDeleteMode(false);
     setSelectedPaxIdsToDelete([]);
+    setShowDependencyModal(false);
+    setDependencyBlockInfo([]);
+  };
+
+  // Save changes: delete selected passengers, persist to storage & cloud, exit mode
+  const handleSaveDelete = () => {
+    if (selectedPaxIdsToDelete.length === 0) return;
+
+    // Safety Dependency Protection: Check if any selected passenger is used in Hotel Vouchers, Bills, or Transport Vouchers
+    const blocked = checkPassengerDependencies(selectedPaxIdsToDelete);
+    if (blocked && blocked.length > 0) {
+      setDependencyBlockInfo(blocked);
+      setShowDependencyModal(true);
+      return;
+    }
+
+    executeDeletePassengers(selectedPaxIdsToDelete);
+  };
+
+  // Direct single passenger delete
+  const handleDeleteSinglePassenger = (pax, party) => {
+    if (!window.confirm(`Are you sure you want to delete passenger "${pax.name}" from ${party.partyName}?`)) {
+      return;
+    }
+    const targetPaxId = pax.id || (party.passengers ? `pax-${party.partyHeadUid}-${party.passengers.findIndex(p => p.name === pax.name) + 1}` : null);
+    if (!targetPaxId) return;
+    const blocked = checkPassengerDependencies([targetPaxId]);
+    if (blocked && blocked.length > 0) {
+      setSelectedPaxIdsToDelete([targetPaxId]);
+      setDependencyBlockInfo(blocked);
+      setShowDependencyModal(true);
+      return;
+    }
+    executeDeletePassengers([targetPaxId]);
+  };
+
+  // Direct family group delete
+  const handleDeleteFamily = (party) => {
+    if (!window.confirm(`Are you sure you want to delete the entire family group "${party.partyName}" (${party.fid})?`)) {
+      return;
+    }
+    const paxIds = (party.passengers || []).map((p, idx) => p.id || `pax-${party.partyHeadUid}-${idx + 1}`);
+    const blocked = checkPassengerDependencies(paxIds);
+    if (blocked && blocked.length > 0) {
+      setSelectedPaxIdsToDelete(paxIds);
+      setDependencyBlockInfo(blocked);
+      setShowDependencyModal(true);
+      return;
+    }
+    deleteParty(party.partyHeadUid);
+    const updated = getAllParties().filter(p => p.partyHeadUid !== party.partyHeadUid && p.fid !== party.fid);
+    if (onPartiesUpdated) onPartiesUpdated(updated);
+    if (selectedPartyUid === party.partyHeadUid) setSelectedPartyUid('ALL');
   };
 
   // Filtered passengers
@@ -1310,6 +1363,16 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                           <UserPlus className="w-3.5 h-3.5" />
                           <span>+ Member</span>
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteFamily(party)}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-white hover:bg-rose-50 rounded-lg border border-rose-200 transition-all shadow-2xs cursor-pointer"
+                          title={`Delete entire family group ${party.partyName}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Delete</span>
+                        </button>
                       </div>
                     </div>
 
@@ -1423,7 +1486,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
 
                                     {/* Actions */}
                                     <td className="py-2.5 px-3.5 text-right">
-                                      <div className="flex items-center justify-end">
+                                      <div className="flex items-center justify-end gap-1">
                                         <button
                                           type="button"
                                           onClick={(e) => {
@@ -1440,6 +1503,18 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                                           className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all cursor-pointer shadow-2xs group"
                                         >
                                           <Edit3 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteSinglePassenger(pax, party);
+                                          }}
+                                          title={`Delete passenger ${pax.name}`}
+                                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all cursor-pointer shadow-2xs group"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
                                         </button>
                                       </div>
                                     </td>
@@ -1591,6 +1666,19 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                             className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all cursor-pointer shadow-2xs group"
                           >
                             <Edit3 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const parentParty = parties.find(p => p.partyHeadUid === pax.parentPartyUid) || { partyName: pax.parentPartyName };
+                              handleDeleteSinglePassenger(pax, parentParty);
+                            }}
+                            title={`Delete passenger ${pax.name}`}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-all cursor-pointer shadow-2xs group"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
                           </button>
                         </div>
                       </td>
@@ -2557,17 +2645,30 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const idsToDelete = dependencyBlockInfo.map(b => b.paxId).filter(Boolean);
+                  const targetIds = idsToDelete.length > 0 ? idsToDelete : selectedPaxIdsToDelete;
+                  executeDeletePassengers(targetIds);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Force Delete Anyway</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => {
                   setShowDependencyModal(false);
                   setDependencyBlockInfo([]);
                 }}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 transition-all shadow-md flex items-center gap-2 cursor-pointer active:scale-95"
+                className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
               >
-                <Check className="w-4 h-4 text-emerald-400" />
-                <span>Understood / Keep Safe</span>
+                <X className="w-4 h-4 text-slate-500" />
+                <span>Cancel / Keep Safe</span>
               </button>
             </div>
           </div>
