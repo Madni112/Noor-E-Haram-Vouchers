@@ -493,22 +493,7 @@ export default function TransportVoucherManager({ parties = [], onGenerateHotelV
                 </div>
 
                 {/* Card Bottom: Actions */}
-                <div className="space-y-2 pt-1 border-t border-slate-100">
-                  
-                  {/* Suggestion 1-Click Hotel Voucher Button (Prominent) */}
-                  {stays.length > 0 && onGenerateHotelVoucher && (
-                    <button
-                      type="button"
-                      onClick={() => onGenerateHotelVoucher(v)}
-                      className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:scale-98 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer"
-                      title="1-Click pre-fill and create Multi-Stay Hotel Voucher with this party's stays & passengers"
-                    >
-                      <Hotel className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-                      <span>1-Click Generate Hotel Voucher</span>
-                      <ArrowRight className="w-3 h-3 text-slate-950 ml-0.5 stroke-[2.5]" />
-                    </button>
-                  )}
-
+                <div className="pt-1 border-t border-slate-100">
                   {/* Standard Operations Actions */}
                   <div className="flex items-center justify-between gap-1.5 flex-wrap">
                     
@@ -647,18 +632,6 @@ export default function TransportVoucherManager({ parties = [], onGenerateHotelV
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1">
-                          
-                          {stays.length > 0 && onGenerateHotelVoucher && (
-                            <button
-                              type="button"
-                              onClick={() => onGenerateHotelVoucher(v)}
-                              className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-bold flex items-center gap-1 border border-amber-200 cursor-pointer"
-                              title="1-Click Generate Hotel Voucher"
-                            >
-                              <Hotel className="w-3 h-3 text-amber-700" />
-                              <span className="hidden sm:inline">Hotel Voucher</span>
-                            </button>
-                          )}
 
                           <button
                             type="button"
