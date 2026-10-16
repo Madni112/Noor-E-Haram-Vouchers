@@ -17,7 +17,8 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Clock, 
-  CreditCard 
+  CreditCard,
+  Users
 } from 'lucide-react';
 import { getInvoiceById, addLedgerTransaction } from '../../../lib/erpData';
 
@@ -257,6 +258,28 @@ export default function InvoiceViewPage() {
           </div>
         </div>
 
+        {/* Demographic PAX Allocation Banner */}
+        {(invoice.totalPax || invoice.adultsCount !== undefined) && (
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-indigo-50/70 border border-indigo-200/80 rounded-lg px-3.5 py-2 mb-4 text-xs">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-indigo-700" />
+              <span className="font-extrabold uppercase text-indigo-950 text-[10px] tracking-wider">
+                Traveler Demographic Allocation:
+              </span>
+              <span className="font-mono font-black text-indigo-900 bg-white px-2 py-0.5 rounded border border-indigo-200 shadow-xs text-xs">
+                Total: {invoice.totalPax || ((Number(invoice.adultsCount) || 0) + (Number(invoice.childrenCount) || 0) + (Number(invoice.infantsCount) || 0))} PAX
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] font-semibold text-slate-700">
+              <span>Adults: <strong className="font-black text-slate-900">{invoice.adultsCount !== undefined ? invoice.adultsCount : (invoice.totalPax || 1)}</strong></span>
+              <span className="text-slate-300">&bull;</span>
+              <span>Children: <strong className="font-black text-slate-900">{invoice.childrenCount || 0}</strong></span>
+              <span className="text-slate-300">&bull;</span>
+              <span>Infants: <strong className="font-black text-slate-900">{invoice.infantsCount || 0}</strong></span>
+            </div>
+          </div>
+        )}
+
         {/* Financial Balance Summary Strip */}
         <div className="grid grid-cols-3 gap-3 bg-emerald-950 text-white rounded-lg p-3 mb-4 text-center">
           <div className="border-r border-emerald-800/80 pr-2">
@@ -383,7 +406,7 @@ export default function InvoiceViewPage() {
           {/* Bank Payment Coordinates */}
           <div className="bg-amber-50/60 border border-amber-200 rounded-lg p-3 text-[10px] space-y-1">
             <span className="font-bold text-amber-950 uppercase tracking-wide block border-b border-amber-200 pb-1 mb-1.5">
-              Official Wire &amp; Bank Coordinates (Noor E Haram)
+              Official Wire &amp; Bank Coordinates (Cheepa FJ Travels)
             </span>
             <p><strong className="text-slate-800">Bank Name:</strong> {invoice.bankDetails?.bankName || 'Meezan Bank Limited'}</p>
             <p><strong className="text-slate-800">Account Title:</strong> {invoice.bankDetails?.accountTitle || 'NOOR E HARAM TRAVELS & TOURS'}</p>

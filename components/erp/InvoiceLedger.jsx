@@ -25,7 +25,12 @@ import {
   TrendingUp,
   TrendingDown,
   Filter,
-  RotateCcw
+  RotateCcw,
+  Edit3,
+  Users,
+  Check,
+  Minus,
+  Tag
 } from 'lucide-react';
 import { addLedgerTransaction, getAllInvoices, saveInvoice, deleteInvoice } from '../../lib/erpData';
 import CustomDatePicker from './CustomDatePicker';
@@ -67,8 +72,48 @@ export default function InvoiceLedger({
   const [payNotes, setPayNotes] = useState('');
 
   // -------------------------------------------------------------
-  // CREATE INVOICE MODAL STATE
+  // PRESET ITEMS & DEMOGRAPHIC PAX STATE
   // -------------------------------------------------------------
+  const DEFAULT_ITEM_PRESETS = [
+    { id: 'p1', name: 'Saudi Umrah Electronic Visas & Medical Insurance', defaultRate: 45000 },
+    { id: 'p2', name: 'Direct International Flight Tickets', defaultRate: 135000 },
+    { id: 'p3', name: 'Makkah Hotel Accommodation Blocks', defaultRate: 180000 },
+    { id: 'p4', name: 'Madinah Hotel Accommodation Blocks', defaultRate: 120000 },
+    { id: 'p5', name: 'Makkah & Madinah Hotel Accommodation Blocks', defaultRate: 180000 },
+    { id: 'p6', name: 'Dedicated Ground Transport & Holy Ziyarat', defaultRate: 65000 },
+    { id: 'p7', name: 'Private GMC / Luxury VIP Vehicle Transfer', defaultRate: 45000 },
+    { id: 'p8', name: 'Jeddah Airport Arrival Transfer (50-Seater Bus)', defaultRate: 85000 },
+    { id: 'p9', name: 'Haramain High-Speed Train Tickets', defaultRate: 18500 },
+    { id: 'p10', name: 'Holy Ziyarat Guidance & Field Operations Liaison', defaultRate: 25000 },
+    { id: 'p11', name: 'Full Umrah Laundry & Hospitality Service', defaultRate: 15000 }
+  ];
+  const PRESETS_STORAGE_KEY = 'erp_invoice_item_presets_v1';
+
+  const [itemPresets, setItemPresets] = useState(DEFAULT_ITEM_PRESETS);
+  const [savedNoticeMap, setSavedNoticeMap] = useState({});
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(PRESETS_STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setItemPresets(parsed);
+            return;
+          }
+        }
+        localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(DEFAULT_ITEM_PRESETS));
+      } catch (e) {
+        console.warn('Failed reading item presets from storage', e);
+      }
+    }
+  }, []);
+
+  // -------------------------------------------------------------
+  // CREATE / EDIT INVOICE MODAL STATE
+  // -------------------------------------------------------------
+  const [editingInvoiceId, setEditingInvoiceId] = useState(null);
   const nextInvoiceNum = `INV-2026-${String(invoices.length + 1).padStart(3, '0')}`;
   const [selectedPartyUid, setSelectedPartyUid] = useState(parties[0]?.partyHeadUid || 'CUSTOM');
   const [customPartyName, setCustomPartyName] = useState('');
@@ -79,11 +124,18 @@ export default function InvoiceLedger({
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
   const [paymentTerms, setPaymentTerms] = useState('Full Payment Required Prior to Visa Stamp & Flight Issuance.');
+
+  // Demographic PAX Counts
+  const [adultsCount, setAdultsCount] = useState(2);
+  const [childrenCount, setChildrenCount] = useState(0);
+  const [infantsCount, setInfantsCount] = useState(0);
+  const [totalPax, setTotalPax] = useState(2);
+
   const [lineItems, setLineItems] = useState([
-    { id: '1', description: 'Saudi Umrah Electronic Visas & Medical Insurance', quantity: 2, rate: 45000, amount: 90000 },
-    { id: '2', description: 'Makkah & Madinah Hotel Accommodation Blocks', quantity: 1, rate: 180000, amount: 180000 },
-    { id: '3', description: 'Dedicated Ground Transport & Holy Ziyarat', quantity: 1, rate: 65000, amount: 65000 },
-    { id: '4', description: 'Direct International Flight Tickets', quantity: 2, rate: 135000, amount: 270000 }
+    { id: '1', description: 'Saudi Umrah Electronic Visas & Medical Insurance', quantity: 2, rate: 45000, amount: 90000, selectedPreset: 'Saudi Umrah Electronic Visas & Medical Insurance', originalPresetRate: 45000 },
+    { id: '2', description: 'Makkah & Madinah Hotel Accommodation Blocks', quantity: 1, rate: 180000, amount: 180000, selectedPreset: 'Makkah & Madinah Hotel Accommodation Blocks', originalPresetRate: 180000 },
+    { id: '3', description: 'Dedicated Ground Transport & Holy Ziyarat', quantity: 1, rate: 65000, amount: 65000, selectedPreset: 'Dedicated Ground Transport & Holy Ziyarat', originalPresetRate: 65000 },
+    { id: '4', description: 'Direct International Flight Tickets', quantity: 2, rate: 135000, amount: 270000, selectedPreset: 'Direct International Flight Tickets', originalPresetRate: 135000 }
   ]);
   const [hasInitialPayment, setHasInitialPayment] = useState(false);
   const [initialPaymentAmount, setInitialPaymentAmount] = useState('');
@@ -97,6 +149,58 @@ export default function InvoiceLedger({
   const [ledgerDateFrom, setLedgerDateFrom] = useState('');
   const [ledgerDateTo, setLedgerDateTo] = useState('');
 
+  // Synchronize demographic PAX from party selection
+  const applyPaxFromParty = (p) => {
+    if (!p) return;
+    let a = 0, c = 0, inf = 0;
+    if (Array.isArray(p.passengers) && p.passengers.length > 0) {
+      p.passengers.forEach(pass => {
+        const cat = (pass.category || pass.type || pass.paxType || '').toLowerCase();
+        if (cat.includes('child')) c++;
+        else if (cat.includes('infant')) inf++;
+        else a++;
+      });
+    } else {
+      a = Number(p.totalPax) || 1;
+    }
+    const tot = a + c + inf;
+    setAdultsCount(a);
+    setChildrenCount(c);
+    setInfantsCount(inf);
+    setTotalPax(tot > 0 ? tot : 1);
+  };
+
+  const handlePaxStep = (type, delta) => {
+    let nextA = adultsCount;
+    let nextC = childrenCount;
+    let nextInf = infantsCount;
+
+    if (type === 'adults') nextA = Math.max(0, adultsCount + delta);
+    else if (type === 'children') nextC = Math.max(0, childrenCount + delta);
+    else if (type === 'infants') nextInf = Math.max(0, infantsCount + delta);
+
+    setAdultsCount(nextA);
+    setChildrenCount(nextC);
+    setInfantsCount(nextInf);
+    setTotalPax(nextA + nextC + nextInf);
+  };
+
+  const handlePaxInput = (type, val) => {
+    const num = Math.max(0, parseInt(val, 10) || 0);
+    let nextA = adultsCount;
+    let nextC = childrenCount;
+    let nextInf = infantsCount;
+
+    if (type === 'adults') nextA = num;
+    else if (type === 'children') nextC = num;
+    else if (type === 'infants') nextInf = num;
+
+    setAdultsCount(nextA);
+    setChildrenCount(nextC);
+    setInfantsCount(nextInf);
+    setTotalPax(nextA + nextC + nextInf);
+  };
+
   // Line Items Helper
   const handleItemChange = (index, field, value) => {
     const updated = [...lineItems];
@@ -109,10 +213,81 @@ export default function InvoiceLedger({
     setLineItems(updated);
   };
 
+  const handlePresetSelect = (index, presetName) => {
+    const updated = [...lineItems];
+    if (presetName === 'CUSTOM') {
+      updated[index].selectedPreset = 'CUSTOM';
+      setLineItems(updated);
+      return;
+    }
+    const match = itemPresets.find(p => p.name === presetName);
+    if (match) {
+      updated[index].selectedPreset = match.name;
+      updated[index].description = match.name;
+      updated[index].rate = match.defaultRate;
+      updated[index].originalPresetRate = match.defaultRate;
+      const q = parseFloat(updated[index].quantity) || 1;
+      updated[index].amount = Math.round(q * match.defaultRate);
+    }
+    setLineItems(updated);
+  };
+
+  const handleSaveRateToPreset = (index) => {
+    const item = lineItems[index];
+    if (!item || !item.description) return;
+    const currentRate = parseFloat(item.rate) || 0;
+    const itemName = item.description.trim();
+
+    setItemPresets(prev => {
+      let next;
+      const existingIndex = prev.findIndex(p => p.name.trim().toLowerCase() === itemName.toLowerCase());
+      if (existingIndex !== -1) {
+        next = [...prev];
+        next[existingIndex] = { ...next[existingIndex], defaultRate: currentRate };
+      } else {
+        next = [
+          ...prev,
+          { id: `preset-${Date.now()}`, name: itemName, defaultRate: currentRate }
+        ];
+      }
+      try {
+        localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.warn('Failed saving presets', e);
+      }
+      return next;
+    });
+
+    const updated = [...lineItems];
+    updated[index].originalPresetRate = currentRate;
+    updated[index].selectedPreset = itemName;
+    setLineItems(updated);
+
+    setSavedNoticeMap(prev => ({ ...prev, [item.id]: true }));
+    setTimeout(() => {
+      setSavedNoticeMap(prev => {
+        const copy = { ...prev };
+        delete copy[item.id];
+        return copy;
+      });
+    }, 2500);
+  };
+
+  const handleResetRateToPreset = (index) => {
+    const item = lineItems[index];
+    if (!item) return;
+    const fallbackRate = item.originalPresetRate !== undefined ? item.originalPresetRate : 0;
+    const updated = [...lineItems];
+    updated[index].rate = fallbackRate;
+    updated[index].amount = Math.round((parseFloat(item.quantity) || 0) * fallbackRate);
+    setLineItems(updated);
+  };
+
   const addLineItem = () => {
+    const newItemId = String(Date.now());
     setLineItems([
       ...lineItems,
-      { id: String(Date.now()), description: '', quantity: 1, rate: 0, amount: 0 }
+      { id: newItemId, description: '', quantity: 1, rate: 0, amount: 0, selectedPreset: '', originalPresetRate: 0 }
     ]);
   };
 
@@ -125,7 +300,7 @@ export default function InvoiceLedger({
   const initialPaidNum = hasInitialPayment ? (parseFloat(initialPaymentAmount) || 0) : 0;
   const calculatedBalanceDue = Math.max(0, calculatedTotalBilled - initialPaidNum);
 
-  // Handle party change in create modal
+  // Handle party change in create/edit modal
   const handlePartySelectChange = (uid) => {
     setSelectedPartyUid(uid);
     if (uid !== 'CUSTOM') {
@@ -135,19 +310,107 @@ export default function InvoiceLedger({
         setCustomPhone(p.contactPhone || '');
         setCustomCompany(p.companyName || 'NOOR E HARAM TRAVELS & TOURS');
         setPackageTitle(p.packageTitle || `${p.totalPax || 2} PAX Umrah Package`);
+        applyPaxFromParty(p);
       }
     }
   };
 
-  // Submit Create Invoice
+  // Open Create Mode
+  const handleOpenCreateInvoice = () => {
+    setEditingInvoiceId(null);
+    setInvoiceNo(`INV-2026-${String(invoices.length + 1).padStart(3, '0')}`);
+    const defaultUid = parties[0]?.partyHeadUid || 'CUSTOM';
+    setSelectedPartyUid(defaultUid);
+
+    if (defaultUid !== 'CUSTOM' && parties[0]) {
+      const p = parties[0];
+      setCustomPartyName(p.partyName || '');
+      setCustomPhone(p.contactPhone || '');
+      setCustomCompany(p.companyName || 'NOOR E HARAM TRAVELS & TOURS');
+      setPackageTitle(p.packageTitle || `${p.totalPax || 2} PAX Umrah Package`);
+      applyPaxFromParty(p);
+    } else {
+      setCustomPartyName('');
+      setCustomPhone('');
+      setCustomCompany('NOOR E HARAM TRAVELS & TOURS');
+      setPackageTitle('15 Days Executive Umrah Package');
+      setAdultsCount(2);
+      setChildrenCount(0);
+      setInfantsCount(0);
+      setTotalPax(2);
+    }
+
+    setIssueDate(new Date().toISOString().split('T')[0]);
+    setDueDate(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
+    setPaymentTerms('Full Payment Required Prior to Visa Stamp & Flight Issuance.');
+    setLineItems([
+      { id: '1', description: 'Saudi Umrah Electronic Visas & Medical Insurance', quantity: 2, rate: 45000, amount: 90000, selectedPreset: 'Saudi Umrah Electronic Visas & Medical Insurance', originalPresetRate: 45000 },
+      { id: '2', description: 'Makkah & Madinah Hotel Accommodation Blocks', quantity: 1, rate: 180000, amount: 180000, selectedPreset: 'Makkah & Madinah Hotel Accommodation Blocks', originalPresetRate: 180000 },
+      { id: '3', description: 'Dedicated Ground Transport & Holy Ziyarat', quantity: 1, rate: 65000, amount: 65000, selectedPreset: 'Dedicated Ground Transport & Holy Ziyarat', originalPresetRate: 65000 },
+      { id: '4', description: 'Direct International Flight Tickets', quantity: 2, rate: 135000, amount: 270000, selectedPreset: 'Direct International Flight Tickets', originalPresetRate: 135000 }
+    ]);
+    setHasInitialPayment(false);
+    setInitialPaymentAmount('');
+    setShowCreateModal(true);
+  };
+
+  // Open Edit Mode
+  const handleOpenEditInvoice = (inv) => {
+    setEditingInvoiceId(inv.id || inv.invoiceNo);
+    setInvoiceNo(inv.invoiceNo || '');
+    setSelectedPartyUid(inv.partyHeadUid || 'CUSTOM');
+    setCustomPartyName(inv.partyName || '');
+    setCustomPhone(inv.contactPhone || '');
+    setCustomCompany(inv.companyName || 'NOOR E HARAM TRAVELS & TOURS');
+    setPackageTitle(inv.packageTitle || 'Umrah Services Package');
+    setIssueDate(inv.issueDate || new Date().toISOString().split('T')[0]);
+    setDueDate(inv.dueDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
+    setPaymentTerms(inv.paymentTerms || 'Full Payment Required Prior to Visa Stamp & Flight Issuance.');
+
+    const a = inv.adultsCount !== undefined ? Number(inv.adultsCount) : (Number(inv.totalPax) || 1);
+    const c = inv.childrenCount !== undefined ? Number(inv.childrenCount) : 0;
+    const inf = inv.infantsCount !== undefined ? Number(inv.infantsCount) : 0;
+    setAdultsCount(a);
+    setChildrenCount(c);
+    setInfantsCount(inf);
+    setTotalPax(inv.totalPax !== undefined ? Number(inv.totalPax) : (a + c + inf));
+
+    const rawItems = inv.lineItems || inv.items || [];
+    if (rawItems.length > 0) {
+      setLineItems(rawItems.map((item, idx) => ({
+        id: item.id || `item-${idx + 1}-${Date.now()}`,
+        description: item.description || '',
+        quantity: item.quantity !== undefined ? item.quantity : 1,
+        rate: item.rate !== undefined ? item.rate : 0,
+        amount: item.amount !== undefined ? item.amount : (item.quantity * item.rate),
+        selectedPreset: item.description || '',
+        originalPresetRate: item.rate !== undefined ? item.rate : 0
+      })));
+    } else {
+      setLineItems([
+        { id: '1', description: 'Umrah Package Services', quantity: 1, rate: 0, amount: 0, selectedPreset: '', originalPresetRate: 0 }
+      ]);
+    }
+
+    setHasInitialPayment(false);
+    setInitialPaymentAmount('');
+    setShowCreateModal(true);
+  };
+
+  // Submit Create or Edit Invoice
   const handleCreateInvoiceSubmit = (e) => {
     e.preventDefault();
     const finalPartyName = selectedPartyUid === 'CUSTOM' ? (customPartyName || 'WALK-IN CLIENT') : customPartyName;
     const finalPhone = selectedPartyUid === 'CUSTOM' ? customPhone : (parties.find(p => p.partyHeadUid === selectedPartyUid)?.contactPhone || '');
     const cleanCompany = customCompany || 'NOOR E HARAM TRAVELS & TOURS';
 
-    const transactions = [];
-    if (hasInitialPayment && initialPaidNum > 0) {
+    let existingInv = null;
+    if (editingInvoiceId) {
+      existingInv = invoices.find(i => i.id === editingInvoiceId || i.invoiceNo === editingInvoiceId);
+    }
+
+    let transactions = existingInv?.ledgerTransactions ? [...existingInv.ledgerTransactions] : [];
+    if (!editingInvoiceId && hasInitialPayment && initialPaidNum > 0) {
       transactions.push({
         id: `tx-init-${Date.now()}`,
         date: issueDate,
@@ -159,8 +422,21 @@ export default function InvoiceLedger({
       });
     }
 
-    const newInvoiceObj = {
-      id: `inv-${Date.now()}`,
+    const currentPaid = transactions.reduce((sum, tx) => sum + (parseFloat(tx.amount) || 0), 0);
+    const balanceDue = Math.max(0, calculatedTotalBilled - currentPaid);
+
+    const cleanItems = lineItems
+      .filter(item => (item.description || '').trim() !== '')
+      .map(item => ({
+        id: item.id,
+        description: item.description,
+        quantity: parseFloat(item.quantity) || 1,
+        rate: parseFloat(item.rate) || 0,
+        amount: Math.round((parseFloat(item.quantity) || 1) * (parseFloat(item.rate) || 0))
+      }));
+
+    const finalInvoiceObj = {
+      id: editingInvoiceId || `inv-${Date.now()}`,
       invoiceNo,
       partyHeadUid: selectedPartyUid,
       partyName: finalPartyName,
@@ -170,19 +446,26 @@ export default function InvoiceLedger({
       issueDate,
       dueDate,
       currency: 'PKR',
-      items: lineItems.filter(item => (item.description || '').trim() !== ''),
+      items: cleanItems,
+      lineItems: cleanItems,
+      adultsCount: Number(adultsCount) || 0,
+      childrenCount: Number(childrenCount) || 0,
+      infantsCount: Number(infantsCount) || 0,
+      totalPax: Number(totalPax) || ((Number(adultsCount) || 0) + (Number(childrenCount) || 0) + (Number(infantsCount) || 0)),
       totalAmount: calculatedTotalBilled,
-      paidAmount: initialPaidNum,
-      balanceDue: calculatedBalanceDue,
-      status: calculatedBalanceDue <= 0 ? 'Settled' : (initialPaidNum > 0 ? 'Partially Unlocked Balance' : 'Outstanding Overdue Collections'),
+      paidAmount: currentPaid,
+      balanceDue,
+      status: balanceDue <= 0 && calculatedTotalBilled > 0 ? 'Settled' : (currentPaid > 0 ? 'Partially Unlocked Balance' : 'Outstanding Overdue Collections'),
       paymentTerms,
       ledgerTransactions: transactions,
-      createdAt: new Date().toISOString()
+      createdAt: existingInv?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
 
-    saveInvoice(newInvoiceObj);
+    saveInvoice(finalInvoiceObj);
     if (onInvoicesUpdated) onInvoicesUpdated(getAllInvoices());
     setShowCreateModal(false);
+    setEditingInvoiceId(null);
   };
 
   const handleDeleteInvoice = (id, invoiceNo) => {
@@ -445,13 +728,7 @@ export default function InvoiceLedger({
 
           {viewMode === 'INVOICES' ? (
             <button
-              onClick={() => {
-                setInvoiceNo(`INV-2026-${String(invoices.length + 1).padStart(3, '0')}`);
-                if (parties.length > 0 && selectedPartyUid === 'CUSTOM') {
-                  handlePartySelectChange(parties[0].partyHeadUid);
-                }
-                setShowCreateModal(true);
-              }}
+              onClick={handleOpenCreateInvoice}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -576,6 +853,15 @@ export default function InvoiceLedger({
                                 Record Pay
                               </button>
                             )}
+
+                            {/* Edit Bill Button */}
+                            <button
+                              onClick={() => handleOpenEditInvoice(inv)}
+                              className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200/80 transition-colors"
+                              title="Edit Bill & Line Items"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
 
                             <Link
                               href={`/invoice/${encodeURIComponent(inv.invoiceNo)}`}
@@ -878,38 +1164,52 @@ export default function InvoiceLedger({
       )}
 
       {/* ============================================================= */}
-      {/* 4. MODAL: CREATE INVOICE                                      */}
+      {/* 4. MODAL: CREATE / EDIT INVOICE                               */}
       {/* ============================================================= */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto print-hide">
-          <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl p-6 sm:p-7 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl p-6 sm:p-7 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold">
-                  <Receipt className="w-4 h-4" />
+              <div className="flex items-center gap-2.5">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shadow-xs ${
+                  editingInvoiceId ? 'bg-indigo-600' : 'bg-slate-900'
+                }`}>
+                  {editingInvoiceId ? <Edit3 className="w-4 h-4" /> : <Receipt className="w-4 h-4" />}
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Issue New Corporate Invoice</h3>
-                  <p className="text-[11px] text-slate-400">Generate invoice with line items and advance payments</p>
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                    {editingInvoiceId ? `Edit Corporate Bill: ${invoiceNo}` : 'Issue New Corporate Invoice'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    {editingInvoiceId 
+                      ? 'Update demographic PAX counts, itemized service allocations, and line pricing'
+                      : 'Generate invoice with demographic PAX allocations, itemized services, and advance deposits'}
+                  </p>
                 </div>
               </div>
-              <button onClick={() => setShowCreateModal(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400">
-                <X className="w-4 h-4" />
+              <button 
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setEditingInvoiceId(null);
+                }} 
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateInvoiceSubmit} className="space-y-4">
               
               {/* Invoice Meta Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
                 <div>
                   <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Invoice Number *</label>
                   <input
                     type="text"
                     value={invoiceNo}
                     onChange={(e) => setInvoiceNo(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg font-mono font-bold text-slate-800"
+                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg font-mono font-bold text-slate-800 focus:outline-none focus:border-slate-800"
                     required
                   />
                 </div>
@@ -919,7 +1219,7 @@ export default function InvoiceLedger({
                   <select
                     value={selectedPartyUid}
                     onChange={(e) => handlePartySelectChange(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white"
+                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg font-semibold text-slate-800 bg-white focus:outline-none focus:border-slate-800 cursor-pointer"
                   >
                     <option value="CUSTOM">+ Custom / Walk-In Debtor</option>
                     {parties.map(p => (
@@ -931,13 +1231,13 @@ export default function InvoiceLedger({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Debtor Full Name</label>
+                  <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Debtor Full Name *</label>
                   <input
                     type="text"
                     value={customPartyName}
                     onChange={(e) => setCustomPartyName(e.target.value)}
                     placeholder="e.g. MOHAMMED AHMED KHAN"
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 uppercase"
+                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 uppercase focus:outline-none focus:border-slate-800"
                     required
                   />
                 </div>
@@ -949,7 +1249,7 @@ export default function InvoiceLedger({
                     value={customPhone}
                     onChange={(e) => setCustomPhone(e.target.value)}
                     placeholder="0311-2264567"
-                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 font-mono"
+                    className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 font-mono focus:outline-none focus:border-slate-800"
                   />
                 </div>
 
@@ -973,150 +1273,384 @@ export default function InvoiceLedger({
                 </div>
               </div>
 
-              {/* Line Items Table */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
+              {/* DEMOGRAPHIC PAX COUNTERS CARD */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-3.5 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                        Demographic PAX Breakdown
+                      </h4>
+                      <p className="text-[10px] text-slate-500">
+                        Specify Adult, Child, and Infant counts for this booking
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200/80 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+                    <span className="text-[10.5px] font-extrabold text-indigo-900 uppercase tracking-wider">Total PAX:</span>
+                    <span className="text-sm font-black text-indigo-700 font-mono bg-white px-2.5 py-0.5 rounded-lg border border-indigo-200 shadow-xs">
+                      {totalPax}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                  {/* Adults */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center justify-between shadow-xs">
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-slate-800 uppercase">Adults</label>
+                      <span className="text-[9.5px] text-slate-400">12+ Years</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handlePaxStep('adults', -1)}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-colors"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        value={adultsCount}
+                        onChange={(e) => handlePaxInput('adults', e.target.value)}
+                        className="w-12 text-center py-1 border border-slate-200 rounded-lg text-xs font-mono font-black text-slate-900 focus:outline-none focus:border-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handlePaxStep('adults', 1)}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Children */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center justify-between shadow-xs">
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-slate-800 uppercase">Children</label>
+                      <span className="text-[9.5px] text-slate-400">2 - 11 Years</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handlePaxStep('children', -1)}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-colors"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        value={childrenCount}
+                        onChange={(e) => handlePaxInput('children', e.target.value)}
+                        className="w-12 text-center py-1 border border-slate-200 rounded-lg text-xs font-mono font-black text-slate-900 focus:outline-none focus:border-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handlePaxStep('children', 1)}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Infants */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-2.5 flex items-center justify-between shadow-xs">
+                    <div>
+                      <label className="block text-[10.5px] font-bold text-slate-800 uppercase">Infants</label>
+                      <span className="text-[9.5px] text-slate-400">&lt; 2 Years</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handlePaxStep('infants', -1)}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-colors"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <input
+                        type="number"
+                        min="0"
+                        value={infantsCount}
+                        onChange={(e) => handlePaxInput('infants', e.target.value)}
+                        className="w-12 text-center py-1 border border-slate-200 rounded-lg text-xs font-mono font-black text-slate-900 focus:outline-none focus:border-indigo-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handlePaxStep('infants', 1)}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ITEMIZED LINE ITEMS & PRESET CATALOG */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-100">
                 <div className="flex items-center justify-between">
-                  <label className="block text-[10px] font-bold text-slate-700 uppercase">Itemized Line Items</label>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wide">
+                      Itemized Line Items &amp; Services
+                    </label>
+                    <p className="text-[10px] text-slate-400">
+                      Select item from saved presets, edit description/rate, and use (✔ / ✖) to save default price per qty
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={addLineItem}
-                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition-colors shadow-xs"
                   >
-                    <Plus className="w-3 h-3" />
-                    <span>Add Row</span>
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Line Item</span>
                   </button>
                 </div>
 
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {lineItems.map((item, idx) => (
-                    <div key={item.id} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded-xl text-xs">
-                      <div className="col-span-5">
-                        <input
-                          type="text"
-                          value={item.description}
-                          onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                          placeholder="Description"
-                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-slate-800 text-xs"
-                          required
-                        />
+                {/* Table Header */}
+                <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                  <div className="sm:col-span-5">Item / Service Description</div>
+                  <div className="sm:col-span-2 text-center">Qty</div>
+                  <div className="sm:col-span-3 text-right">Price per Qty (Rate)</div>
+                  <div className="sm:col-span-2 text-right">Total (PKR)</div>
+                </div>
+
+                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                  {lineItems.map((item, idx) => {
+                    const lineTotal = Math.round((parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0));
+                    const isPriceDirty = item.originalPresetRate !== undefined && Number(item.rate) !== Number(item.originalPresetRate);
+                    const isSavedNotice = !!savedNoticeMap[item.id];
+
+                    return (
+                      <div 
+                        key={item.id} 
+                        className="bg-slate-50 border border-slate-200/90 rounded-2xl p-2.5 sm:p-3 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center hover:bg-slate-100/50 transition-colors"
+                      >
+                        {/* Preset Dropdown & Description Input */}
+                        <div className="sm:col-span-5 space-y-1.5">
+                          <select
+                            value={item.selectedPreset || ''}
+                            onChange={(e) => handlePresetSelect(idx, e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                          >
+                            <option value="">-- Choose Saved Item Preset --</option>
+                            {itemPresets.map(preset => (
+                              <option key={preset.id || preset.name} value={preset.name}>
+                                {preset.name} (PKR {preset.defaultRate.toLocaleString()})
+                              </option>
+                            ))}
+                            <option value="CUSTOM">+ Custom / Manual Item</option>
+                          </select>
+
+                          <input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
+                            placeholder="Enter specific line item description or booking notes..."
+                            className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
+                            required
+                          />
+                        </div>
+
+                        {/* Qty Input */}
+                        <div className="sm:col-span-2 flex items-center justify-between sm:justify-center gap-1">
+                          <span className="sm:hidden text-[10px] font-bold text-slate-500 uppercase">Qty:</span>
+                          <input
+                            type="number"
+                            min="1"
+                            step="any"
+                            value={item.quantity}
+                            onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                            placeholder="Qty"
+                            className="w-20 sm:w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 text-center font-mono font-bold focus:outline-none focus:border-indigo-500"
+                            required
+                          />
+                        </div>
+
+                        {/* Price per Qty (Rate) + Inline Save/Dismiss Controls */}
+                        <div className="sm:col-span-3 space-y-1">
+                          <div className="flex items-center justify-between sm:justify-end gap-1.5">
+                            <span className="sm:hidden text-[10px] font-bold text-slate-500 uppercase">Rate:</span>
+                            <div className="relative flex-1 max-w-[140px] sm:max-w-none">
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={item.rate}
+                                onChange={(e) => handleItemChange(idx, 'rate', e.target.value)}
+                                placeholder="Rate"
+                                className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-indigo-500"
+                                required
+                              />
+                            </div>
+
+                            {/* Inline (✔ / ✖) Price Preset Save Actions */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {isPriceDirty && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveRateToPreset(idx)}
+                                    title="✔ Save this price per qty for this item into preset catalog"
+                                    className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-colors shadow-xs"
+                                  >
+                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleResetRateToPreset(idx)}
+                                    title="✖ Reset price back to default saved rate"
+                                    className="p-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors"
+                                  >
+                                    <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                                  </button>
+                                </>
+                              )}
+                              
+                              {isSavedNotice && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold bg-emerald-100 text-emerald-800 animate-pulse">
+                                  <Check className="w-3 h-3" /> Saved!
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-end text-[9.5px] text-slate-400">
+                            {item.originalPresetRate ? (
+                              <span>Default: PKR {Number(item.originalPresetRate).toLocaleString()}</span>
+                            ) : (
+                              <span>Custom Rate</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Line Total & Remove Button */}
+                        <div className="sm:col-span-2 flex items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200">
+                          <div className="text-right">
+                            <span className="sm:hidden text-[10px] text-slate-500 mr-2 uppercase font-bold">Total:</span>
+                            <span className="font-mono font-black text-slate-900 text-xs">
+                              PKR {lineTotal.toLocaleString()}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => removeLineItem(idx)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Remove Line Item"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="col-span-2">
-                        <input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                          placeholder="Qty"
-                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-slate-800 text-xs text-center font-mono"
-                          required
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <input
-                          type="number"
-                          value={item.rate}
-                          onChange={(e) => handleItemChange(idx, 'rate', e.target.value)}
-                          placeholder="Rate"
-                          className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-slate-800 text-xs text-right font-mono"
-                          required
-                        />
-                      </div>
-                      <div className="col-span-2 text-right font-mono font-bold text-slate-800 text-[11px]">
-                        {(item.amount || 0).toLocaleString()}
-                      </div>
-                      <div className="col-span-1 text-right">
-                        <button
-                          type="button"
-                          onClick={() => removeLineItem(idx)}
-                          className="text-slate-400 hover:text-rose-600 p-1"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Total Calculation Card */}
-              <div className="bg-slate-900 text-white p-3.5 rounded-xl flex items-center justify-between text-xs font-mono">
+              <div className="bg-slate-900 text-white p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono shadow-md">
                 <div>
-                  <span className="text-[10px] text-slate-400 block uppercase">Grand Total Billed</span>
-                  <span className="text-base font-black text-white">PKR {calculatedTotalBilled.toLocaleString()}</span>
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Grand Total Billed</span>
+                  <span className="text-lg font-black text-white">PKR {calculatedTotalBilled.toLocaleString()}</span>
                 </div>
                 {hasInitialPayment && (
                   <div className="text-right">
-                    <span className="text-[10px] text-emerald-400 block uppercase">Net Balance Due</span>
-                    <span className="text-base font-black text-emerald-300">PKR {calculatedBalanceDue.toLocaleString()}</span>
+                    <span className="text-[10px] text-emerald-400 block uppercase font-bold tracking-wider">Net Balance Due</span>
+                    <span className="text-lg font-black text-emerald-300">PKR {calculatedBalanceDue.toLocaleString()}</span>
                   </div>
                 )}
               </div>
 
-              {/* Advance Payment Toggle */}
-              <div className="space-y-2 pt-1 border-t border-slate-100">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={hasInitialPayment}
-                    onChange={(e) => setHasInitialPayment(e.target.checked)}
-                    className="rounded text-indigo-600"
-                  />
-                  <span className="text-xs font-bold text-slate-800">Record Advance / Initial Deposit Now</span>
-                </label>
+              {/* Advance Payment Toggle (only for new invoices) */}
+              {!editingInvoiceId && (
+                <div className="space-y-2 pt-1 border-t border-slate-100">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hasInitialPayment}
+                      onChange={(e) => setHasInitialPayment(e.target.checked)}
+                      className="rounded text-indigo-600"
+                    />
+                    <span className="text-xs font-bold text-slate-800">Record Advance / Initial Deposit Now</span>
+                  </label>
 
-                {hasInitialPayment && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-100 text-xs">
-                    <div>
-                      <label className="block text-[9.5px] font-bold text-emerald-900 uppercase">Paid Amount (PKR)</label>
-                      <input
-                        type="number"
-                        value={initialPaymentAmount}
-                        onChange={(e) => setInitialPaymentAmount(e.target.value)}
-                        placeholder="e.g. 100000"
-                        className="w-full px-2 py-1 bg-white border border-emerald-200 rounded text-xs font-mono font-bold"
-                        required={hasInitialPayment}
-                      />
+                  {hasInitialPayment && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100 text-xs">
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-emerald-900 uppercase">Paid Amount (PKR)</label>
+                        <input
+                          type="number"
+                          value={initialPaymentAmount}
+                          onChange={(e) => setInitialPaymentAmount(e.target.value)}
+                          placeholder="e.g. 100000"
+                          className="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs font-mono font-bold focus:outline-none"
+                          required={hasInitialPayment}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-emerald-900 uppercase">Payment Method</label>
+                        <select
+                          value={initialPaymentMethod}
+                          onChange={(e) => setInitialPaymentMethod(e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs focus:outline-none"
+                        >
+                          <option>Online Bank Transfer</option>
+                          <option>Cash Deposit</option>
+                          <option>Cheque Clearance</option>
+                          <option>Pay Order</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-emerald-900 uppercase">Reference #</label>
+                        <input
+                          type="text"
+                          value={initialPaymentRef}
+                          onChange={(e) => setInitialPaymentRef(e.target.value)}
+                          placeholder="e.g. TRX-90412"
+                          className="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs font-mono focus:outline-none"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-[9.5px] font-bold text-emerald-900 uppercase">Payment Method</label>
-                      <select
-                        value={initialPaymentMethod}
-                        onChange={(e) => setInitialPaymentMethod(e.target.value)}
-                        className="w-full px-2 py-1 bg-white border border-emerald-200 rounded text-xs"
-                      >
-                        <option>Online Bank Transfer</option>
-                        <option>Cash Deposit</option>
-                        <option>Cheque Clearance</option>
-                        <option>Pay Order</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[9.5px] font-bold text-emerald-900 uppercase">Reference #</label>
-                      <input
-                        type="text"
-                        value={initialPaymentRef}
-                        onChange={(e) => setInitialPaymentRef(e.target.value)}
-                        placeholder="e.g. TRX-90412"
-                        className="w-full px-2 py-1 bg-white border border-emerald-200 rounded text-xs font-mono"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
-              {/* Submit Button */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setEditingInvoiceId(null);
+                  }}
+                  className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-xs"
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-xs transition-colors flex items-center gap-2"
                 >
-                  Confirm &amp; Issue Invoice
+                  {editingInvoiceId ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-400 stroke-[3]" />
+                      <span>Save Bill Changes</span>
+                    </>
+                  ) : (
+                    <>
+                      <Receipt className="w-4 h-4 text-indigo-300" />
+                      <span>Confirm &amp; Issue Invoice</span>
+                    </>
+                  )}
                 </button>
               </div>
 
