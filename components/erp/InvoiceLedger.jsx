@@ -625,7 +625,7 @@ export default function InvoiceLedger({
       totalAmount: calculatedTotalBilled,
       paidAmount: currentPaid,
       balanceDue,
-      status: balanceDue <= 0 && calculatedTotalBilled > 0 ? 'Settled' : (currentPaid > 0 ? 'Partially Unlocked Balance' : 'Outstanding Overdue Collections'),
+      status: balanceDue <= 0 ? 'Settled' : (currentPaid > 0 ? 'Partially Unlocked Balance' : 'Outstanding Overdue Collections'),
       paymentTerms,
       ledgerTransactions: transactions,
       createdAt: existingInv?.createdAt || new Date().toISOString(),
@@ -689,36 +689,39 @@ export default function InvoiceLedger({
     );
     if (!matchSearch) return false;
 
-    if (statusFilter === 'SETTLED') return inv.status === 'Settled';
-    if (statusFilter === 'PARTIAL') return inv.status === 'Partially Unlocked Balance';
-    if (statusFilter === 'OVERDUE') return inv.status === 'Outstanding Overdue Collections';
+    const isSettled = inv.balanceDue <= 0 || inv.status === 'Settled';
+    const isPartial = !isSettled && (inv.paidAmount > 0 || inv.status === 'Partially Unlocked Balance');
+    const isOverdue = !isSettled && !isPartial;
+
+    if (statusFilter === 'SETTLED') return isSettled;
+    if (statusFilter === 'PARTIAL') return isPartial;
+    if (statusFilter === 'OVERDUE') return isOverdue;
     return true;
   });
 
-  const getStatusChip = (status) => {
-    switch (status) {
-      case 'Settled':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9.5px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
-            <CheckCircle2 className="w-3 h-3 text-emerald-700" />
-            <span>SETTLED</span>
-          </span>
-        );
-      case 'Partially Unlocked Balance':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9.5px] font-black bg-amber-100 text-amber-950 border border-amber-300">
-            <Clock className="w-3 h-3 text-amber-700" />
-            <span>PARTIAL</span>
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9.5px] font-black bg-rose-100 text-rose-950 border border-rose-300">
-            <AlertCircle className="w-3 h-3 text-rose-700" />
-            <span>OVERDUE</span>
-          </span>
-        );
+  const getStatusChip = (status, balanceDue = 0, paidAmount = 0) => {
+    if (balanceDue <= 0 || status === 'Settled') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9.5px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+          <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+          <span>SETTLED</span>
+        </span>
+      );
     }
+    if (status === 'Partially Unlocked Balance' || paidAmount > 0) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9.5px] font-black bg-amber-100 text-amber-950 border border-amber-300">
+          <Clock className="w-3 h-3 text-amber-700" />
+          <span>PARTIAL</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9.5px] font-black bg-rose-100 text-rose-950 border border-rose-300">
+        <AlertCircle className="w-3 h-3 text-rose-700" />
+        <span>OVERDUE</span>
+      </span>
+    );
   };
 
   // -------------------------------------------------------------
@@ -876,36 +879,8 @@ export default function InvoiceLedger({
           </p>
         </div>
 
-        {/* View Switcher Tabs (Invoices vs Ledger) */}
+        {/* Action Button */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200">
-            <button
-              type="button"
-              onClick={() => handleSwitchView('INVOICES')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'INVOICES'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Receipt className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Bill ({invoices.length})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSwitchView('LEDGER')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewMode === 'LEDGER'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <FileText className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Accounts Ledger</span>
-            </button>
-          </div>
-
           {viewMode === 'INVOICES' ? (
             <button
               onClick={handleOpenCreateInvoice}
@@ -1020,7 +995,7 @@ export default function InvoiceLedger({
                           </span>
                         </td>
                         <td className="py-3 px-4 text-center">
-                          {getStatusChip(inv.status)}
+                          {getStatusChip(inv.status, inv.balanceDue, inv.paidAmount)}
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
