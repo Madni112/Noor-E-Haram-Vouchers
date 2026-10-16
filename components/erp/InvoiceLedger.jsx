@@ -48,6 +48,8 @@ import {
   deleteCloudItemPreset
 } from '../../lib/erpData';
 import CustomDatePicker from './CustomDatePicker';
+import ItemCombobox from './ItemCombobox';
+import PackageCombobox from './PackageCombobox';
 
 export default function InvoiceLedger({ 
   invoices = [], 
@@ -1366,65 +1368,36 @@ export default function InvoiceLedger({
                   />
                 </div>
 
-                {/* Package Name with Supabase Cloud Save & Selector */}
+                {/* Package Name with Single Typable Dropdown */}
                 <div className="sm:col-span-2 lg:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 space-y-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                  <div className="flex items-center justify-between">
                     <div>
                       <label className="block text-[10px] font-bold text-slate-800 uppercase tracking-wide">
                         Package Name (Supabase Database) *
                       </label>
                       <span className="text-[9.5px] text-slate-400">
-                        Saved in cloud for instant selection and auto-fills travel dates
+                        Single typable dropdown — select saved package to auto-fill travel dates
                       </span>
                     </div>
-
-                    {cloudPackages.length > 0 && (
-                      <div className="w-full sm:w-auto flex items-center gap-1.5">
-                        <select
-                          value={selectedPackageId}
-                          onChange={(e) => handleSelectCloudPackage(e.target.value)}
-                          className="w-full sm:w-64 px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500"
-                        >
-                          <option value="">-- Choose Cloud Package --</option>
-                          {cloudPackages.map(pkg => (
-                            <option key={pkg.id} value={pkg.id}>
-                              {pkg.package_name} {pkg.departure_date ? `(${pkg.departure_date} → ${pkg.arrival_date || '...'})` : ''}
-                            </option>
-                          ))}
-                          <option value="CUSTOM">+ New / Custom Package</option>
-                        </select>
-
-                        {selectedPackageId && selectedPackageId !== 'CUSTOM' && (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCloudPackage(selectedPackageId)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors shrink-0"
-                            title="Delete this package directly from Supabase database"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <input
-                      type="text"
+                    <PackageCombobox
                       value={packageTitle}
-                      onChange={(e) => setPackageTitle(e.target.value)}
-                      placeholder="e.g. 15 Days Executive Umrah Package (Makkah & Madinah)"
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
-                      required
+                      onChange={(val) => setPackageTitle(val)}
+                      onSelectPackage={(pkg) => handleSelectCloudPackage(pkg.id)}
+                      packages={cloudPackages}
+                      onDeletePackage={handleDeleteCloudPackage}
+                      placeholder="Select or type package name..."
                     />
                     <button
                       type="button"
                       onClick={handleSavePackageToCloud}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs shrink-0"
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs shrink-0"
                       title="Save this Package Name and its Departure/Arrival dates straight into Supabase"
                     >
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>{packageSaveNotice ? 'Saved to Supabase!' : 'Save Package'}</span>
+                      <span>{packageSaveNotice ? 'Saved!' : 'Save Package'}</span>
                     </button>
                   </div>
                 </div>
@@ -1612,29 +1585,30 @@ export default function InvoiceLedger({
                         key={item.id} 
                         className="bg-slate-50 border border-slate-200/90 rounded-2xl p-2.5 sm:p-3 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center hover:bg-slate-100/50 transition-colors"
                       >
-                        {/* Preset Dropdown & Description Input */}
-                        <div className="sm:col-span-5 space-y-1.5">
-                          <select
-                            value={item.selectedPreset || ''}
-                            onChange={(e) => handlePresetSelect(idx, e.target.value)}
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-500 cursor-pointer"
-                          >
-                            <option value="">-- Choose Saved Item Preset --</option>
-                            {itemPresets.map(preset => (
-                              <option key={preset.id || preset.name} value={preset.name}>
-                                {preset.name} (PKR {preset.defaultRate.toLocaleString()})
-                              </option>
-                            ))}
-                            <option value="CUSTOM">+ Custom / Manual Item</option>
-                          </select>
-
-                          <input
-                            type="text"
+                        {/* Single Typable Combobox like Hotel Combobox */}
+                        <div className="sm:col-span-5">
+                          <ItemCombobox
                             value={item.description}
-                            onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                            placeholder="Enter specific line item description or booking notes..."
-                            className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
-                            required
+                            onChange={(val) => handleItemChange(idx, 'description', val)}
+                            onSelectPreset={(preset) => {
+                              const updated = [...lineItems];
+                              updated[idx].description = preset.name;
+                              updated[idx].rate = preset.defaultRate;
+                              updated[idx].originalPresetRate = preset.defaultRate;
+                              updated[idx].selectedPreset = preset.name;
+                              const q = parseFloat(updated[idx].quantity) || 1;
+                              updated[idx].amount = Math.round(q * preset.defaultRate);
+                              setLineItems(updated);
+                            }}
+                            presets={itemPresets}
+                            onDeletePreset={async (presetId) => {
+                              if (confirm('Delete this preset from Supabase?')) {
+                                await deleteCloudItemPreset(presetId);
+                                const refreshed = await getCloudItemPresets();
+                                setItemPresets(refreshed);
+                              }
+                            }}
+                            placeholder="Select preset or type custom item..."
                           />
                         </div>
 
