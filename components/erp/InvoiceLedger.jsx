@@ -225,7 +225,7 @@ export default function InvoiceLedger({
   const [customPhone, setCustomPhone] = useState('');
   const [customCompany, setCustomCompany] = useState('NOOR E HARAM TRAVELS & TOURS');
   const [invoiceNo, setInvoiceNo] = useState(nextInvoiceNum);
-  const [packageTitle, setPackageTitle] = useState('15 Days Executive Umrah Package');
+  const [packageTitle, setPackageTitle] = useState('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]); // Departure Date
   const [dueDate, setDueDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]); // Arrival Date
   const [paymentTerms, setPaymentTerms] = useState('Full Payment Required Prior to Visa Stamp & Flight Issuance.');
@@ -459,7 +459,7 @@ export default function InvoiceLedger({
         setCustomPartyName(p.partyName || '');
         setCustomPhone(p.contactPhone || '');
         setCustomCompany(p.companyName || 'NOOR E HARAM TRAVELS & TOURS');
-        setPackageTitle(p.packageTitle || `${p.totalPax || 2} PAX Umrah Package`);
+        setPackageTitle('');
         applyPaxFromParty(p);
       }
     }
@@ -477,13 +477,13 @@ export default function InvoiceLedger({
       setCustomPartyName(p.partyName || '');
       setCustomPhone(p.contactPhone || '');
       setCustomCompany(p.companyName || 'NOOR E HARAM TRAVELS & TOURS');
-      setPackageTitle(p.packageTitle || `${p.totalPax || 2} PAX Umrah Package`);
+      setPackageTitle('');
       applyPaxFromParty(p);
     } else {
       setCustomPartyName('');
       setCustomPhone('');
       setCustomCompany('NOOR E HARAM TRAVELS & TOURS');
-      setPackageTitle('15 Days Executive Umrah Package');
+      setPackageTitle('');
       setAdultsCount(2);
       setChildrenCount(0);
       setInfantsCount(0);
