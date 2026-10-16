@@ -1778,86 +1778,107 @@ export default function InvoiceLedger({
                           </div>
                         )}
 
-                        {/* Price Inputs: Demographic Breakdown OR Single Rate */}
+                        {/* Price Inputs: Demographic Breakdown Stacked Vertically Below Each Other */}
                         {hasDemographics ? (
-                          <div className="sm:col-span-5 space-y-1">
-                            <div className={`grid gap-1.5 ${childrenCount >= 1 && infantsCount >= 1 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                              {/* Adult Input */}
-                              <div>
-                                <div className="flex items-center justify-between mb-0.5">
-                                  <label className="text-[9px] font-black text-slate-700 uppercase tracking-tight">
+                          <div className="sm:col-span-5 space-y-1.5">
+                            <div className="space-y-1.5 bg-white/80 border border-slate-200/90 rounded-xl p-2 shadow-2xs">
+                              {/* Adult Input Row (below each other) */}
+                              <div className="flex items-center gap-2">
+                                <div className="w-24 shrink-0 flex items-center justify-between">
+                                  <label className="text-[9.5px] font-black text-slate-700 uppercase tracking-tight">
                                     Adult {adultsCount > 1 ? `(x${adultsCount})` : ''}
                                   </label>
                                   {sarEngineActive && (
                                     <span className="text-[8px] font-mono text-emerald-700 font-bold">
-                                      {priceInputCurrency === 'SAR'
-                                        ? `PKR ${Math.round((parseFloat(item.adultRate !== undefined ? item.adultRate : item.rate) || 0) * exchangeRateSarPkr).toLocaleString()}`
-                                        : `SAR ${(((parseFloat(item.adultRate !== undefined ? item.adultRate : item.rate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                      {priceInputCurrency === 'SAR' ? 'SAR' : 'PKR'}
                                     </span>
                                   )}
                                 </div>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="any"
-                                  placeholder="Adult"
-                                  value={item.adultRate !== undefined ? item.adultRate : item.rate}
-                                  onChange={(e) => handleDemographicRateChange(idx, 'adultRate', e.target.value)}
-                                  className="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-indigo-500 shadow-2xs"
-                                />
+                                <div className="flex-1 relative">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    placeholder="Adult"
+                                    value={item.adultRate !== undefined ? item.adultRate : item.rate}
+                                    onChange={(e) => handleDemographicRateChange(idx, 'adultRate', e.target.value)}
+                                    className="w-full px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-indigo-500 shadow-2xs"
+                                  />
+                                </div>
+                                {sarEngineActive && (
+                                  <div className="w-24 shrink-0 text-right font-mono text-[9px] font-bold text-emerald-700 truncate">
+                                    {priceInputCurrency === 'SAR'
+                                      ? `≈ PKR ${Math.round((parseFloat(item.adultRate !== undefined ? item.adultRate : item.rate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                      : `≈ SAR ${(((parseFloat(item.adultRate !== undefined ? item.adultRate : item.rate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                  </div>
+                                )}
                               </div>
 
-                              {/* Child Input (if childrenCount >= 1) */}
+                              {/* Child Input Row (if childrenCount >= 1, below adult) */}
                               {childrenCount >= 1 && (
-                                <div>
-                                  <div className="flex items-center justify-between mb-0.5">
-                                    <label className="text-[9px] font-black text-amber-700 uppercase tracking-tight">
+                                <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                                  <div className="w-24 shrink-0 flex items-center justify-between">
+                                    <label className="text-[9.5px] font-black text-amber-700 uppercase tracking-tight">
                                       Child (x{childrenCount})
                                     </label>
                                     {sarEngineActive && (
                                       <span className="text-[8px] font-mono text-emerald-700 font-bold">
-                                        {priceInputCurrency === 'SAR'
-                                          ? `PKR ${Math.round((parseFloat(item.childRate) || 0) * exchangeRateSarPkr).toLocaleString()}`
-                                          : `SAR ${(((parseFloat(item.childRate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                        {priceInputCurrency === 'SAR' ? 'SAR' : 'PKR'}
                                       </span>
                                     )}
                                   </div>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="any"
-                                    placeholder="Child"
-                                    value={item.childRate !== undefined ? item.childRate : ''}
-                                    onChange={(e) => handleDemographicRateChange(idx, 'childRate', e.target.value)}
-                                    className="w-full px-2 py-1 bg-white border border-amber-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-amber-500 shadow-2xs"
-                                  />
+                                  <div className="flex-1 relative">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="any"
+                                      placeholder="Child"
+                                      value={item.childRate !== undefined ? item.childRate : ''}
+                                      onChange={(e) => handleDemographicRateChange(idx, 'childRate', e.target.value)}
+                                      className="w-full px-2.5 py-1 bg-white border border-amber-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-amber-500 shadow-2xs"
+                                    />
+                                  </div>
+                                  {sarEngineActive && (
+                                    <div className="w-24 shrink-0 text-right font-mono text-[9px] font-bold text-emerald-700 truncate">
+                                      {priceInputCurrency === 'SAR'
+                                        ? `≈ PKR ${Math.round((parseFloat(item.childRate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                        : `≈ SAR ${(((parseFloat(item.childRate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                    </div>
+                                  )}
                                 </div>
                               )}
 
-                              {/* Infant Input (if infantsCount >= 1) */}
+                              {/* Infant Input Row (if infantsCount >= 1, below child) */}
                               {infantsCount >= 1 && (
-                                <div>
-                                  <div className="flex items-center justify-between mb-0.5">
-                                    <label className="text-[9px] font-black text-indigo-700 uppercase tracking-tight">
+                                <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+                                  <div className="w-24 shrink-0 flex items-center justify-between">
+                                    <label className="text-[9.5px] font-black text-indigo-700 uppercase tracking-tight">
                                       Infant (x{infantsCount})
                                     </label>
                                     {sarEngineActive && (
                                       <span className="text-[8px] font-mono text-emerald-700 font-bold">
-                                        {priceInputCurrency === 'SAR'
-                                          ? `PKR ${Math.round((parseFloat(item.infantRate) || 0) * exchangeRateSarPkr).toLocaleString()}`
-                                          : `SAR ${(((parseFloat(item.infantRate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                        {priceInputCurrency === 'SAR' ? 'SAR' : 'PKR'}
                                       </span>
                                     )}
                                   </div>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="any"
-                                    placeholder="Infant"
-                                    value={item.infantRate !== undefined ? item.infantRate : ''}
-                                    onChange={(e) => handleDemographicRateChange(idx, 'infantRate', e.target.value)}
-                                    className="w-full px-2 py-1 bg-white border border-indigo-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-indigo-500 shadow-2xs"
-                                  />
+                                  <div className="flex-1 relative">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="any"
+                                      placeholder="Infant"
+                                      value={item.infantRate !== undefined ? item.infantRate : ''}
+                                      onChange={(e) => handleDemographicRateChange(idx, 'infantRate', e.target.value)}
+                                      className="w-full px-2.5 py-1 bg-white border border-indigo-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-indigo-500 shadow-2xs"
+                                    />
+                                  </div>
+                                  {sarEngineActive && (
+                                    <div className="w-24 shrink-0 text-right font-mono text-[9px] font-bold text-emerald-700 truncate">
+                                      {priceInputCurrency === 'SAR'
+                                        ? `≈ PKR ${Math.round((parseFloat(item.infantRate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                        : `≈ SAR ${(((parseFloat(item.infantRate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
