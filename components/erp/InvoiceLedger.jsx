@@ -168,6 +168,21 @@ export default function InvoiceLedger({
     }
   };
 
+  const handleDeleteCloudPackage = async (pkgId) => {
+    const pkg = cloudPackages.find(p => p.id === pkgId);
+    if (!pkg) return;
+    if (confirm(`Are you sure you want to delete package "${pkg.package_name}" from Supabase?`)) {
+      try {
+        await deleteCloudPackage(pkgId);
+        const updated = await getCloudPackages();
+        setCloudPackages(updated);
+        setSelectedPackageId('');
+      } catch (err) {
+        alert('Error deleting package from Supabase: ' + err.message);
+      }
+    }
+  };
+
   // -------------------------------------------------------------
   // CREATE / EDIT INVOICE MODAL STATE
   // -------------------------------------------------------------
@@ -1330,7 +1345,7 @@ export default function InvoiceLedger({
                     </div>
 
                     {cloudPackages.length > 0 && (
-                      <div className="w-full sm:w-auto">
+                      <div className="w-full sm:w-auto flex items-center gap-1.5">
                         <select
                           value={selectedPackageId}
                           onChange={(e) => handleSelectCloudPackage(e.target.value)}
@@ -1344,6 +1359,17 @@ export default function InvoiceLedger({
                           ))}
                           <option value="CUSTOM">+ New / Custom Package</option>
                         </select>
+
+                        {selectedPackageId && selectedPackageId !== 'CUSTOM' && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCloudPackage(selectedPackageId)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 transition-colors shrink-0"
+                            title="Delete this package directly from Supabase database"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
