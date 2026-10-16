@@ -29,6 +29,7 @@ import {
   Edit3,
   Users,
   Check,
+  Minus,
   Tag
 } from 'lucide-react';
 import { 
