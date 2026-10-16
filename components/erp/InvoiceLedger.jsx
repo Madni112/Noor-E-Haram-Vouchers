@@ -1449,7 +1449,7 @@ export default function InvoiceLedger({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="w-full">
                     <PackageCombobox
                       value={packageTitle}
                       onChange={(val) => setPackageTitle(val)}
@@ -1458,15 +1458,6 @@ export default function InvoiceLedger({
                       onDeletePackage={handleDeleteCloudPackage}
                       placeholder="Select or type package name..."
                     />
-                    <button
-                      type="button"
-                      onClick={handleSavePackageToCloud}
-                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs shrink-0"
-                      title="Save this Package Name and its Departure/Arrival dates straight into Supabase"
-                    >
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      <span>{packageSaveNotice ? 'Saved!' : 'Save Package'}</span>
-                    </button>
                   </div>
                 </div>
 
@@ -1489,6 +1480,20 @@ export default function InvoiceLedger({
                     minDate={issueDate || undefined}
                     placeholder="DD-MM-YYYY"
                   />
+                </div>
+
+                {/* Save Package Template Button (Placed Next to Dates) */}
+                <div className="flex flex-col justify-end">
+                  <label className="hidden sm:block text-[10px] font-bold text-transparent uppercase mb-1 select-none">Action</label>
+                  <button
+                    type="button"
+                    onClick={handleSavePackageToCloud}
+                    className="w-full px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer h-[38px]"
+                    title="Save this Package Name and its Departure/Arrival dates straight into Supabase database"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>{packageSaveNotice ? 'Saved to Cloud!' : 'Save Package'}</span>
+                  </button>
                 </div>
               </div>
 
