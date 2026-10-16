@@ -60,6 +60,7 @@ import TransportVoucherManager from '../../components/erp/TransportVoucherManage
 import TransportOnlyManager from '../../components/erp/TransportOnlyManager';
 import CostEstimator from '../../components/erp/CostEstimator';
 import InvoiceLedger from '../../components/erp/InvoiceLedger';
+import ChartOfAccounts from '../../components/erp/ChartOfAccounts';
 import BillReceiptManager from '../../components/erp/BillReceiptManager';
 import RemindersPanel from '../../components/erp/RemindersPanel';
 import SystemArchitectureModal from '../../components/erp/SystemArchitectureModal';
@@ -395,6 +396,12 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
           badge: null,
         },
         {
+          id: 'CHART_OF_ACCOUNTS',
+          label: 'Chart of Accounts (COA)',
+          icon: Layers,
+          badge: null,
+        },
+        {
           id: 'LEDGER_JOURNAL',
           label: 'General Journal',
           icon: FileText,
@@ -418,6 +425,12 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
       id: 'LEDGER_BANKS',
       label: 'Bank & Cash Accounts',
       icon: Landmark,
+      hidden: true,
+    },
+    {
+      id: 'CHART_OF_ACCOUNTS',
+      label: 'Chart of Accounts',
+      icon: Layers,
       hidden: true,
     },
     {
@@ -905,6 +918,14 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
                 setInvoices(updated);
                 loadAllErpData();
               }}
+            />
+          )}
+
+          {activeTab === 'CHART_OF_ACCOUNTS' && (
+            <ChartOfAccounts 
+              companyName={companyName}
+              invoices={invoices}
+              parties={parties}
             />
           )}
 
