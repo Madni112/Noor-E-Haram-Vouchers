@@ -909,10 +909,10 @@ export default function InvoiceLedger({
           {viewMode === 'INVOICES' ? (
             <button
               onClick={handleOpenCreateInvoice}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>+ Create Bill</span>
+              <span>Create Bill</span>
             </button>
           ) : (
             <button
@@ -1632,10 +1632,10 @@ export default function InvoiceLedger({
                   <button
                     type="button"
                     onClick={addLineItem}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition-colors shadow-xs shrink-0"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition-colors shadow-xs shrink-0 cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>+ Add Line Item</span>
+                    <span>Add Line Item</span>
                   </button>
                 </div>
 
