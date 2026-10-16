@@ -202,8 +202,8 @@ export default function InvoiceViewPage() {
             <p className="text-xs text-slate-600 font-medium">
               Registered Umrah &amp; Hajj Tour Operator • Corporate Finance Division
             </p>
-            <p className="text-[10.5px] text-slate-500 font-mono">
-              INVOICE #: <strong className="text-emerald-950 font-black">{invoice.invoiceNo}</strong> • DUE DATE: {invoice.dueDate}
+            <p className="text-[10.5px] text-slate-600 font-mono">
+              BILL #: <strong className="text-emerald-950 font-black">{invoice.invoiceNo}</strong> • PACKAGE: <strong className="text-indigo-900 font-bold uppercase">{invoice.packageTitle || invoice.packageName || 'Umrah Tour Package'}</strong>
             </p>
           </div>
 
@@ -244,16 +244,16 @@ export default function InvoiceViewPage() {
           </div>
 
           <div>
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Issue Date</span>
-            <span className="font-medium font-mono text-xs text-slate-800 block mt-0.5">
-              {invoice.issueDate}
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Departure Date</span>
+            <span className="font-bold font-mono text-xs text-emerald-900 block mt-0.5">
+              {invoice.departureDate || invoice.issueDate}
             </span>
           </div>
 
           <div>
-            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Payment Terms</span>
-            <span className="font-bold text-[10px] text-amber-900 block mt-0.5">
-              Strict 14-Day Cycle
+            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Arrival Date</span>
+            <span className="font-bold font-mono text-xs text-indigo-900 block mt-0.5">
+              {invoice.arrivalDate || invoice.dueDate}
             </span>
           </div>
         </div>

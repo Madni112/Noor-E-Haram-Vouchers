@@ -29,10 +29,17 @@ import {
   Edit3,
   Users,
   Check,
-  Minus,
   Tag
 } from 'lucide-react';
-import { addLedgerTransaction, getAllInvoices, saveInvoice, deleteInvoice } from '../../lib/erpData';
+import { 
+  addLedgerTransaction, 
+  getAllInvoices, 
+  saveInvoice, 
+  deleteInvoice,
+  getCloudPackages,
+  saveCloudPackage,
+  deleteCloudPackage
+} from '../../lib/erpData';
 import CustomDatePicker from './CustomDatePicker';
 
 export default function InvoiceLedger({ 
@@ -111,6 +118,57 @@ export default function InvoiceLedger({
   }, []);
 
   // -------------------------------------------------------------
+  // SUPABASE CLOUD PACKAGES STATE & HANDLERS
+  // -------------------------------------------------------------
+  const [cloudPackages, setCloudPackages] = useState([]);
+  const [selectedPackageId, setSelectedPackageId] = useState('');
+  const [packageSaveNotice, setPackageSaveNotice] = useState(false);
+
+  // Fetch Supabase Cloud Packages on Mount
+  useEffect(() => {
+    let isMounted = true;
+    getCloudPackages().then(pkgs => {
+      if (isMounted && Array.isArray(pkgs)) {
+        setCloudPackages(pkgs);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleSelectCloudPackage = (pkgId) => {
+    setSelectedPackageId(pkgId);
+    if (!pkgId || pkgId === 'CUSTOM') return;
+    const found = cloudPackages.find(p => p.id === pkgId);
+    if (found) {
+      setPackageTitle(found.package_name);
+      if (found.departure_date) setIssueDate(found.departure_date);
+      if (found.arrival_date) setDueDate(found.arrival_date);
+    }
+  };
+
+  const handleSavePackageToCloud = async () => {
+    if (!packageTitle.trim()) {
+      alert('Please enter a Package Name before saving.');
+      return;
+    }
+    try {
+      const saved = await saveCloudPackage({
+        packageName: packageTitle.trim(),
+        departureDate: issueDate,
+        arrivalDate: dueDate,
+        companyName: customCompany || 'NOOR E HARAM TRAVELS & TOURS'
+      });
+      setPackageSaveNotice(true);
+      setTimeout(() => setPackageSaveNotice(false), 2500);
+      const updated = await getCloudPackages();
+      setCloudPackages(updated);
+      setSelectedPackageId(saved.id);
+    } catch (err) {
+      alert('Error saving package to Supabase: ' + err.message);
+    }
+  };
+
+  // -------------------------------------------------------------
   // CREATE / EDIT INVOICE MODAL STATE
   // -------------------------------------------------------------
   const [editingInvoiceId, setEditingInvoiceId] = useState(null);
@@ -121,8 +179,8 @@ export default function InvoiceLedger({
   const [customCompany, setCustomCompany] = useState('NOOR E HARAM TRAVELS & TOURS');
   const [invoiceNo, setInvoiceNo] = useState(nextInvoiceNum);
   const [packageTitle, setPackageTitle] = useState('15 Days Executive Umrah Package');
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]); // Departure Date
+  const [dueDate, setDueDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]); // Arrival Date
   const [paymentTerms, setPaymentTerms] = useState('Full Payment Required Prior to Visa Stamp & Flight Issuance.');
 
   // Demographic PAX Counts
@@ -362,9 +420,9 @@ export default function InvoiceLedger({
     setCustomPartyName(inv.partyName || '');
     setCustomPhone(inv.contactPhone || '');
     setCustomCompany(inv.companyName || 'NOOR E HARAM TRAVELS & TOURS');
-    setPackageTitle(inv.packageTitle || 'Umrah Services Package');
-    setIssueDate(inv.issueDate || new Date().toISOString().split('T')[0]);
-    setDueDate(inv.dueDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
+    setPackageTitle(inv.packageTitle || inv.packageName || 'Umrah Services Package');
+    setIssueDate(inv.departureDate || inv.issueDate || new Date().toISOString().split('T')[0]);
+    setDueDate(inv.arrivalDate || inv.dueDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
     setPaymentTerms(inv.paymentTerms || 'Full Payment Required Prior to Visa Stamp & Flight Issuance.');
 
     const a = inv.adultsCount !== undefined ? Number(inv.adultsCount) : (Number(inv.totalPax) || 1);
@@ -443,6 +501,9 @@ export default function InvoiceLedger({
       contactPhone: finalPhone,
       companyName: cleanCompany,
       packageTitle,
+      packageName: packageTitle,
+      departureDate: issueDate,
+      arrivalDate: dueDate,
       issueDate,
       dueDate,
       currency: 'PKR',
@@ -790,7 +851,7 @@ export default function InvoiceLedger({
                   <tr>
                     <th className="py-3 px-4 font-bold">Bill Ref #</th>
                     <th className="py-3 px-4 font-bold">Party Head (Debtor)</th>
-                    <th className="py-3 px-4 font-bold">Issue / Due Date</th>
+                    <th className="py-3 px-4 font-bold">Departure &amp; Arrival</th>
                     <th className="py-3 px-4 font-bold text-right">Total Billed</th>
                     <th className="py-3 px-4 font-bold text-right">Paid Receipts</th>
                     <th className="py-3 px-4 font-bold text-right">Balance Due</th>
@@ -818,12 +879,15 @@ export default function InvoiceLedger({
                           <div className="font-bold text-slate-900 uppercase">{inv.partyName}</div>
                           <div className="text-[10px] text-slate-400 font-mono">{inv.partyHeadUid}</div>
                         </td>
-                        <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
-                          <span>{inv.issueDate}</span>
-                          <span className="mx-1 text-slate-400">&rarr;</span>
-                          <span className={inv.balanceDue > 0 && new Date(inv.dueDate) < new Date() ? 'text-rose-600 font-bold' : ''}>
-                            {inv.dueDate}
-                          </span>
+                        <td className="py-3 px-4 font-mono">
+                          <div className="font-bold text-slate-900 text-xs truncate max-w-[200px]" title={inv.packageTitle || inv.packageName}>
+                            {inv.packageTitle || inv.packageName || 'Umrah Package'}
+                          </div>
+                          <div className="text-[10.5px] text-slate-500 flex items-center gap-1 mt-0.5">
+                            <span className="text-emerald-700 font-semibold">{inv.departureDate || inv.issueDate}</span>
+                            <span className="text-slate-400">&rarr;</span>
+                            <span className="text-indigo-700 font-semibold">{inv.arrivalDate || inv.dueDate}</span>
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
                           {inv.currency} {(inv.totalAmount || 0).toLocaleString()}
@@ -1253,8 +1317,61 @@ export default function InvoiceLedger({
                   />
                 </div>
 
+                {/* Package Name with Supabase Cloud Save & Selector */}
+                <div className="sm:col-span-2 lg:col-span-3 bg-slate-50 border border-slate-200/90 rounded-2xl p-3 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-800 uppercase tracking-wide">
+                        Package Name (Supabase Database) *
+                      </label>
+                      <span className="text-[9.5px] text-slate-400">
+                        Saved in cloud for instant selection and auto-fills travel dates
+                      </span>
+                    </div>
+
+                    {cloudPackages.length > 0 && (
+                      <div className="w-full sm:w-auto">
+                        <select
+                          value={selectedPackageId}
+                          onChange={(e) => handleSelectCloudPackage(e.target.value)}
+                          className="w-full sm:w-64 px-2.5 py-1 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 cursor-pointer focus:outline-none focus:border-indigo-500"
+                        >
+                          <option value="">-- Choose Cloud Package --</option>
+                          {cloudPackages.map(pkg => (
+                            <option key={pkg.id} value={pkg.id}>
+                              {pkg.package_name} {pkg.departure_date ? `(${pkg.departure_date} → ${pkg.arrival_date || '...'})` : ''}
+                            </option>
+                          ))}
+                          <option value="CUSTOM">+ New / Custom Package</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={packageTitle}
+                      onChange={(e) => setPackageTitle(e.target.value)}
+                      placeholder="e.g. 15 Days Executive Umrah Package (Makkah & Madinah)"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSavePackageToCloud}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs shrink-0"
+                      title="Save this Package Name and its Departure/Arrival dates straight into Supabase"
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>{packageSaveNotice ? 'Saved to Supabase!' : 'Save Package'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Departure Date */}
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Issue Date</label>
+                  <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Departure Date *</label>
                   <CustomDatePicker
                     value={issueDate}
                     onChange={(val) => setIssueDate(val)}
@@ -1262,8 +1379,9 @@ export default function InvoiceLedger({
                   />
                 </div>
 
+                {/* Arrival Date */}
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Due Date</label>
+                  <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Arrival Date *</label>
                   <CustomDatePicker
                     value={dueDate}
                     onChange={(val) => setDueDate(val)}
