@@ -47,9 +47,13 @@ import {
   getRegisteredRoomTypes,
   addRegisteredRoomType,
   getHotelDistance,
-  saveRegisteredHotelDistance
+  saveRegisteredHotelDistance,
+  saveParty,
+  getNextFidNumber,
+  isAgencyPhone
 } from '../../lib/erpData';
 import CustomDatePicker from './CustomDatePicker';
+import FamilyGroupCombobox from './FamilyGroupCombobox';
 
 // -------------------------------------------------------------
 // ROOM TYPE SELECTOR WITH PERSISTENT '+ ADD NEW' SUPPORT
@@ -141,6 +145,7 @@ export default function HotelVoucherManager({
   hotelVouchers = [], 
   parties = [], 
   onVouchersUpdated,
+  onPartiesUpdated,
   prefillData = null,
   onClearPrefill = null
 }) {
@@ -149,6 +154,7 @@ export default function HotelVoucherManager({
 
   // Form State
   const [targetPartyUid, setTargetPartyUid] = useState(parties[0]?.partyHeadUid || '');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [issueDate, setIssueDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [activeTab, setActiveTab] = useState('STAYS'); // 'STAYS' | 'PASSENGERS' | 'EMERGENCY'
   const [paxList, setPaxList] = useState([]);
@@ -163,6 +169,56 @@ export default function HotelVoucherManager({
   const [emergencyKsaGround, setEmergencyKsaGround] = useState('+966 53 649 2846');
   const [emergencyMadinah, setEmergencyMadinah] = useState('+966 57 593 0550');
   const [emergencyPkHeadOffice, setEmergencyPkHeadOffice] = useState('MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
+
+  // Add a brand-new family group directly from the combobox
+  const handleAddNewParty = (rawName) => {
+    const clean = (rawName || '').trim().toUpperCase();
+    if (!clean) return null;
+
+    const nextFid = `FID-${getNextFidNumber()}`;
+    const newUid = `PHU-${Date.now()}`;
+    const headPax = {
+      id: `pax-${newUid}-1`,
+      sNo: '1',
+      name: clean,
+      prefix: 'MR',
+      passportNo: '',
+      dob: '',
+      gender: 'M',
+      category: 'Adult',
+      hasBed: true,
+      relationship: 'Family Head',
+      contactPhone: '',
+    };
+
+    const newParty = {
+      partyHeadUid: newUid,
+      fid: nextFid,
+      voucherRefNo: nextFid,
+      partyName: clean,
+      companyName: 'NOOR E HARAM TRAVELS & TOURS',
+      contactPhone: '',
+      backupPhone: '',
+      totalPax: 1,
+      declaredPax: 1,
+      isSelfVisa: true,
+      packageTitle: 'Umrah Package',
+      status: 'Active Operations',
+      passengers: [headPax],
+      accommodations: [],
+      transports: [],
+      flights: [],
+    };
+
+    saveParty(newParty);
+    setTargetPartyUid(newUid);
+    setPaxList([{ ...headPax }]);
+
+    if (onPartiesUpdated) {
+      onPartiesUpdated([...parties, newParty]);
+    }
+    return newUid;
+  };
 
   // Handle 1-Click Generate Hotel Voucher from Transport Voucher prefill
   useEffect(() => {
@@ -191,6 +247,155 @@ export default function HotelVoucherManager({
       setPaxList([]);
     }
   }, [targetPartyUid, parties, showCreateModal, editingVoucherId]);
+
+  const [paxInputValues, setPaxInputValues] = useState({});
+
+  const adultsCount = paxList.filter(p => (p.category || 'Adult').toLowerCase() === 'adult').length;
+  const childrenCount = paxList.filter(p => (p.category || '').toLowerCase() === 'child').length;
+  const infantsCount = paxList.filter(p => (p.category || '').toLowerCase() === 'infant').length;
+
+  const setCategoryCount = (cat, targetCount) => {
+    const minVal = cat.toLowerCase() === 'adult' ? 1 : 0;
+    const target = Math.max(minVal, Math.min(99, targetCount));
+    const catLower = cat.toLowerCase();
+
+    setPaxList(prev => {
+      const currentOfCat = prev.filter(p => (p.category || 'Adult').toLowerCase() === catLower);
+      const diff = target - currentOfCat.length;
+      if (diff === 0) return prev;
+
+      if (diff > 0) {
+        const newItems = Array.from({ length: diff }, (_, i) => ({
+          id: `pax-hotel-${Date.now()}-${prev.length + i + 1}`,
+          sNo: String(prev.length + i + 1),
+          prefix: cat === 'Adult' ? 'MR' : cat === 'Child' ? 'CHD_MSTR' : 'INF',
+          name: `${cat.toUpperCase()} ${currentOfCat.length + i + 1}`,
+          passportNo: '',
+          category: cat,
+          hasBed: cat !== 'Infant',
+        }));
+        return [...prev, ...newItems];
+      } else {
+        // Decrease: keep first `target` items of this category, keep all other categories
+        let kept = 0;
+        const result = [];
+        for (const p of prev) {
+          if ((p.category || 'Adult').toLowerCase() === catLower) {
+            if (kept < target) {
+              result.push(p);
+              kept++;
+            }
+          } else {
+            result.push(p);
+          }
+        }
+        if (result.length === 0) {
+          result.push({
+            id: `pax-hotel-${Date.now()}-1`,
+            sNo: '1',
+            prefix: 'MR',
+            name: 'LEAD PASSENGER',
+            passportNo: '',
+            category: 'Adult',
+            hasBed: true,
+          });
+        }
+        return result;
+      }
+    });
+  };
+
+  const adjustCategoryCount = (cat, delta) => {
+    const catLower = cat.toLowerCase();
+    const minVal = catLower === 'adult' ? 1 : 0;
+    const currentCount = paxList.filter(p => (p.category || 'Adult').toLowerCase() === catLower).length;
+    const target = Math.max(minVal, currentCount + delta);
+    setCategoryCount(cat, target);
+  };
+
+  const handleDirectCountChange = (cat, valStr) => {
+    setPaxInputValues(prev => ({ ...prev, [cat]: valStr }));
+    if (valStr !== '') {
+      const num = parseInt(valStr, 10);
+      const minVal = cat.toLowerCase() === 'adult' ? 1 : 0;
+      if (!isNaN(num) && num >= minVal && num <= 99) {
+        setCategoryCount(cat, num);
+      }
+    }
+  };
+
+  const handleCountBlur = (cat) => {
+    setPaxInputValues(prev => {
+      const currentVal = prev[cat];
+      const minVal = cat.toLowerCase() === 'adult' ? 1 : 0;
+      if (currentVal === '' || isNaN(parseInt(currentVal, 10)) || parseInt(currentVal, 10) < minVal) {
+        setCategoryCount(cat, minVal);
+      }
+      const next = { ...prev };
+      delete next[cat];
+      return next;
+    });
+  };
+
+  const handleUpdatePassenger = (index, field, value) => {
+    if (field === 'category' && value !== 'Adult') {
+      const isLead = index === 0 || paxList[index]?.manifestRole === 'HEAD';
+      if (isLead) {
+        alert('Rule: Lead Pilgrim / Party Head must be an Adult.');
+        return;
+      }
+      const otherAdults = paxList.filter((p, i) => i !== index && (p.category || 'Adult').toLowerCase() === 'adult').length;
+      if (otherAdults === 0) {
+        alert('Rule: At least 1 Adult is required in the booking.');
+        return;
+      }
+    }
+    if (field === 'prefix' && (value === 'INF' || value.startsWith('CHD'))) {
+      const isLead = index === 0 || paxList[index]?.manifestRole === 'HEAD';
+      if (isLead) {
+        alert('Rule: Lead Pilgrim / Party Head must be an Adult.');
+        return;
+      }
+    }
+
+    setPaxList(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      if (field === 'category') {
+        if (value === 'Infant') {
+          copy[index].hasBed = false;
+          copy[index].prefix = 'INF';
+        } else if (value === 'Child') {
+          copy[index].hasBed = true;
+          if (!copy[index].prefix || copy[index].prefix === 'MR') copy[index].prefix = 'CHD_MSTR';
+        } else {
+          copy[index].hasBed = true;
+          if (copy[index].prefix === 'INF' || copy[index].prefix === 'CHD_MSTR') copy[index].prefix = 'MR';
+        }
+      }
+      return copy;
+    });
+  };
+
+  const handleAddPassenger = () => {
+    adjustCategoryCount('Adult', 1);
+  };
+
+  const handleRemovePassenger = (index) => {
+    if (paxList.length <= 1) {
+      alert('At least 1 passenger is required.');
+      return;
+    }
+    const target = paxList[index];
+    if ((target?.category || 'Adult').toLowerCase() === 'adult') {
+      const remainingAdults = paxList.filter((p, i) => i !== index && (p.category || 'Adult').toLowerCase() === 'adult').length;
+      if (remainingAdults === 0) {
+        alert('Rule: Cannot remove the only Adult. At least 1 Adult is required.');
+        return;
+      }
+    }
+    setPaxList(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleToggleBed = (index, hasBedVal) => {
     setPaxList(prev => prev.map((p, i) => i === index ? { ...p, hasBed: hasBedVal } : p));
@@ -330,6 +535,9 @@ export default function HotelVoucherManager({
     setEditingVoucherId(null);
     const defaultParty = parties[0]?.partyHeadUid || '';
     setTargetPartyUid(defaultParty);
+    const matchedParty = parties.find(p => p.partyHeadUid === defaultParty);
+    const defaultPhone = (matchedParty?.contactPhone && !isAgencyPhone(matchedParty.contactPhone)) ? matchedParty.contactPhone : '';
+    setCustomerPhone(defaultPhone);
     setIssueDate(new Date().toISOString().split('T')[0]);
     setStays([
       {
@@ -380,8 +588,16 @@ export default function HotelVoucherManager({
 
   const handleOpenEdit = (v) => {
     setEditingVoucherId(v.id || v.voucherNo);
-    setTargetPartyUid(v.partyHeadUid);
+    const matched = parties.find(p => 
+      (v.partyHeadUid && p.partyHeadUid === v.partyHeadUid) || 
+      (v.partyName && p.partyName?.trim().toLowerCase() === v.partyName?.trim().toLowerCase()) ||
+      (v.voucherRefNo && p.voucherRefNo === v.voucherRefNo)
+    );
+    const resolvedUid = matched?.partyHeadUid || v.partyHeadUid || v.partyName || '';
+    setTargetPartyUid(resolvedUid);
     setIssueDate(v.issueDate || new Date().toISOString().split('T')[0]);
+    const candidatePhone = v.customerPhone || v.contactPhone || matched?.contactPhone || '';
+    setCustomerPhone((candidatePhone && !isAgencyPhone(candidatePhone)) ? candidatePhone : '');
     if (Array.isArray(v.stays) && v.stays.length > 0) {
       setStays(v.stays.map((s, idx) => ({
         id: s.id || `stay-${idx + 1}`,
@@ -399,10 +615,20 @@ export default function HotelVoucherManager({
       })));
     }
     if (Array.isArray(v.passengers) && v.passengers.length > 0) {
-      setPaxList(v.passengers.map(p => ({
-        ...p,
-        hasBed: p.hasBed !== undefined ? Boolean(p.hasBed) : (p.category !== 'Infant'),
-      })));
+      const party = parties.find(p => p.partyHeadUid === v.partyHeadUid) || { partyName: v.partyName };
+      setPaxList(v.passengers.map((p, idx) => {
+        let cleanName = (p.name || '').trim();
+        if ((!cleanName || cleanName.toLowerCase().includes('unnamed')) && idx === 0) {
+          cleanName = (v.partyName || party.partyName || 'LEAD GUEST').replace(/^MR\s+/i, '');
+        }
+        return {
+          ...p,
+          prefix: p.prefix || 'MR',
+          name: cleanName,
+          category: p.category || (p.prefix === 'CHD' || p.prefix?.startsWith('CHD') ? 'Child' : p.prefix === 'INF' || p.prefix?.startsWith('INF') ? 'Infant' : 'Adult'),
+          hasBed: p.hasBed !== undefined ? Boolean(p.hasBed) : (p.category !== 'Infant'),
+        };
+      }));
     }
     if (v.emergencyContacts) {
       setEmergencyKsaGround(v.emergencyContacts.ksaGround || '+966 53 649 2846');
@@ -431,7 +657,11 @@ export default function HotelVoucherManager({
 
   const handleCreateHotelVoucher = (e) => {
     e.preventDefault();
-    const party = parties.find(p => p.partyHeadUid === targetPartyUid);
+    const party = parties.find(p => 
+      p.partyHeadUid === targetPartyUid || 
+      (p.partyName && p.partyName.trim().toLowerCase() === targetPartyUid?.trim().toLowerCase()) ||
+      (p.voucherRefNo && p.voucherRefNo === targetPartyUid)
+    );
     if (!party) {
       alert('Selected family group not found');
       return;
@@ -470,7 +700,41 @@ export default function HotelVoucherManager({
       };
     });
 
-    const targetPassengers = paxList.length > 0 ? paxList : (party.passengers || []);
+    const targetPassengers = (paxList.length > 0 ? paxList : (party.passengers || [])).map((p, idx) => {
+      if (idx === 0) {
+        return { ...p, contactPhone: customerPhone.trim() };
+      }
+      return p;
+    });
+    const adultsCount = targetPassengers.filter(p => (p.category || 'Adult').toLowerCase() === 'adult').length;
+    const childrenCount = targetPassengers.filter(p => (p.category || '').toLowerCase() === 'child').length;
+    const infantsCount = targetPassengers.filter(p => (p.category || '').toLowerCase() === 'infant').length;
+    const totalCount = targetPassengers.length;
+
+    // Update the master party record so /passengers immediately updates badge to 10 PAX
+    const updatedParty = {
+      ...party,
+      totalPax: Math.max(totalCount, party.totalPax || 1),
+      declaredPax: Math.max(totalCount, party.declaredPax || 1),
+      contactPhone: customerPhone.trim() || party.contactPhone || '',
+      adultsCount,
+      childrenCount,
+      infantsCount,
+    };
+
+    // If party head name was edited in paxList[0], sync partyName
+    if (targetPassengers[0]?.name && targetPassengers[0].name.trim()) {
+      updatedParty.partyName = targetPassengers[0].name.trim().toUpperCase();
+      if (updatedParty.passengers && updatedParty.passengers.length > 0) {
+        updatedParty.passengers[0] = {
+          ...updatedParty.passengers[0],
+          ...targetPassengers[0],
+          name: targetPassengers[0].name.trim().toUpperCase(),
+        };
+      }
+    }
+
+    saveParty(updatedParty);
 
     const newVoucher = {
       id: vId,
@@ -478,6 +742,8 @@ export default function HotelVoucherManager({
       partyHeadUid: party.partyHeadUid,
       partyName: party.partyName,
       companyName: party.companyName || 'NOOR E HARAM TRAVELS & TOURS',
+      customerPhone: customerPhone.trim(),
+      contactPhone: customerPhone.trim(),
       totalPax: targetPassengers.length || party.totalPax || 1,
       passengers: targetPassengers,
       stays: compiledStays,
@@ -717,47 +983,71 @@ export default function HotelVoucherManager({
             {/* Modal Body (Scrollable) */}
             <form onSubmit={handleCreateHotelVoucher} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5 text-xs">
               
-              {/* Top Controls: Parent Party Select + Issue Date + Quick Stats */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                <div className="md:col-span-5">
-                  <label className="block text-slate-700 font-bold mb-1.5 text-xs">
-                    Select Target Family Group *
-                  </label>
-                  <select 
-                    value={targetPartyUid}
-                    onChange={(e) => setTargetPartyUid(e.target.value)}
-                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-white font-bold text-slate-900 text-xs shadow-2xs outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 cursor-pointer"
-                  >
-                    {parties.map(p => (
-                      <option key={p.partyHeadUid} value={p.partyHeadUid}>
-                        {p.voucherRefNo || p.partyHeadUid}: {p.partyName} ({p.passengers?.length || p.totalPax || 1} PAX) • {p.packageTitle || 'Umrah Package'}
-                      </option>
-                    ))}
-                  </select>
+              {/* Top Controls: Parent Party Select + Customer Phone + Issue Date + Quick Stats */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                  <div className="md:col-span-6">
+                    <label className="block text-slate-700 font-bold mb-1.5 text-xs flex items-center justify-between">
+                      <span>Select Target Family Group *</span>
+                      <span className="text-[10px] text-emerald-700 font-semibold">Search existing or type new</span>
+                    </label>
+                    <FamilyGroupCombobox
+                      parties={parties}
+                      value={targetPartyUid}
+                      onChange={(newUid) => {
+                        setTargetPartyUid(newUid);
+                        const matched = parties.find(p => p.partyHeadUid === newUid);
+                        if (matched?.contactPhone && !isAgencyPhone(matched.contactPhone)) {
+                          setCustomerPhone(matched.contactPhone);
+                        }
+                      }}
+                      onAddNewParty={handleAddNewParty}
+                      placeholder="Search family group or type new..."
+                    />
+                  </div>
+
+                  <div className="md:col-span-6">
+                    <label className="block text-slate-700 font-bold mb-1.5 text-xs flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <PhoneCall className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Customer Phone (Optional)</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">Leave blank to hide from voucher</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="e.g. +92 311 2324764 / 055 819 2401"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-white text-xs font-bold text-slate-800 outline-none focus:border-slate-800 transition"
+                    />
+                  </div>
                 </div>
 
-                <div className="md:col-span-4">
-                  <label className="block text-slate-700 font-bold mb-1.5 text-xs flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Issue Date *</span>
-                  </label>
-                  <CustomDatePicker
-                    value={issueDate}
-                    onChange={(val) => setIssueDate(val)}
-                    placeholder="YYYY-MM-DD"
-                  />
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center pt-2 border-t border-slate-200/60">
+                  <div className="md:col-span-6">
+                    <label className="block text-slate-700 font-bold mb-1.5 text-xs flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Issue Date *</span>
+                    </label>
+                    <CustomDatePicker
+                      value={issueDate}
+                      onChange={(val) => setIssueDate(val)}
+                      placeholder="YYYY-MM-DD"
+                    />
+                  </div>
 
-                <div className="md:col-span-3 p-3 bg-white border border-slate-200 rounded-xl shadow-2xs flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Itinerary</span>
-                    <span className="text-xs font-black text-slate-800">
-                      {stays.length} Stays • <span className="text-emerald-700">{totalNights} Nights</span>
+                  <div className="md:col-span-6 p-2.5 bg-white border border-slate-200 rounded-xl shadow-2xs flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Itinerary</span>
+                      <span className="text-xs font-black text-slate-800">
+                        {stays.length} Stays • <span className="text-emerald-700">{totalNights} Nights</span>
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      A4 Ready
                     </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    A4 Ready
-                  </span>
                 </div>
               </div>
 
@@ -1127,10 +1417,10 @@ export default function HotelVoucherManager({
                     <div>
                       <h4 className="font-bold text-sm text-slate-900 tracking-tight flex items-center gap-2">
                         <Users className="w-4 h-4 text-emerald-600" />
-                        <span>Pilgrim Bed Allocation ({paxList.length} Guests)</span>
+                        <span>Pilgrim Manifest &amp; Bed Allocation ({paxList.length} Guests)</span>
                       </h4>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        Select whether each passenger has an allocated bed (<span className="text-emerald-700 font-bold">Yes</span>) or shares without a bed (<span className="text-amber-700 font-bold">No</span>).
+                        Adjust counts directly by <strong className="text-slate-700">Adult, Child, Infant</strong> or edit passenger rows below.
                       </p>
                     </div>
 
@@ -1174,81 +1464,280 @@ export default function HotelVoucherManager({
                     </div>
                   </div>
 
+                  {/* EDITABLE DEMOGRAPHIC COUNTS: Adult, Child, Infant Wise */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {/* Adults Stepper */}
+                    <div className="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-0.5">Adults</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="99"
+                          value={paxInputValues['Adult'] !== undefined ? paxInputValues['Adult'] : adultsCount}
+                          onChange={(e) => handleDirectCountChange('Adult', e.target.value)}
+                          onBlur={() => handleCountBlur('Adult')}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                          onFocus={(e) => e.target.select()}
+                          onClick={(e) => e.target.select()}
+                          className="w-14 h-8 px-1.5 text-left text-base font-black text-slate-900 bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-emerald-600 rounded-lg outline-none transition-colors cursor-text"
+                          title="Click to edit Adults count directly (min: 1)"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => adjustCategoryCount('Adult', -1)}
+                          disabled={adultsCount <= 1}
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 font-black text-xs flex items-center justify-center transition cursor-pointer"
+                          title="Decrease Adult (minimum 1)"
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => adjustCategoryCount('Adult', 1)}
+                          className="w-7 h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center transition cursor-pointer"
+                          title="Add Adult"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Children Stepper */}
+                    <div className="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 block mb-0.5">Children</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="99"
+                          value={paxInputValues['Child'] !== undefined ? paxInputValues['Child'] : childrenCount}
+                          onChange={(e) => handleDirectCountChange('Child', e.target.value)}
+                          onBlur={() => handleCountBlur('Child')}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                          onFocus={(e) => e.target.select()}
+                          onClick={(e) => e.target.select()}
+                          className="w-14 h-8 px-1.5 text-left text-base font-black text-sky-950 bg-sky-50/50 hover:bg-sky-50 focus:bg-white border border-sky-200 hover:border-sky-300 focus:border-sky-600 rounded-lg outline-none transition-colors cursor-text"
+                          title="Click to edit Children count directly"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => adjustCategoryCount('Child', -1)}
+                          disabled={childrenCount <= 0}
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 font-black text-xs flex items-center justify-center transition cursor-pointer"
+                          title="Decrease Child"
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => adjustCategoryCount('Child', 1)}
+                          className="w-7 h-7 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-black text-xs flex items-center justify-center transition cursor-pointer"
+                          title="Add Child"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Infants Stepper */}
+                    <div className="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 block mb-0.5">Infants</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="99"
+                          value={paxInputValues['Infant'] !== undefined ? paxInputValues['Infant'] : infantsCount}
+                          onChange={(e) => handleDirectCountChange('Infant', e.target.value)}
+                          onBlur={() => handleCountBlur('Infant')}
+                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                          onFocus={(e) => e.target.select()}
+                          onClick={(e) => e.target.select()}
+                          className="w-14 h-8 px-1.5 text-left text-base font-black text-purple-950 bg-purple-50/50 hover:bg-purple-50 focus:bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-600 rounded-lg outline-none transition-colors cursor-text"
+                          title="Click to edit Infants count directly"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => adjustCategoryCount('Infant', -1)}
+                          disabled={infantsCount <= 0}
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 font-black text-xs flex items-center justify-center transition cursor-pointer"
+                          title="Decrease Infant"
+                        >
+                          -
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => adjustCategoryCount('Infant', 1)}
+                          className="w-7 h-7 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-black text-xs flex items-center justify-center transition cursor-pointer"
+                          title="Add Infant"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Total PAX & Quick Add Button */}
+                    <div className="p-3 bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl text-white shadow-2xs flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Pax</span>
+                        <span className="text-sm sm:text-base font-black text-emerald-400">{paxList.length} Guests</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddPassenger}
+                        className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 transition cursor-pointer shadow-xs active:scale-95"
+                        title="Add Passenger Row"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Pax</span>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Passenger Table */}
                   {paxList.length === 0 ? (
                     <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl text-slate-400 italic text-xs">
-                      No passengers found in this family group. Please select another family or add passengers in the Passenger Manifest module.
+                      No passengers found. Use the steppers above or click &quot;Add Pax&quot; to register guests.
                     </div>
                   ) : (
                     <div className="overflow-hidden rounded-2xl border border-slate-200/90 shadow-2xs bg-white">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="bg-slate-100/80 border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-wider text-slate-600">
-                            <th className="py-2.5 px-3 text-center w-12">#</th>
-                            <th className="py-2.5 px-4">Passenger Name</th>
-                            <th className="py-2.5 px-3">Passport #</th>
-                            <th className="py-2.5 px-3">Category</th>
-                            <th className="py-2.5 px-4 w-52 text-right sm:text-left">Bed Allocation (Dropdown)</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {paxList.map((pax, idx) => {
-                            const isHead = idx === 0 || pax.manifestRole === 'HEAD' || pax.relationship?.toLowerCase() === 'head';
-                            const isInfant = (pax.category || '').toLowerCase() === 'infant';
-                            const hasBed = pax.hasBed !== false;
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="bg-slate-100/80 border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-wider text-slate-600">
+                              <th className="py-2.5 px-3 text-center w-12 border-r border-slate-200/60">#</th>
+                              <th className="py-2.5 px-2.5 w-24 border-r border-slate-200/60">Prefix</th>
+                              <th className="py-2.5 px-3.5 border-r border-slate-200/60">Passenger Legal Name *</th>
+                              <th className="py-2.5 px-2.5 border-r border-slate-200/60 w-32">Passport #</th>
+                              <th className="py-2.5 px-2.5 border-r border-slate-200/60 w-28">Category</th>
+                              <th className="py-2.5 px-3 w-40 border-r border-slate-200/60">Bed Allocation</th>
+                              <th className="py-2.5 px-2 text-center w-12">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {paxList.map((pax, idx) => {
+                              const isHead = idx === 0 || pax.manifestRole === 'HEAD' || pax.relationship?.toLowerCase() === 'head';
+                              const hasBed = pax.hasBed !== false;
 
-                            return (
-                              <tr 
-                                key={pax.id || idx}
-                                className={`transition-colors hover:bg-slate-50/70 ${hasBed ? 'bg-white' : 'bg-slate-50/40'}`}
-                              >
-                                <td className="py-3 px-3 text-center font-mono font-bold text-slate-400 text-xs">
-                                  {idx + 1}
-                                </td>
-                                <td className="py-3 px-4 font-bold text-slate-900 uppercase">
-                                  <div className="flex items-center gap-2">
-                                    <span>{pax.prefix ? `${pax.prefix} ` : ''}{pax.name || 'Unnamed Passenger'}</span>
-                                    {isHead && (
-                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
-                                        <Crown className="w-2.5 h-2.5 text-amber-700" />
-                                        <span>Head</span>
-                                      </span>
-                                    )}
-                                  </div>
-                                </td>
-                                <td className="py-3 px-3 font-mono text-slate-600 text-[11px]">
-                                  {pax.passportNo || '—'}
-                                </td>
-                                <td className="py-3 px-3">
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                    isInfant 
-                                      ? 'bg-purple-100 text-purple-900 border border-purple-200' 
-                                      : (pax.category || '').toLowerCase() === 'child'
-                                      ? 'bg-sky-100 text-sky-900 border border-sky-200'
-                                      : 'bg-slate-100 text-slate-800 border border-slate-200'
-                                  }`}>
-                                    {pax.category || 'Adult'}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 text-right sm:text-left">
-                                  <select
-                                    value={hasBed ? 'yes' : 'no'}
-                                    onChange={(e) => handleToggleBed(idx, e.target.value === 'yes')}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs outline-none ${
-                                      hasBed
-                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900 focus:ring-2 focus:ring-emerald-700/20'
-                                        : 'bg-slate-100 border-slate-300 text-slate-600 focus:ring-2 focus:ring-slate-400/20'
-                                    }`}
-                                  >
-                                    <option value="yes">Yes (Bed Allocated)</option>
-                                    <option value="no">No (No Bed / Sharing)</option>
-                                  </select>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                              return (
+                                <tr 
+                                  key={pax.id || idx}
+                                  className={`transition-colors hover:bg-slate-50/70 ${hasBed ? 'bg-white' : 'bg-slate-50/40'}`}
+                                >
+                                  <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-400 text-xs border-r border-slate-100">
+                                    {idx + 1}
+                                  </td>
+
+                                  {/* Prefix */}
+                                  <td className="py-2.5 px-2 border-r border-slate-100">
+                                    <select
+                                      value={pax.prefix || 'MR'}
+                                      onChange={(e) => handleUpdatePassenger(idx, 'prefix', e.target.value)}
+                                      className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 bg-white"
+                                    >
+                                      <option value="MR">MR</option>
+                                      <option value="MRS">MRS</option>
+                                      <option value="MS">MS</option>
+                                      {!isHead && <option value="CHD_MSTR">MSTR</option>}
+                                      {!isHead && <option value="CHD_MISS">MISS</option>}
+                                      {!isHead && <option value="INF">INF</option>}
+                                    </select>
+                                  </td>
+
+                                  {/* Passenger Name Input */}
+                                  <td className="py-2.5 px-3 border-r border-slate-100">
+                                    <div className="flex items-center gap-1.5">
+                                      <input
+                                        type="text"
+                                        value={pax.name || ''}
+                                        onChange={(e) => handleUpdatePassenger(idx, 'name', e.target.value)}
+                                        placeholder="Full Legal Name"
+                                        className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 uppercase focus:border-slate-800 outline-none"
+                                      />
+                                      {isHead && (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-1 rounded text-[9px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+                                          <Crown className="w-2.5 h-2.5 text-amber-700" />
+                                          <span>Head</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+
+                                  {/* Passport # */}
+                                  <td className="py-2.5 px-2 border-r border-slate-100">
+                                    <input
+                                      type="text"
+                                      value={pax.passportNo || ''}
+                                      onChange={(e) => handleUpdatePassenger(idx, 'passportNo', e.target.value)}
+                                      placeholder="Passport #"
+                                      className="w-full px-2 py-1.5 border border-slate-200 rounded-lg font-mono text-xs text-slate-700 uppercase outline-none focus:border-slate-800"
+                                    />
+                                  </td>
+
+                                  {/* Category Dropdown (Adult, Child, Infant) */}
+                                  <td className="py-2.5 px-2 border-r border-slate-100">
+                                    <select
+                                      value={isHead ? 'Adult' : (pax.category || 'Adult')}
+                                      disabled={isHead}
+                                      onChange={(e) => handleUpdatePassenger(idx, 'category', e.target.value)}
+                                      title={isHead ? 'Rule: Party Head must always be an Adult' : 'Select Category'}
+                                      className={`w-full px-2 py-1.5 rounded-lg text-xs font-bold border outline-none ${
+                                        isHead 
+                                          ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
+                                          : pax.category === 'Infant'
+                                          ? 'bg-purple-50 border-purple-200 text-purple-900 cursor-pointer'
+                                          : pax.category === 'Child'
+                                          ? 'bg-sky-50 border-sky-200 text-sky-900 cursor-pointer'
+                                          : 'bg-slate-50 border-slate-200 text-slate-800 cursor-pointer'
+                                      }`}
+                                    >
+                                      <option value="Adult">Adult</option>
+                                      {!isHead && <option value="Child">Child</option>}
+                                      {!isHead && <option value="Infant">Infant</option>}
+                                    </select>
+                                  </td>
+
+                                  {/* Bed Allocation */}
+                                  <td className="py-2.5 px-2.5 border-r border-slate-100">
+                                    <select
+                                      value={hasBed ? 'yes' : 'no'}
+                                      onChange={(e) => handleToggleBed(idx, e.target.value === 'yes')}
+                                      className={`w-full px-2 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer outline-none ${
+                                        hasBed
+                                          ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                                          : 'bg-slate-100 border-slate-300 text-slate-600'
+                                      }`}
+                                    >
+                                      <option value="yes">Yes (Bed)</option>
+                                      <option value="no">No Bed</option>
+                                    </select>
+                                  </td>
+
+                                  {/* Delete Row */}
+                                  <td className="py-2.5 px-2 text-center">
+                                    <button
+                                      type="button"
+                                      disabled={paxList.length <= 1}
+                                      onClick={() => handleRemovePassenger(idx)}
+                                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                      title="Remove passenger"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </div>

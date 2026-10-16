@@ -6,7 +6,9 @@ import {
   getAllTransportOnlyVouchers, 
   saveTransportOnlyVoucher, 
   deleteTransportOnlyVoucher,
-  getNextTransportVoucherNo
+  getNextTransportVoucherNo,
+  saveParty,
+  getAllParties
 } from '../../lib/erpData';
 import { 
   Bus, 
@@ -28,7 +30,8 @@ import {
   Plus,
   Plane,
   ChevronDown,
-  Hash
+  Hash,
+  Crown
 } from 'lucide-react';
 
 const COMMON_LOCATIONS = [
@@ -62,7 +65,25 @@ const DEFAULT_TERMS = [
   "- In the case that the passengers don't connect to the internet or fail to establish contact with the transporter we will not be responsible for any inconvenience."
 ];
 
-export default function TransportOnlyManager({ parties = [], onVouchersUpdated }) {
+export function formatTimeWithoutSeconds(timeVal) {
+  if (!timeVal) return '';
+  const str = String(timeVal).trim();
+  if (!str) return '';
+  const match = str.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+  if (match) {
+    const hh = match[1].padStart(2, '0');
+    const mm = match[2];
+    const ampm = match[3] ? ` ${match[3].toUpperCase()}` : '';
+    return `${hh}:${mm}${ampm}`.trim();
+  }
+  if (str.includes('T')) {
+    const part = str.split('T')[1];
+    return part.slice(0, 5);
+  }
+  return str.replace(/:\d{2}$/, '').trim();
+}
+
+export default function TransportOnlyManager({ parties = [], onVouchersUpdated, onPartiesUpdated }) {
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -77,11 +98,12 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
   
   // Fields matching exact requirements:
   const [voucherNo, setVoucherNo] = useState('');
+  const [selectedPartyHeadUid, setSelectedPartyHeadUid] = useState(null);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [totalPax, setTotalPax] = useState(1);
   const [issueDate, setIssueDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVELS');
+  const [companyName, setCompanyName] = useState('NOOR E HARAM TRAVELS & TOURS');
 
   // Searchable dropdown state for Customer Name (Party Heads only)
   const [partyDropdownOpen, setPartyDropdownOpen] = useState(false);
@@ -99,6 +121,13 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
   const [headOfficeHelpline, setHeadOfficeHelpline] = useState('MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
   const [terms, setTerms] = useState(DEFAULT_TERMS);
 
+  // Modal Tab Navigation State ('TRANSFERS' | 'PASSENGERS' | 'FLIGHTS' | 'HELPLINES')
+  const [activeModalTab, setActiveModalTab] = useState('TRANSFERS');
+
+  // Passenger Manifest State
+  const [paxList, setPaxList] = useState([]);
+  const [paxInputValues, setPaxInputValues] = useState({});
+
   // Delete State
   const [deletingVoucher, setDeletingVoucher] = useState(null);
 
@@ -114,6 +143,157 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
     }
     loadData();
   }, []);
+
+  // Demographic count summaries
+  const adultsCount = paxList.filter(p => (p.category || 'Adult').toLowerCase() === 'adult').length;
+  const childrenCount = paxList.filter(p => (p.category || '').toLowerCase() === 'child').length;
+  const infantsCount = paxList.filter(p => (p.category || '').toLowerCase() === 'infant').length;
+
+  // Pure slice updater for category counts ensuring min 1 adult and lead adult preservation
+  const setCategoryCount = (cat, targetCount) => {
+    const minVal = cat.toLowerCase() === 'adult' ? 1 : 0;
+    const target = Math.max(minVal, Math.min(99, targetCount));
+    const catLower = cat.toLowerCase();
+
+    setPaxList(prev => {
+      const currentOfCat = prev.filter(p => (p.category || 'Adult').toLowerCase() === catLower);
+      const diff = target - currentOfCat.length;
+      if (diff === 0) return prev;
+
+      if (diff > 0) {
+        const newItems = Array.from({ length: diff }, (_, i) => ({
+          id: `pax-trans-${Date.now()}-${prev.length + i + 1}`,
+          sNo: String(prev.length + i + 1),
+          prefix: cat === 'Adult' ? 'MR' : cat === 'Child' ? 'CHD_MSTR' : 'INF',
+          name: `${cat.toUpperCase()} ${currentOfCat.length + i + 1}`,
+          passportNo: '',
+          category: cat,
+        }));
+        const updated = [...prev, ...newItems];
+        setTotalPax(updated.length);
+        return updated;
+      } else {
+        let kept = 0;
+        const result = [];
+        for (const p of prev) {
+          if ((p.category || 'Adult').toLowerCase() === catLower) {
+            if (kept < target) {
+              result.push(p);
+              kept++;
+            }
+          } else {
+            result.push(p);
+          }
+        }
+        if (result.length === 0) {
+          result.push({
+            id: `pax-trans-${Date.now()}-1`,
+            sNo: '1',
+            prefix: 'MR',
+            name: customerName || 'LEAD PILGRIM',
+            passportNo: '',
+            category: 'Adult',
+          });
+        }
+        const reindexed = result.map((p, idx) => ({ ...p, sNo: String(idx + 1) }));
+        setTotalPax(reindexed.length);
+        return reindexed;
+      }
+    });
+  };
+
+  const adjustCategoryCount = (cat, delta) => {
+    const catLower = cat.toLowerCase();
+    const minVal = catLower === 'adult' ? 1 : 0;
+    const currentCount = paxList.filter(p => (p.category || 'Adult').toLowerCase() === catLower).length;
+    const target = Math.max(minVal, currentCount + delta);
+    setCategoryCount(cat, target);
+  };
+
+  const handleDirectCountChange = (cat, valStr) => {
+    setPaxInputValues(prev => ({ ...prev, [cat]: valStr }));
+    if (valStr !== '') {
+      const num = parseInt(valStr, 10);
+      const minVal = cat.toLowerCase() === 'adult' ? 1 : 0;
+      if (!isNaN(num) && num >= minVal && num <= 99) {
+        setCategoryCount(cat, num);
+      }
+    }
+  };
+
+  const handleCountBlur = (cat) => {
+    setPaxInputValues(prev => {
+      const currentVal = prev[cat];
+      const minVal = cat.toLowerCase() === 'adult' ? 1 : 0;
+      if (currentVal === '' || isNaN(parseInt(currentVal, 10)) || parseInt(currentVal, 10) < minVal) {
+        setCategoryCount(cat, minVal);
+      }
+      const next = { ...prev };
+      delete next[cat];
+      return next;
+    });
+  };
+
+  const handleUpdatePassenger = (index, field, value) => {
+    const isLead = index === 0;
+    if (field === 'category' && value !== 'Adult') {
+      if (isLead) {
+        alert('Rule: Lead Pilgrim / Party Head must be an Adult.');
+        return;
+      }
+      const otherAdults = paxList.filter((p, i) => i !== index && (p.category || 'Adult').toLowerCase() === 'adult').length;
+      if (otherAdults === 0) {
+        alert('Rule: At least 1 Adult is required in the booking.');
+        return;
+      }
+    }
+    if (field === 'prefix' && (value === 'INF' || value.startsWith('CHD'))) {
+      if (isLead) {
+        alert('Rule: Lead Pilgrim / Party Head must be an Adult.');
+        return;
+      }
+    }
+
+    setPaxList(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      if (field === 'category') {
+        if (value === 'Infant') {
+          copy[index].prefix = 'INF';
+        } else if (value === 'Child') {
+          if (!copy[index].prefix || copy[index].prefix === 'MR') copy[index].prefix = 'CHD_MSTR';
+        } else {
+          if (copy[index].prefix === 'INF' || copy[index].prefix === 'CHD_MSTR') copy[index].prefix = 'MR';
+        }
+      }
+      return copy;
+    });
+  };
+
+  const handleAddPassenger = () => {
+    adjustCategoryCount('Adult', 1);
+  };
+
+  const handleRemovePassenger = (index) => {
+    if (paxList.length <= 1) {
+      alert('At least 1 passenger is required.');
+      return;
+    }
+    const target = paxList[index];
+    if ((target?.category || 'Adult').toLowerCase() === 'adult') {
+      const remainingAdults = paxList.filter((p, i) => i !== index && (p.category || 'Adult').toLowerCase() === 'adult').length;
+      if (remainingAdults === 0) {
+        alert('Rule: At least 1 Adult is required in the booking.');
+        return;
+      }
+    }
+
+    setPaxList(prev => {
+      const updated = prev.filter((_, i) => i !== index).map((p, idx) => ({ ...p, sNo: String(idx + 1) }));
+      setTotalPax(updated.length);
+      return updated;
+    });
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -149,11 +329,12 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
 
   const handleOpenCreate = () => {
     setEditingId(null);
-    const nextNo = getNextTransportVoucherNo('NTV-');
+    const nextNo = getNextTransportVoucherNo('CTV-');
     setVoucherNo(nextNo);
     setIssueDate(new Date().toISOString().split('T')[0]);
-    setCompanyName('NOOR E HARAM TRAVELS');
+    setCompanyName('NOOR E HARAM TRAVELS & TOURS');
 
+    setSelectedPartyHeadUid(null);
     setCustomerName('');
     setCustomerPhone('');
     setTotalPax(1);
@@ -173,24 +354,92 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
       }
     ]);
 
-    // Flights start empty until added
-    setFlights([]);
+    // Initial 1 passenger manifest
+    const initialPax = [
+      { id: `pax-${Date.now()}-1`, sNo: '1', prefix: 'MR', name: '', passportNo: '', category: 'Adult' }
+    ];
+    setPaxList(initialPax);
+
+    // At least 1 connecting flight pre-added
+    setFlights([
+      {
+        id: `f-${Date.now()}-1`,
+        flightNo: 'SV-701',
+        date: new Date().toISOString().split('T')[0],
+        departure: 'KHI',
+        departureTime: '13:15',
+        arrival: 'JED',
+        arrivalTime: '15:30'
+      }
+    ]);
 
     setKsaHelpline('+966 53 649 2846 / +966 57 593 0550');
     setHeadOfficeHelpline('MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
     setTerms(DEFAULT_TERMS);
+    setActiveModalTab('TRANSFERS');
     setShowModal(true);
   };
 
   const handleOpenEdit = (v) => {
     setEditingId(v.id || v.voucherNo);
     setVoucherNo(v.voucherNo || v.id);
-    setCustomerName(v.customerName || v.partyName || '');
-    setPartySearchQuery(v.customerName || v.partyName || '');
-    setCustomerPhone(v.customerPhone || v.contactPhone || '');
-    setTotalPax(v.totalPax || (v.passengers?.length || 1));
+    
+    const cleanCustName = v.customerName || v.partyName || '';
+    const matched = (parties || []).find(p => 
+      (v.partyHeadUid && p.partyHeadUid === v.partyHeadUid) || 
+      (p.partyName && p.partyName.toLowerCase() === cleanCustName.toLowerCase())
+    );
+
+    setSelectedPartyHeadUid(matched?.partyHeadUid || v.partyHeadUid || null);
+    setCustomerName(cleanCustName);
+    setPartySearchQuery(cleanCustName);
+    setCustomerPhone(v.customerPhone || v.contactPhone || matched?.contactPhone || '');
     setIssueDate(v.issueDate || new Date().toISOString().split('T')[0]);
-    setCompanyName(v.companyName || 'NOOR E HARAM TRAVELS');
+    setCompanyName(v.companyName || 'NOOR E HARAM TRAVELS & TOURS');
+
+    // Load passenger manifest
+    let loadedPax = [];
+    if (Array.isArray(v.passengers) && v.passengers.length > 0) {
+      loadedPax = v.passengers.map((p, idx) => ({
+        id: p.id || `pax-${idx + 1}`,
+        sNo: String(idx + 1),
+        prefix: p.prefix || 'MR',
+        name: p.name || (idx === 0 ? cleanCustName : `PASSENGER ${idx + 1}`),
+        passportNo: p.passportNo || '',
+        category: idx === 0 ? 'Adult' : (p.category || 'Adult')
+      }));
+    } else if (matched?.passengers && matched.passengers.length > 0) {
+      loadedPax = matched.passengers.map((p, idx) => ({
+        id: p.id || `pax-${idx + 1}`,
+        sNo: String(idx + 1),
+        prefix: p.prefix || 'MR',
+        name: p.name || (idx === 0 ? cleanCustName : `PASSENGER ${idx + 1}`),
+        passportNo: p.passportNo || '',
+        category: idx === 0 ? 'Adult' : (p.category || 'Adult')
+      }));
+    } else {
+      const count = Math.max(1, parseInt(v.totalPax, 10) || 1);
+      loadedPax = [{
+        id: `pax-${Date.now()}-1`,
+        sNo: '1',
+        prefix: 'MR',
+        name: cleanCustName,
+        passportNo: '',
+        category: 'Adult'
+      }];
+      for (let i = 2; i <= count; i++) {
+        loadedPax.push({
+          id: `pax-${Date.now()}-${i}`,
+          sNo: String(i),
+          prefix: 'MR',
+          name: `PASSENGER ${i}`,
+          passportNo: '',
+          category: 'Adult'
+        });
+      }
+    }
+    setPaxList(loadedPax);
+    setTotalPax(loadedPax.length);
 
     setBookings(v.bookings && v.bookings.length > 0 ? v.bookings : [
       {
@@ -205,21 +454,74 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
       }
     ]);
 
-    setFlights(v.flights || []);
+    setFlights((Array.isArray(v.flights) && v.flights.length > 0) ? v.flights.map((f, i) => ({
+      id: f.id || `f-${Date.now()}-${i + 1}`,
+      flightNo: f.flightNo || '',
+      date: f.date || v.issueDate || new Date().toISOString().split('T')[0],
+      departure: f.departure || '',
+      departureTime: formatTimeWithoutSeconds(f.departureTime || f.depTime || ''),
+      arrival: f.arrival || '',
+      arrivalTime: formatTimeWithoutSeconds(f.arrivalTime || f.arrTime || '')
+    })) : [
+      {
+        id: `f-${Date.now()}-1`,
+        flightNo: 'SV-701',
+        date: v.issueDate || new Date().toISOString().split('T')[0],
+        departure: 'KHI',
+        departureTime: '13:15',
+        arrival: 'JED',
+        arrivalTime: '15:30'
+      }
+    ]);
     setKsaHelpline(v.helplines?.ksaGround || '+966 53 649 2846 / +966 57 593 0550');
     setHeadOfficeHelpline(v.helplines?.headOffice || 'MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683');
     setTerms(v.termsAndConditions || DEFAULT_TERMS);
+    setActiveModalTab('TRANSFERS');
     setShowModal(true);
   };
 
   // Select Party Head from searchable dropdown
   const handleSelectPartyHead = (p) => {
+    setSelectedPartyHeadUid(p.partyHeadUid);
     setCustomerName(p.partyName || '');
     setPartySearchQuery(p.partyName || '');
     if (p.contactPhone) setCustomerPhone(p.contactPhone);
-    if (p.totalPax || p.passengers?.length) {
-      setTotalPax(p.totalPax || p.passengers?.length || 1);
+
+    if (Array.isArray(p.passengers) && p.passengers.length > 0) {
+      const mapped = p.passengers.map((pax, idx) => ({
+        id: pax.id || `pax-${idx + 1}`,
+        sNo: String(idx + 1),
+        prefix: pax.prefix || 'MR',
+        name: pax.name || (idx === 0 ? p.partyName : `PASSENGER ${idx + 1}`),
+        passportNo: pax.passportNo || '',
+        category: idx === 0 ? 'Adult' : (pax.category || 'Adult')
+      }));
+      setPaxList(mapped);
+      setTotalPax(mapped.length);
+    } else {
+      const count = Math.max(1, p.declaredPax || p.totalPax || 1);
+      const genPax = [{
+        id: `pax-${Date.now()}-1`,
+        sNo: '1',
+        prefix: 'MR',
+        name: p.partyName || '',
+        passportNo: '',
+        category: 'Adult'
+      }];
+      for (let i = 2; i <= count; i++) {
+        genPax.push({
+          id: `pax-${Date.now()}-${i}`,
+          sNo: String(i),
+          prefix: 'MR',
+          name: `PASSENGER ${i}`,
+          passportNo: '',
+          category: 'Adult'
+        });
+      }
+      setPaxList(genPax);
+      setTotalPax(count);
     }
+
     setPartyDropdownOpen(false);
   };
 
@@ -250,7 +552,8 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
 
   const handleUpdateBooking = (idx, field, val) => {
     const updated = [...bookings];
-    updated[idx] = { ...updated[idx], [field]: val };
+    const cleanedVal = field === 'time' ? formatTimeWithoutSeconds(val) : val;
+    updated[idx] = { ...updated[idx], [field]: cleanedVal };
     setBookings(updated);
   };
 
@@ -263,7 +566,9 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
         flightNo: 'SV-',
         date: issueDate,
         departure: 'KHI',
-        arrival: 'JED'
+        departureTime: '13:15',
+        arrival: 'JED',
+        arrivalTime: '15:30'
       }
     ]);
   };
@@ -274,7 +579,10 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
 
   const handleUpdateFlight = (idx, field, val) => {
     const updated = [...flights];
-    updated[idx] = { ...updated[idx], [field]: val };
+    const cleanedVal = (field === 'departureTime' || field === 'arrivalTime')
+      ? formatTimeWithoutSeconds(val)
+      : val;
+    updated[idx] = { ...updated[idx], [field]: cleanedVal };
     setFlights(updated);
   };
 
@@ -285,22 +593,96 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
       return;
     }
 
-    const assignedNo = voucherNo.trim() || editingId || getNextTransportVoucherNo('NTV-');
+    const assignedNo = voucherNo.trim() || editingId || getNextTransportVoucherNo('CTV-');
+    const cleanCustomerName = customerName.trim().toUpperCase();
+
+    // Prepare final passenger manifest
+    const finalPaxList = paxList.length > 0 ? paxList.map((p, idx) => ({
+      ...p,
+      sNo: String(idx + 1),
+      name: idx === 0 ? (cleanCustomerName || p.name) : (p.name || `PASSENGER ${idx + 1}`),
+      category: idx === 0 ? 'Adult' : (p.category || 'Adult')
+    })) : [{
+      id: `pax-${Date.now()}-1`,
+      sNo: '1',
+      prefix: 'MR',
+      name: cleanCustomerName,
+      passportNo: '',
+      contactPhone: customerPhone.trim(),
+      category: 'Adult'
+    }];
+
+    const numericTotalPax = Math.max(finalPaxList.length, parseInt(totalPax, 10) || 1);
+
+    // Find or create matching party so /passengers immediately shows the total pax count and manifest
+    const matchedParty = (parties || []).find(p => 
+      (selectedPartyHeadUid && p.partyHeadUid === selectedPartyHeadUid) ||
+      (p.partyName && p.partyName.trim().toUpperCase() === cleanCustomerName)
+    );
+
+    let partyUid = matchedParty?.partyHeadUid;
+
+    if (matchedParty) {
+      const updatedParty = {
+        ...matchedParty,
+        partyName: cleanCustomerName,
+        contactPhone: customerPhone.trim() || matchedParty.contactPhone || '',
+        totalPax: numericTotalPax,
+        declaredPax: numericTotalPax,
+        voucherRefNo: matchedParty.voucherRefNo || assignedNo,
+        updatedAt: new Date().toISOString(),
+        passengers: finalPaxList
+      };
+      saveParty(updatedParty);
+    } else {
+      const newPartyUid = `PID-${Date.now().toString().slice(-4)}`;
+      partyUid = newPartyUid;
+      const newParty = {
+        partyHeadUid: newPartyUid,
+        partyName: cleanCustomerName,
+        contactPhone: customerPhone.trim(),
+        voucherRefNo: assignedNo,
+        totalPax: numericTotalPax,
+        declaredPax: numericTotalPax,
+        isSelfVisa: true,
+        packageTitle: 'Umrah Package',
+        status: 'Active Operations',
+        passengers: finalPaxList,
+        accommodations: [],
+        transports: bookings.map(b => ({
+          date: b.pickupDate || issueDate,
+          service: `${b.pickupLocation || ''} to ${b.dropoffLocation || ''}`.trim(),
+          transporter: 'Ground Fleet',
+          vehicleType: b.vehicle || 'Bus'
+        })),
+        flights: flights.map(f => ({
+          type: 'Flight',
+          date: f.date || issueDate,
+          flight: f.flightNo || '',
+          sector: `${f.departure || ''}-${f.arrival || ''}`.trim(),
+          departureTime: formatTimeWithoutSeconds(f.departureTime),
+          arrivalTime: formatTimeWithoutSeconds(f.arrivalTime),
+        })),
+      };
+      saveParty(newParty);
+    }
 
     const record = {
       id: assignedNo,
       voucherNo: assignedNo,
-      customerName: customerName.trim(),
-      partyName: customerName.trim(),
+      partyHeadUid: partyUid,
+      customerName: cleanCustomerName,
+      partyName: cleanCustomerName,
       customerPhone: customerPhone.trim(),
-      totalPax: parseInt(totalPax) || 1,
+      totalPax: numericTotalPax,
+      passengers: finalPaxList,
       issueDate: issueDate || new Date().toISOString().split('T')[0],
       companyName,
       bookings: bookings.map((b, i) => ({
         id: b.id || `b-${i + 1}`,
         pickupDate: b.pickupDate || issueDate,
         pickupLocation: b.pickupLocation || 'Pickup Point',
-        time: b.time || '12:00',
+        time: formatTimeWithoutSeconds(b.time) || '12:00',
         dropoffLocation: b.dropoffLocation || 'Drop off Point',
         vehicle: b.vehicle || '50-Seater Luxury Bus',
         details: b.details || 'Standard Transfer',
@@ -311,7 +693,9 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
         flightNo: f.flightNo || '—',
         date: f.date || issueDate,
         departure: f.departure || '—',
-        arrival: f.arrival || '—'
+        departureTime: formatTimeWithoutSeconds(f.departureTime),
+        arrival: f.arrival || '—',
+        arrivalTime: formatTimeWithoutSeconds(f.arrivalTime)
       })),
       helplines: {
         ksaGround: ksaHelpline.trim(),
@@ -325,6 +709,7 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
     loadData();
     setShowModal(false);
     if (onVouchersUpdated) onVouchersUpdated();
+    if (onPartiesUpdated) onPartiesUpdated(getAllParties());
   };
 
   const handleDelete = () => {
@@ -472,7 +857,7 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by voucher # (NTV-001), customer name, phone, res no, location..."
+              placeholder="Search by voucher # (CTV-001), customer name, phone, res no, location..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0a192f]/20 focus:border-[#0a192f] font-medium transition-all"
@@ -623,7 +1008,13 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
                   <div className="flex items-center gap-2 text-xs bg-blue-50/60 text-blue-900 p-2 rounded-xl border border-blue-100 font-medium">
                     <Plane className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                     <span className="truncate">
-                      Flights: {v.flights.map(f => `${f.flightNo || ''} (${f.departure || ''})`).join(' • ')}
+                      Flights: {v.flights.map(f => {
+                        const depTime = formatTimeWithoutSeconds(f.departureTime);
+                        const arrTime = formatTimeWithoutSeconds(f.arrivalTime);
+                        const dep = `${f.departure || ''}${depTime ? ` @ ${depTime}` : ''}`.trim();
+                        const arr = `${f.arrival || ''}${arrTime ? ` @ ${arrTime}` : ''}`.trim();
+                        return `${f.flightNo || ''} (${dep || '—'} → ${arr || '—'})`;
+                      }).join(' • ')}
                     </span>
                   </div>
                 )}
@@ -762,13 +1153,13 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
 
       {/* CREATE / EDIT DEDICATED TRANSPORT VOUCHER MODAL */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-5 sm:p-6 space-y-4 shadow-2xl border border-slate-200 my-8">
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-3xl w-full flex flex-col max-h-[90vh] shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#0a192f] text-[#dfba73] flex items-center justify-center font-bold">
+            <div className="px-5 sm:px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#0a192f] text-[#dfba73] flex items-center justify-center font-bold shadow-sm shrink-0">
                   <Bus className="w-5 h-5" />
                 </div>
                 <div>
@@ -779,391 +1170,849 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated }
                 </div>
               </div>
               <button 
+                type="button"
                 onClick={() => setShowModal(false)} 
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-200 flex items-center justify-center transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSave} className="space-y-4 text-xs">
+            <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-xs">
               
-              {/* Top Row: Voucher No, Issue Date, Total Pax */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Voucher No. *</label>
-                  <div className="relative">
-                    <Hash className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={voucherNo}
-                      onChange={(e) => setVoucherNo(e.target.value)}
-                      placeholder="e.g. NTV-001"
-                      className="w-full pl-8 pr-3 py-2 border border-slate-300 rounded-lg font-mono font-bold text-slate-900 bg-white"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Issue Date *</label>
-                  <input
-                    type="date"
-                    value={issueDate}
-                    onChange={(e) => setIssueDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg font-medium text-slate-800 bg-white"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Total Pax *</label>
-                  <div className="relative">
-                    <Users className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="number"
-                      min="1"
-                      max="500"
-                      value={totalPax}
-                      onChange={(e) => setTotalPax(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 border border-slate-300 rounded-lg font-mono font-bold text-slate-900 bg-white"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Row 2: Customer Name (Searchable dropdown with ONLY party head names) & Customer Phone (Optional) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                
-                {/* Searchable dropdown */}
-                <div className="relative" ref={dropdownRef}>
-                  <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
-                    <span>Customer Name (Party Head) *</span>
-                    <span className="text-[10px] text-blue-600 font-semibold">Searchable</span>
-                  </label>
-                  
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={partySearchQuery}
-                      onChange={(e) => {
-                        setPartySearchQuery(e.target.value);
-                        setCustomerName(e.target.value);
-                        setPartyDropdownOpen(true);
-                      }}
-                      onFocus={() => setPartyDropdownOpen(true)}
-                      placeholder="Type or select Lead Pilgrim head name..."
-                      className="w-full px-3 py-2 pr-8 border border-slate-300 rounded-xl font-bold text-slate-900 bg-white outline-none focus:ring-2 focus:ring-[#0a192f]/20 focus:border-[#0a192f]"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPartyDropdownOpen(!partyDropdownOpen)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Dropdown Options */}
-                  {partyDropdownOpen && (
-                    <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto py-1">
-                      {filteredPartyHeads.length > 0 ? (
-                        filteredPartyHeads.map((p) => (
-                          <button
-                            key={p.partyHeadUid}
-                            type="button"
-                            onClick={() => handleSelectPartyHead(p)}
-                            className="w-full text-left px-3 py-2 hover:bg-slate-50 transition flex items-center justify-between text-xs"
-                          >
-                            <div>
-                              <strong className="text-slate-900 block font-bold uppercase">{p.partyName}</strong>
-                              <span className="text-[10px] text-slate-500 font-mono">
-                                {p.voucherRefNo || p.partyHeadUid} • {p.totalPax || (p.passengers?.length || 1)} PAX
-                              </span>
-                            </div>
-                            {p.contactPhone && (
-                              <span className="text-[10px] text-slate-400 font-mono">{p.contactPhone}</span>
-                            )}
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-3 py-2 text-slate-400 text-xs italic">
-                          No matching head names found. You can keep typing custom name.
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Customer Phone (Optional) */}
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Customer Phone (Optional)</label>
-                  <input
-                    type="text"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="e.g. +92 311 2324764 / 055 819 2401"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-medium font-mono text-slate-800 bg-white outline-none focus:ring-2 focus:ring-[#0a192f]/20 focus:border-[#0a192f]"
-                  />
-                </div>
-
-              </div>
-
-              {/* BOOKING INFORMATION SECTION */}
-              <div className="space-y-2 pt-2 border-t border-slate-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bus className="w-4 h-4 text-[#0a192f]" />
-                    <span className="font-black text-slate-900 uppercase text-[11px] tracking-wider">
-                      Booking Information &amp; Transfer Schedule ({bookings.length})
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddBooking}
-                    className="px-2.5 py-1 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Transfer</span>
-                  </button>
-                </div>
-
-                <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                  {bookings.map((b, idx) => (
-                    <div key={b.id || idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 relative">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 pb-1 border-b border-slate-200">
-                        <span>Transfer #{idx + 1}</span>
-                        {bookings.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveBooking(idx)}
-                            className="text-rose-600 hover:text-rose-700 text-xs font-bold cursor-pointer"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        {/* Pickup Date */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Pickup Date</label>
-                          <input
-                            type="date"
-                            value={b.pickupDate}
-                            onChange={(e) => handleUpdateBooking(idx, 'pickupDate', e.target.value)}
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-medium"
-                            required
-                          />
-                        </div>
-
-                        {/* Pickup Location */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Pickup Location</label>
-                          <input
-                            type="text"
-                            list={`pickup-locs-${idx}`}
-                            value={b.pickupLocation}
-                            onChange={(e) => handleUpdateBooking(idx, 'pickupLocation', e.target.value)}
-                            placeholder="e.g. Jeddah Airport"
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-medium"
-                            required
-                          />
-                          <datalist id={`pickup-locs-${idx}`}>
-                            {COMMON_LOCATIONS.map(loc => <option key={loc} value={loc} />)}
-                          </datalist>
-                        </div>
-
-                        {/* Time */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Time</label>
-                          <input
-                            type="time"
-                            value={b.time}
-                            onChange={(e) => handleUpdateBooking(idx, 'time', e.target.value)}
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-medium"
-                          />
-                        </div>
-
-                        {/* Drop off Location */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Drop off Location</label>
-                          <input
-                            type="text"
-                            list={`dropoff-locs-${idx}`}
-                            value={b.dropoffLocation}
-                            onChange={(e) => handleUpdateBooking(idx, 'dropoffLocation', e.target.value)}
-                            placeholder="e.g. Makkah Hotel"
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-medium"
-                            required
-                          />
-                          <datalist id={`dropoff-locs-${idx}`}>
-                            {COMMON_LOCATIONS.map(loc => <option key={loc} value={loc} />)}
-                          </datalist>
-                        </div>
-
-                        {/* Vehicle */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Vehicle</label>
-                          <select
-                            value={b.vehicle}
-                            onChange={(e) => handleUpdateBooking(idx, 'vehicle', e.target.value)}
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-bold text-slate-800"
-                          >
-                            {VEHICLE_OPTIONS.map(opt => (
-                              <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Res No. */}
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Res No.</label>
-                          <input
-                            type="text"
-                            value={b.resNo}
-                            onChange={(e) => handleUpdateBooking(idx, 'resNo', e.target.value)}
-                            placeholder="e.g. RES-892101"
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-mono font-bold"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Details row */}
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Details</label>
+                {/* Top Sticky/Fixed Summary: Voucher No, Issue Date, Total Pax, Customer Name & Phone */}
+                <div className="bg-slate-50 p-3.5 sm:p-4 rounded-2xl border border-slate-200 space-y-3">
+                  {/* Row 1: Voucher No & Issue Date */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Voucher No. *</label>
+                      <div className="relative">
+                        <Hash className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                         <input
                           type="text"
-                          value={b.details}
-                          onChange={(e) => handleUpdateBooking(idx, 'details', e.target.value)}
-                          placeholder="e.g. Arrival Airport Transfer - Meet outside Gate 4"
-                          className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-xs"
+                          value={voucherNo}
+                          onChange={(e) => setVoucherNo(e.target.value)}
+                          placeholder="e.g. CTV-001"
+                          className="w-full pl-8 pr-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-slate-900 bg-white outline-none focus:ring-2 focus:ring-[#0a192f]/20 focus:border-[#0a192f]"
+                          required
                         />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* FLIGHT DETAILS SECTION */}
-              <div className="space-y-2 pt-2 border-t border-slate-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Plane className="w-4 h-4 text-[#0a192f]" />
-                    <span className="font-black text-slate-900 uppercase text-[11px] tracking-wider">
-                      Flight Details ({flights.length})
-                    </span>
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Issue Date *</label>
+                      <input
+                        type="date"
+                        value={issueDate}
+                        onChange={(e) => setIssueDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-medium text-slate-800 bg-white outline-none focus:ring-2 focus:ring-[#0a192f]/20 focus:border-[#0a192f]"
+                        required
+                      />
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddFlight}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Add Flight</span>
-                  </button>
-                </div>
 
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                  {flights.map((f, idx) => (
-                    <div key={f.id || idx} className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
-                        <span>Flight #{idx + 1}</span>
+                  {/* Row 2: Customer Name (Searchable dropdown with ONLY party head names) & Customer Phone */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Searchable dropdown */}
+                    <div className="relative" ref={dropdownRef}>
+                      <label className="block text-slate-700 font-bold mb-1 flex items-center justify-between">
+                        <span>Customer Name (Party Head) *</span>
+                        <span className="text-[10px] text-blue-600 font-semibold">Searchable</span>
+                      </label>
+                      
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={partySearchQuery}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setPartySearchQuery(val);
+                            setCustomerName(val);
+                            setPartyDropdownOpen(true);
+                            setPaxList(prev => {
+                              if (prev.length > 0) {
+                                const copy = [...prev];
+                                copy[0] = { ...copy[0], name: val };
+                                return copy;
+                              }
+                              return prev;
+                            });
+                          }}
+                          onFocus={() => setPartyDropdownOpen(true)}
+                          placeholder="Type or select Lead Pilgrim head name..."
+                          className="w-full px-3 py-2 pr-8 border border-slate-300 rounded-xl font-bold text-slate-900 bg-white outline-none focus:ring-2 focus:ring-[#0a192f]/20 focus:border-[#0a192f]"
+                          required
+                        />
                         <button
                           type="button"
-                          onClick={() => handleRemoveFlight(idx)}
-                          className="text-rose-600 hover:text-rose-700 text-xs font-bold cursor-pointer"
+                          onClick={() => setPartyDropdownOpen(!partyDropdownOpen)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                         >
-                          Remove
+                          <ChevronDown className="w-4 h-4" />
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {/* Dropdown Options */}
+                      {partyDropdownOpen && (
+                        <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-white border border-slate-200 rounded-xl shadow-xl max-h-48 overflow-y-auto py-1">
+                          {filteredPartyHeads.length > 0 ? (
+                            filteredPartyHeads.map((p) => (
+                              <button
+                                key={p.partyHeadUid}
+                                type="button"
+                                onClick={() => handleSelectPartyHead(p)}
+                                className="w-full text-left px-3 py-2 hover:bg-slate-50 transition flex items-center justify-between text-xs cursor-pointer"
+                              >
+                                <div>
+                                  <strong className="text-slate-900 block font-bold uppercase">{p.partyName}</strong>
+                                  <span className="text-[10px] text-slate-500 font-mono">
+                                    {p.voucherRefNo || p.partyHeadUid} • {p.totalPax || (p.passengers?.length || 1)} PAX
+                                  </span>
+                                </div>
+                                {p.contactPhone && (
+                                  <span className="text-[10px] text-slate-400 font-mono">{p.contactPhone}</span>
+                                )}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-slate-400 text-xs italic">
+                              No matching head names found. You can keep typing custom name.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Customer Phone (Optional) */}
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-1">Customer Phone (Optional)</label>
+                      <input
+                        type="text"
+                        value={customerPhone}
+                        onChange={(e) => setCustomerPhone(e.target.value)}
+                        placeholder="e.g. +92 311 2324764 / 055 819 2401"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-xl font-medium font-mono text-slate-800 bg-white outline-none focus:ring-2 focus:ring-[#0a192f]/20 focus:border-[#0a192f]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* MODAL TABS NAVIGATION BAR */}
+                <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveModalTab('TRANSFERS')}
+                    className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeModalTab === 'TRANSFERS'
+                        ? 'bg-[#0a192f] text-[#dfba73] shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    <Bus className="w-3.5 h-3.5" />
+                    <span>Transfers ({bookings.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveModalTab('PASSENGERS')}
+                    className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeModalTab === 'PASSENGERS'
+                        ? 'bg-[#0a192f] text-[#dfba73] shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>Passengers ({paxList.length})</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold ${
+                      activeModalTab === 'PASSENGERS' ? 'bg-[#dfba73]/20 text-[#dfba73]' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {adultsCount}A {childrenCount > 0 ? `• ${childrenCount}C` : ''} {infantsCount > 0 ? `• ${infantsCount}I` : ''}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveModalTab('FLIGHTS')}
+                    className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeModalTab === 'FLIGHTS'
+                        ? 'bg-[#0a192f] text-[#dfba73] shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    <Plane className="w-3.5 h-3.5" />
+                    <span>Flight Details ({flights.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveModalTab('HELPLINES')}
+                    className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      activeModalTab === 'HELPLINES'
+                        ? 'bg-[#0a192f] text-[#dfba73] shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
+                    }`}
+                  >
+                    <PhoneCall className="w-3.5 h-3.5" />
+                    <span>Helplines</span>
+                  </button>
+                </div>
+
+                {/* TAB 1: TRANSFERS & BOOKING SCHEDULE */}
+                {activeModalTab === 'TRANSFERS' && (
+                  <div className="space-y-3 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bus className="w-4 h-4 text-[#0a192f]" />
+                        <span className="font-black text-slate-900 uppercase text-[11px] tracking-wider">
+                          Booking Information &amp; Transfer Schedule ({bookings.length})
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddBooking}
+                        className="px-2.5 py-1 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Transfer</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                      {bookings.map((b, idx) => (
+                        <div key={b.id || idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 relative">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 pb-1 border-b border-slate-200">
+                            <span>Transfer #{idx + 1}</span>
+                            {bookings.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveBooking(idx)}
+                                className="text-rose-600 hover:text-rose-700 text-xs font-bold cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            {/* Pickup Date */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Pickup Date</label>
+                              <input
+                                type="date"
+                                value={b.pickupDate}
+                                onChange={(e) => handleUpdateBooking(idx, 'pickupDate', e.target.value)}
+                                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-medium"
+                                required
+                              />
+                            </div>
+
+                            {/* Pickup Location */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Pickup Location</label>
+                              <input
+                                type="text"
+                                list={`pickup-locs-${idx}`}
+                                value={b.pickupLocation}
+                                onChange={(e) => handleUpdateBooking(idx, 'pickupLocation', e.target.value)}
+                                placeholder="e.g. Jeddah Airport"
+                                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-medium"
+                                required
+                              />
+                              <datalist id={`pickup-locs-${idx}`}>
+                                {COMMON_LOCATIONS.map(loc => <option key={loc} value={loc} />)}
+                              </datalist>
+                            </div>
+
+                            {/* Time */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Time</label>
+                              <input
+                                type="time"
+                                step="60"
+                                value={formatTimeWithoutSeconds(b.time)}
+                                onChange={(e) => handleUpdateBooking(idx, 'time', e.target.value)}
+                                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-medium"
+                              />
+                            </div>
+
+                            {/* Drop off Location */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Drop off Location</label>
+                              <input
+                                type="text"
+                                list={`dropoff-locs-${idx}`}
+                                value={b.dropoffLocation}
+                                onChange={(e) => handleUpdateBooking(idx, 'dropoffLocation', e.target.value)}
+                                placeholder="e.g. Makkah Hotel"
+                                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-medium"
+                                required
+                              />
+                              <datalist id={`dropoff-locs-${idx}`}>
+                                {COMMON_LOCATIONS.map(loc => <option key={loc} value={loc} />)}
+                              </datalist>
+                            </div>
+
+                            {/* Vehicle */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Vehicle</label>
+                              <select
+                                value={b.vehicle}
+                                onChange={(e) => handleUpdateBooking(idx, 'vehicle', e.target.value)}
+                                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-bold text-slate-800"
+                              >
+                                {VEHICLE_OPTIONS.map(opt => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {/* Res No. */}
+                            <div>
+                              <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Res No.</label>
+                              <input
+                                type="text"
+                                value={b.resNo}
+                                onChange={(e) => handleUpdateBooking(idx, 'resNo', e.target.value)}
+                                placeholder="e.g. RES-892101"
+                                className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-mono font-bold"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Details row */}
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Details</label>
+                            <input
+                              type="text"
+                              value={b.details}
+                              onChange={(e) => handleUpdateBooking(idx, 'details', e.target.value)}
+                              placeholder="e.g. Arrival Airport Transfer - Meet outside Gate 4"
+                              className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg bg-white text-xs"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 2: PASSENGERS & DEMOGRAPHIC COUNTS */}
+                {activeModalTab === 'PASSENGERS' && (
+                  <div className="space-y-4 animate-in fade-in duration-150">
+                    {/* Passenger Tab Top Summary */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-900 tracking-tight flex items-center gap-2">
+                          <Users className="w-4 h-4 text-[#0a192f]" />
+                          <span>Pilgrim Manifest ({paxList.length} Guests)</span>
+                        </h4>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Adjust counts directly by <strong className="text-slate-700">Adult (min 1), Child, Infant</strong> or edit passenger rows below.
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl shadow-2xs text-[11px] font-bold text-slate-700">
+                          Total Pax: <span className="font-black text-slate-900">{paxList.length}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddPassenger}
+                          className="px-3 py-1.5 rounded-xl bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] text-xs font-bold flex items-center gap-1 transition cursor-pointer shadow-xs"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Pax</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* DEMOGRAPHIC COUNTS: Adult, Child, Infant Wise & Total Pax with direct editable numbers & steppers */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {/* Adults Stepper */}
+                      <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Flight No.</label>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-0.5">Adults</span>
                           <input
-                            type="text"
-                            value={f.flightNo}
-                            onChange={(e) => handleUpdateFlight(idx, 'flightNo', e.target.value)}
-                            placeholder="e.g. SV-701"
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-mono font-bold"
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={paxInputValues['Adult'] !== undefined ? paxInputValues['Adult'] : adultsCount}
+                            onChange={(e) => handleDirectCountChange('Adult', e.target.value)}
+                            onBlur={() => handleCountBlur('Adult')}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                            onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
+                            className="w-14 h-8 px-1.5 text-left text-base font-black text-slate-900 bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-[#0a192f] rounded-lg outline-none transition-colors cursor-text"
+                            title="Click to edit Adults count directly (min: 1)"
                           />
                         </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => adjustCategoryCount('Adult', -1)}
+                            disabled={adultsCount <= 1}
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Decrease Adult (minimum 1)"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => adjustCategoryCount('Adult', 1)}
+                            className="w-7 h-7 rounded-lg bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Add Adult"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
 
+                      {/* Children Stepper */}
+                      <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Date</label>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 block mb-0.5">Children</span>
                           <input
-                            type="date"
-                            value={f.date}
-                            onChange={(e) => handleUpdateFlight(idx, 'date', e.target.value)}
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs"
+                            type="number"
+                            min="0"
+                            max="99"
+                            value={paxInputValues['Child'] !== undefined ? paxInputValues['Child'] : childrenCount}
+                            onChange={(e) => handleDirectCountChange('Child', e.target.value)}
+                            onBlur={() => handleCountBlur('Child')}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                            onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
+                            className="w-14 h-8 px-1.5 text-left text-base font-black text-sky-950 bg-sky-50/50 hover:bg-sky-50 focus:bg-white border border-sky-200 hover:border-sky-300 focus:border-sky-600 rounded-lg outline-none transition-colors cursor-text"
+                            title="Click to edit Children count directly"
                           />
                         </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => adjustCategoryCount('Child', -1)}
+                            disabled={childrenCount <= 0}
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Decrease Child"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => adjustCategoryCount('Child', 1)}
+                            className="w-7 h-7 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Add Child"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
 
+                      {/* Infants Stepper */}
+                      <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between">
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Departure</label>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 block mb-0.5">Infants</span>
                           <input
-                            type="text"
-                            value={f.departure}
-                            onChange={(e) => handleUpdateFlight(idx, 'departure', e.target.value)}
-                            placeholder="e.g. KHI 13:15"
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs"
+                            type="number"
+                            min="0"
+                            max="99"
+                            value={paxInputValues['Infant'] !== undefined ? paxInputValues['Infant'] : infantsCount}
+                            onChange={(e) => handleDirectCountChange('Infant', e.target.value)}
+                            onBlur={() => handleCountBlur('Infant')}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                            onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
+                            className="w-14 h-8 px-1.5 text-left text-base font-black text-purple-950 bg-purple-50/50 hover:bg-purple-50 focus:bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-600 rounded-lg outline-none transition-colors cursor-text"
+                            title="Click to edit Infants count directly"
                           />
                         </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => adjustCategoryCount('Infant', -1)}
+                            disabled={infantsCount <= 0}
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Decrease Infant"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => adjustCategoryCount('Infant', 1)}
+                            className="w-7 h-7 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Add Infant"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
 
+                      {/* Total Pax Stepper */}
+                      <div className="p-3 bg-[#0a192f] text-white rounded-2xl border border-slate-800 shadow-2xs flex items-center justify-between">
                         <div>
-                          <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Arrival</label>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#dfba73] block mb-0.5">Total Pax</span>
                           <input
-                            type="text"
-                            value={f.arrival}
-                            onChange={(e) => handleUpdateFlight(idx, 'arrival', e.target.value)}
-                            placeholder="e.g. JED 15:30"
-                            className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs"
+                            type="number"
+                            min="1"
+                            max="500"
+                            value={totalPax}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '') {
+                                setTotalPax('');
+                              } else {
+                                const target = Math.max(1, parseInt(val, 10) || 1);
+                                setTotalPax(target);
+                                const diff = target - paxList.length;
+                                if (diff !== 0) adjustCategoryCount('Adult', diff);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (!totalPax || parseInt(totalPax, 10) < 1) {
+                                setTotalPax(paxList.length || 1);
+                              }
+                            }}
+                            onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
+                            className="w-14 h-8 px-1.5 text-left text-base font-black text-white bg-slate-800 hover:bg-slate-700 focus:bg-slate-900 border border-slate-700 focus:border-[#dfba73] rounded-lg outline-none transition-colors cursor-text"
+                            title="Click to edit Total Pax directly"
+                            required
                           />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => adjustCategoryCount('Adult', -1)}
+                            disabled={adultsCount <= 1 && childrenCount === 0 && infantsCount === 0}
+                            className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-300 font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Decrease Pax"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => adjustCategoryCount('Adult', 1)}
+                            className="w-7 h-7 rounded-lg bg-[#dfba73] hover:bg-amber-400 text-[#0a192f] font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Add Pax"
+                          >
+                            +
+                          </button>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    {/* Passenger Manifest Table */}
+                    <div className="overflow-hidden rounded-2xl border border-slate-200/90 shadow-2xs bg-white">
+                      <div className="overflow-x-auto max-h-[300px]">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="sticky top-0 z-10">
+                            <tr className="bg-slate-100/90 border-b border-slate-200 text-[10px] font-extrabold uppercase tracking-wider text-slate-600">
+                              <th className="py-2.5 px-3 text-center w-12 border-r border-slate-200/60">#</th>
+                              <th className="py-2.5 px-2.5 w-24 border-r border-slate-200/60">Prefix</th>
+                              <th className="py-2.5 px-3.5 border-r border-slate-200/60">Passenger Legal Name *</th>
+                              <th className="py-2.5 px-2.5 border-r border-slate-200/60 w-32">Passport #</th>
+                              <th className="py-2.5 px-2.5 border-r border-slate-200/60 w-28">Category</th>
+                              <th className="py-2.5 px-2 text-center w-16">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {paxList.map((pax, idx) => {
+                              const isHead = idx === 0;
+
+                              return (
+                                <tr key={pax.id || idx} className="hover:bg-slate-50/70 transition-colors">
+                                  <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-400 text-xs border-r border-slate-100">
+                                    {idx + 1}
+                                  </td>
+
+                                  {/* Prefix */}
+                                  <td className="py-2.5 px-2 border-r border-slate-100">
+                                    <select
+                                      value={pax.prefix || 'MR'}
+                                      onChange={(e) => handleUpdatePassenger(idx, 'prefix', e.target.value)}
+                                      className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 bg-white"
+                                    >
+                                      <option value="MR">MR</option>
+                                      <option value="MRS">MRS</option>
+                                      <option value="MS">MS</option>
+                                      {!isHead && <option value="CHD_MSTR">MSTR</option>}
+                                      {!isHead && <option value="CHD_MISS">MISS</option>}
+                                      {!isHead && <option value="INF">INF</option>}
+                                    </select>
+                                  </td>
+
+                                  {/* Passenger Name Input */}
+                                  <td className="py-2.5 px-3 border-r border-slate-100">
+                                    <div className="flex items-center gap-1.5">
+                                      <input
+                                        type="text"
+                                        value={pax.name || ''}
+                                        onChange={(e) => {
+                                          handleUpdatePassenger(idx, 'name', e.target.value);
+                                          if (isHead) {
+                                            setCustomerName(e.target.value);
+                                            setPartySearchQuery(e.target.value);
+                                          }
+                                        }}
+                                        placeholder="Full Legal Name"
+                                        className="flex-1 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 uppercase focus:border-slate-800 outline-none"
+                                      />
+                                      {isHead && (
+                                        <span className="inline-flex items-center gap-0.5 px-1.5 py-1 rounded text-[9px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
+                                          <Crown className="w-2.5 h-2.5 text-amber-700" />
+                                          <span>Head</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+
+                                  {/* Passport # */}
+                                  <td className="py-2.5 px-2 border-r border-slate-100">
+                                    <input
+                                      type="text"
+                                      value={pax.passportNo || ''}
+                                      onChange={(e) => handleUpdatePassenger(idx, 'passportNo', e.target.value)}
+                                      placeholder="Passport #"
+                                      className="w-full px-2 py-1.5 border border-slate-200 rounded-lg font-mono text-xs text-slate-700 uppercase outline-none focus:border-slate-800"
+                                    />
+                                  </td>
+
+                                  {/* Category Dropdown (Adult, Child, Infant) */}
+                                  <td className="py-2.5 px-2 border-r border-slate-100">
+                                    <select
+                                      value={isHead ? 'Adult' : (pax.category || 'Adult')}
+                                      disabled={isHead}
+                                      onChange={(e) => handleUpdatePassenger(idx, 'category', e.target.value)}
+                                      title={isHead ? 'Rule: Party Head must always be an Adult' : 'Select Category'}
+                                      className={`w-full px-2 py-1.5 rounded-lg text-xs font-bold border outline-none ${
+                                        isHead 
+                                          ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
+                                          : pax.category === 'Infant'
+                                          ? 'bg-purple-50 border-purple-200 text-purple-900 cursor-pointer'
+                                          : pax.category === 'Child'
+                                          ? 'bg-sky-50 border-sky-200 text-sky-900 cursor-pointer'
+                                          : 'bg-slate-50 border-slate-200 text-slate-800 cursor-pointer'
+                                      }`}
+                                    >
+                                      <option value="Adult">Adult</option>
+                                      {!isHead && <option value="Child">Child</option>}
+                                      {!isHead && <option value="Infant">Infant</option>}
+                                    </select>
+                                  </td>
+
+                                  {/* Action */}
+                                  <td className="py-2.5 px-2 text-center">
+                                    {!isHead ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemovePassenger(idx)}
+                                        className="text-rose-600 hover:text-rose-800 font-bold text-xs p-1 rounded hover:bg-rose-50 cursor-pointer transition-colors"
+                                        title="Remove passenger row"
+                                      >
+                                        Remove
+                                      </button>
+                                    ) : (
+                                      <span className="text-[10px] text-slate-400 font-mono italic">Primary</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: FLIGHT DETAILS */}
+                {activeModalTab === 'FLIGHTS' && (
+                  <div className="space-y-3 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Plane className="w-4 h-4 text-[#0a192f]" />
+                        <span className="font-black text-slate-900 uppercase text-[11px] tracking-wider">
+                          Flight Details &amp; Connecting Flights ({flights.length})
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddFlight}
+                        className="px-2.5 py-1 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Flight</span>
+                      </button>
+                    </div>
+
+                    {flights.length === 0 ? (
+                      <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+                          <Plane className="w-5 h-5" />
+                        </div>
+                        <p className="text-xs font-bold text-slate-700">No Connecting Flights Added</p>
+                        <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                          Connecting flights are optional. Click below to add flight arrival or departure schedules for your fleet dispatchers.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleAddFlight}
+                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0a192f] text-[#dfba73] hover:bg-slate-800 rounded-xl text-xs font-bold cursor-pointer transition shadow-2xs"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add First Flight</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                        {flights.map((f, idx) => (
+                          <div key={f.id || idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 pb-1 border-b border-slate-200">
+                              <span>Flight #{idx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFlight(idx)}
+                                className="text-rose-600 hover:text-rose-700 text-xs font-bold cursor-pointer"
+                              >
+                                Remove
+                              </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Flight No.</label>
+                                <input
+                                  type="text"
+                                  value={f.flightNo}
+                                  onChange={(e) => handleUpdateFlight(idx, 'flightNo', e.target.value)}
+                                  placeholder="e.g. SV-701"
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-mono font-bold uppercase"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Date</label>
+                                <input
+                                  type="date"
+                                  value={f.date}
+                                  onChange={(e) => handleUpdateFlight(idx, 'date', e.target.value)}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Departure Sector</label>
+                                <input
+                                  type="text"
+                                  value={f.departure}
+                                  onChange={(e) => handleUpdateFlight(idx, 'departure', e.target.value)}
+                                  placeholder="e.g. KHI"
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-bold uppercase"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Dep. Time</label>
+                                <input
+                                  type="time"
+                                  step="60"
+                                  value={formatTimeWithoutSeconds(f.departureTime)}
+                                  onChange={(e) => handleUpdateFlight(idx, 'departureTime', e.target.value)}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-mono font-bold"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Arrival Sector</label>
+                                <input
+                                  type="text"
+                                  value={f.arrival}
+                                  onChange={(e) => handleUpdateFlight(idx, 'arrival', e.target.value)}
+                                  placeholder="e.g. JED"
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-bold uppercase"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Arr. Time</label>
+                                <input
+                                  type="time"
+                                  step="60"
+                                  value={formatTimeWithoutSeconds(f.arrivalTime)}
+                                  onChange={(e) => handleUpdateFlight(idx, 'arrivalTime', e.target.value)}
+                                  className="w-full px-2 py-1.5 border border-slate-300 rounded-lg bg-white text-xs font-mono font-bold"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 4: HELPLINES & TERMS */}
+                {activeModalTab === 'HELPLINES' && (
+                  <div className="space-y-4 animate-in fade-in duration-150">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                        <label className="block text-slate-800 font-bold text-xs flex items-center gap-1.5">
+                          <PhoneCall className="w-3.5 h-3.5 text-blue-600" />
+                          <span>KSA Ground Dispatch Helpline</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={ksaHelpline}
+                          onChange={(e) => setKsaHelpline(e.target.value)}
+                          placeholder="+966 53 649 2846 / +966 57 593 0550"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs bg-white text-slate-900"
+                        />
+                        <p className="text-[10px] text-slate-400">Available 24/7 for Saudi airport &amp; inter-city fleet coordination.</p>
+                      </div>
+
+                      <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                        <label className="block text-slate-800 font-bold text-xs flex items-center gap-1.5">
+                          <PhoneCall className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Pakistan Head Office Helpline</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={headOfficeHelpline}
+                          onChange={(e) => setHeadOfficeHelpline(e.target.value)}
+                          placeholder="MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683"
+                          className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs bg-white text-slate-900"
+                        />
+                        <p className="text-[10px] text-slate-400">Customer care and emergency contact in Pakistan.</p>
+                      </div>
+                    </div>
+
+                    {/* Terms & Conditions preview */}
+                    <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                      <span className="font-bold text-slate-800 text-xs block">
+                        Included Terms &amp; Policies ({terms.length} Clauses):
+                      </span>
+                      <ul className="space-y-1 text-[11px] text-slate-600 list-disc list-inside bg-white p-3 rounded-xl border border-slate-200 max-h-36 overflow-y-auto">
+                        {terms.map((t, idx) => (
+                          <li key={idx} className="leading-relaxed">{t}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
               </div>
 
-              {/* HELPLINES */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200">
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">KSA Ground Dispatch Helpline</label>
-                  <input
-                    type="text"
-                    value={ksaHelpline}
-                    onChange={(e) => setKsaHelpline(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 font-bold mb-1">Pakistan Head Office Helpline</label>
-                  <input
-                    type="text"
-                    value={headOfficeHelpline}
-                    onChange={(e) => setHeadOfficeHelpline(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Modal Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+              {/* Modal Buttons (Sticky Footer) */}
+              <div className="px-5 sm:px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-xl font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                  className="px-4 py-2 border border-slate-300 rounded-xl font-bold text-slate-700 hover:bg-white cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] rounded-xl font-black shadow-md cursor-pointer"
+                  className="px-5 py-2 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] rounded-xl font-black shadow-md cursor-pointer transition-all active:scale-95"
                 >
                   Save Transport Voucher
                 </button>

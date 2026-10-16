@@ -145,8 +145,16 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
         setActiveTab(tab);
       };
 
+      // Safety failsafe: ensure loading screen never hangs
+      const safetyTimer = setTimeout(() => {
+        setLoading(false);
+      }, 600);
+
       window.addEventListener('popstate', handlePopState);
-      return () => window.removeEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        clearTimeout(safetyTimer);
+      };
     }
   }, []);
 
@@ -168,16 +176,21 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
   };
 
   const loadAllErpData = () => {
-    setParties(getAllParties());
-    setGroups(getAllGroups());
-    setHotelVouchers(getAllHotelVouchers());
-    setTransportOnlyVouchers(getAllTransportOnlyVouchers());
-    setEstimates(getAllEstimates());
-    setInvoices(getAllInvoices());
-    setTasks(getAllTasks());
-    setAuditLogs(getAllAuditLogs());
-    setCurrentRole(getActiveRole());
-    setLoading(false);
+    try {
+      setParties(getAllParties());
+      setGroups(getAllGroups());
+      setHotelVouchers(getAllHotelVouchers());
+      setTransportOnlyVouchers(getAllTransportOnlyVouchers());
+      setEstimates(getAllEstimates());
+      setInvoices(getAllInvoices());
+      setTasks(getAllTasks());
+      setAuditLogs(getAllAuditLogs());
+      setCurrentRole(getActiveRole());
+    } catch (err) {
+      console.error('loadAllErpData error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const syncWithCloud = async () => {
@@ -795,6 +808,9 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
                 setHotelVouchers(updated);
                 loadAllErpData();
               }}
+              onPartiesUpdated={(updated) => {
+                setParties(updated);
+              }}
             />
           )}
 
@@ -803,6 +819,9 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
               parties={parties}
               onVouchersUpdated={() => {
                 loadAllErpData();
+              }}
+              onPartiesUpdated={(updated) => {
+                setParties(updated);
               }}
             />
           )}

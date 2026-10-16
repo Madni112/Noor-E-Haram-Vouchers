@@ -28,9 +28,13 @@ import {
   Trash2,
   X,
   Shield,
-  QrCode
+  Wifi,
+  Smartphone,
+  AlertCircle,
+  Award,
+  ChevronRight
 } from 'lucide-react';
-import { getHotelVoucherById, saveHotelVoucher } from '../../../lib/erpData';
+import { getHotelVoucherById, saveHotelVoucher, getAllParties, isAgencyPhone } from '../../../lib/erpData';
 
 function getMealPlanLabel(code) {
   switch ((code || '').toUpperCase()) {
@@ -107,7 +111,7 @@ export default function HotelVoucherViewPage() {
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState('');
   
-  // Emergency contacts custom edit modal state (supports dynamic multi-row contacts)
+  // Emergency contacts custom edit modal state
   const [showEditEmergency, setShowEditEmergency] = useState(false);
   const [emergencyList, setEmergencyList] = useState([
     { id: 1, label: 'KSA Ground', value: '+966 53 649 2846' },
@@ -250,7 +254,7 @@ export default function HotelVoucherViewPage() {
   const liveQrUrl = `${origin}/hotel-voucher/${voucher.id || id}`;
   const totalNights = (voucher.stays || []).reduce((acc, curr) => acc + (parseInt(curr.nights) || 0), 0);
   
-  // Extract Lead Passenger / Family Head details ONLY
+  // Extract Lead Passenger / Family Head details
   const passengers = voucher.passengers || [];
   const headPax = passengers.find(p => 
     p.manifestRole === 'HEAD' || 
@@ -264,13 +268,17 @@ export default function HotelVoucherViewPage() {
   const leadName = rawLeadName;
   const leadPrefix = (headPax.prefix && !leadName.toUpperCase().startsWith(headPax.prefix.toUpperCase())) ? `${headPax.prefix} ` : '';
   const leadPassport = headPax.passportNo || '—';
-  const leadPhone = headPax.contactPhone || voucher.contactPhone || voucher.phone || '+92 328 8189989';
 
-  const adultCount = passengers.filter(p => (p.category || 'Adult').toLowerCase() === 'adult').length || 1;
-  const childCount = passengers.filter(p => (p.category || '').toLowerCase() === 'child').length;
-  const infantCount = passengers.filter(p => (p.category || '').toLowerCase() === 'infant').length;
+  const allParties = typeof window !== 'undefined' ? getAllParties() : [];
+  const matchedParty = allParties.find(p => 
+    (voucher.partyHeadUid && p.partyHeadUid === voucher.partyHeadUid) || 
+    (voucher.partyName && p.partyName?.toLowerCase() === voucher.partyName?.toLowerCase())
+  );
+  const rawCandidate = voucher.customerPhone || voucher.contactPhone || headPax.contactPhone || matchedParty?.contactPhone || (!isAgencyPhone(voucher.phone) ? voucher.phone : '') || '';
+  const leadPhone = (rawCandidate && !isAgencyPhone(rawCandidate)) ? rawCandidate.trim() : '';
+  const hasCustomerPhone = Boolean(leadPhone && leadPhone !== '—');
+
   const totalPax = passengers.length || voucher.totalPax || 1;
-  const bedsCount = passengers.filter(p => p.hasBed !== false).length;
 
   const activeContactsList = Array.isArray(voucher.emergencyContactsList) && voucher.emergencyContactsList.length > 0
     ? voucher.emergencyContactsList
@@ -286,10 +294,10 @@ export default function HotelVoucherViewPage() {
 
   const currentPkHeadOffice = activeContactsList.find(r => (r.label || '').toLowerCase().includes('pk') || (r.label || '').toLowerCase().includes('head'))?.value 
     || voucher?.emergencyContacts?.pkHeadOffice 
-    || 'MUHAMMAD FAIZAN 0311-2324764 / G.MURTAZA (HAJI) 0312-3608683';
+    || '+92 321 8450030';
 
   return (
-    <div className="min-h-screen bg-slate-100/90 text-slate-800 pb-12 font-sans selection:bg-[#dfba73] selection:text-[#0a192f]">
+    <div className="min-h-screen bg-[#f3f4f8] text-slate-800 pb-16 font-sans selection:bg-[#dfba73] selection:text-[#0a192f]">
       
       {/* ------------------------------------------------------------- */}
       {/* 1. TOP EXECUTIVE NAVIGATION BAR (Screen Only - Deep Navy #0a192f) */}
@@ -297,42 +305,33 @@ export default function HotelVoucherViewPage() {
       <header className="bg-[#0a192f] text-white border-b border-slate-800 shadow-md sticky top-0 z-40 no-print">
         <div className="max-w-[1100px] mx-auto px-4 h-14 flex items-center justify-between gap-4">
           
-          {/* Left: Voucher Brand Title & Verified Badge */}
+          {/* Left: Brand Title & Verified Badge */}
           <div className="flex items-center gap-3">
             <Link 
               href="/erp/hotel-voucher" 
               className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition"
-              title="Return to Multi-Stay Hotel Vouchers"
+              title="Return to Hotel Vouchers"
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
 
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#dfba73]" />
-              <span className="font-mono font-black text-xs sm:text-sm tracking-wider uppercase text-white">
-                HOTEL VOUCHER • {voucher.voucherNo}
-              </span>
+              <span className="font-black text-xs uppercase tracking-wider text-[#dfba73]">AERO VOUCHER</span>
             </div>
 
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-              <span>CONFIRMED &amp; GUARANTEED</span>
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#dfba73]/15 text-[#dfba73] border border-[#dfba73]/30">
+              <CheckCircle2 className="w-3 h-3 text-[#dfba73]" />
+              <span>VERIFIED</span>
             </span>
           </div>
 
           {/* Center Tabs (Executive Document Viewer) */}
           <nav className="hidden md:flex items-center gap-1 text-xs font-bold text-slate-300">
             <span className="px-3 py-1.5 rounded-lg bg-slate-800 text-white border border-slate-700 shadow-xs cursor-default">
-              Document Viewer
+              Manifest
             </span>
             <span className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition cursor-pointer">
-              Stay Manifest
-            </span>
-            <span className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition cursor-pointer">
-              Fiscal Settlement
-            </span>
-            <span className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition cursor-pointer">
-              Policies &amp; Access
+              Logistics
             </span>
           </nav>
 
@@ -340,7 +339,7 @@ export default function HotelVoucherViewPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopyLink}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold shadow-xs transition"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
               <span>{copied ? 'Copied!' : 'Copy Link'}</span>
@@ -357,10 +356,10 @@ export default function HotelVoucherViewPage() {
 
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-2 px-4 py-1.5 bg-white hover:bg-slate-100 text-[#0a192f] rounded-xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#dfba73] hover:bg-amber-400 text-[#0a192f] rounded-xl text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
             >
               <Printer className="w-4 h-4 text-[#0a192f]" />
-              <span>Print / Save as PDF</span>
+              <span>Save PDF / Print</span>
             </button>
           </div>
 
@@ -371,31 +370,28 @@ export default function HotelVoucherViewPage() {
       {/* 2. SUB PREVIEW BAR (Screen Only) */}
       {/* ------------------------------------------------------------- */}
       <div className="bg-white border-b border-slate-200 py-2.5 px-4 no-print shadow-xs mb-6">
-        <div className="max-w-[900px] mx-auto flex items-center justify-between text-xs text-slate-600">
+        <div className="max-w-[860px] mx-auto flex items-center justify-between text-xs text-slate-600">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-700" />
-            <span className="font-extrabold text-slate-900">Executive Voucher Preview Mode</span>
+            <span className="font-extrabold text-slate-900">Executive Voucher Document Engine</span>
             <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200">
-              A4 Portrait (210x297mm)
+              A4 Portrait Archival (ISO 216)
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[11px] font-medium text-slate-400">Zoom: <strong className="text-slate-700">Fit Width</strong></span>
+            <span className="text-[11px] font-medium text-slate-400">Zoom: <strong className="text-slate-700">100%</strong></span>
             <button
               onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#0a192f] hover:bg-slate-800 text-white rounded-lg text-xs font-bold shadow-xs transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] rounded-lg text-xs font-bold shadow-xs transition cursor-pointer"
             >
-              <Printer className="w-3.5 h-3.5 text-[#dfba73]" />
-              <span>Print Voucher</span>
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* ------------------------------------------------------------- */}
-      {/* ------------------------------------------------------------- */}
-      {/* ------------------------------------------------------------- */}
       {/* ------------------------------------------------------------- */}
       {/* 3. A4 CERTIFIED ACCOMMODATION VOUCHER SHEET */}
       {/* ------------------------------------------------------------- */}
@@ -403,12 +399,12 @@ export default function HotelVoucherViewPage() {
         @media print {
           @page {
             size: A4 portrait !important;
-            margin: 4mm 6mm 4mm 6mm !important;
+            margin: 5mm 7mm 5mm 7mm !important;
           }
           html, body {
             background: #ffffff !important;
             color: #0f172a !important;
-            font-size: 10.5pt !important;
+            font-size: 10pt !important;
             line-height: 1.35 !important;
             padding: 0 !important;
             margin: 0 !important;
@@ -423,19 +419,15 @@ export default function HotelVoucherViewPage() {
           main.hotel-voucher-sheet {
             max-width: 100% !important;
             width: 100% !important;
-            border: 2px solid #0a192f !important;
-            border-radius: 6px !important;
+            border: none !important;
+            border-radius: 0 !important;
             margin: 0 auto !important;
-            padding: 4mm 6mm !important;
+            padding: 0 !important;
             box-shadow: none !important;
             background: #ffffff !important;
             box-sizing: border-box !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            page-break-after: avoid !important;
-            break-after: avoid !important;
-            page-break-before: avoid !important;
-            break-before: avoid !important;
           }
           .hotel-voucher-sheet * {
             -webkit-print-color-adjust: exact !important;
@@ -448,503 +440,396 @@ export default function HotelVoucherViewPage() {
         }
       `}} />
 
-      {(() => {
-        const staysCount = (voucher.stays || []).length;
-        const isThreeOrMore = staysCount >= 3;
+      <main className="hotel-voucher-sheet max-w-[860px] mx-auto bg-white shadow-xl rounded-2xl border border-slate-200/90 p-6 sm:p-7 print:p-0 print:border-none print:shadow-none space-y-4 print:space-y-3">
+        
+        {/* ========================================================= */}
+        {/* A. HEADER: CHEEPA FJ TRAVELS (LARGE) & LOGO, HOTEL VOUCHER BELOW */}
+        {/* ========================================================= */}
+        <section className="pb-3 border-b-2 border-slate-900 space-y-2">
+          {/* Top Row: Noor E Haram Travels (Large) & Logo */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <span className="w-3 h-3 rounded-full bg-[#dfba73] inline-block shadow-2xs shrink-0" />
+              <span className="text-2xl sm:text-3xl font-black text-[#0a192f] tracking-tight uppercase leading-none">
+                Noor E Haram Travels
+              </span>
+            </div>
 
-        return (
-          <main className={`hotel-voucher-sheet max-w-[780px] mx-auto bg-white shadow-xl border border-slate-300 print:shadow-none print:border-2 print:border-[#0a192f] print:m-0 text-slate-800 print:w-full print:max-w-full print:text-black ${
-            isThreeOrMore ? 'p-3.5 sm:p-4 print:p-3' : 'p-4 sm:p-5 print:p-3.5'
-          }`}>
-            
-            {/* ========================================================= */}
-            {/* A. HEADER: LOGO AT LEFT, CENTER TITLE, CONFIRMED AT RIGHT */}
-            {/* ========================================================= */}
-            <section className={`relative flex flex-col sm:flex-row items-center justify-between border-b-2 border-slate-900 gap-2 ${
-              isThreeOrMore 
-                ? 'pb-2 mb-2 min-h-[96px] sm:min-h-[105px] print:min-h-[105px] print:pb-2 print:mb-2.5' 
-                : 'pb-2.5 mb-2.5 min-h-[100px] sm:min-h-[115px] print:min-h-[115px] print:pb-2.5 print:mb-3'
-            }`}>
-              {/* Left: Company Logo */}
-              <div className="flex items-center justify-start shrink-0 z-10">
-                <img 
-                  src={voucher.logo || "/logo.png"} 
-                  alt={voucher.companyName || "Cheepa Travels Logo"} 
-                  className={`${
-                    isThreeOrMore ? 'h-24 sm:h-28 print:h-[105px]' : 'h-28 sm:h-32 print:h-[112px]'
-                  } max-w-[250px] sm:max-w-[300px] print:max-w-[300px] w-auto object-contain drop-shadow-sm`} 
-                />
-              </div>
+            <div className="shrink-0">
+              <img 
+                src="/logo.png" 
+                alt="Noor E Haram Travels Logo" 
+                className="h-24 sm:h-32 md:h-36 max-w-[280px] sm:max-w-[360px] w-auto object-contain drop-shadow-sm" 
+              />
+            </div>
+          </div>
 
-              {/* Center: Hotel Voucher Heading */}
-              <div className="sm:absolute sm:inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <h1 className={`${
-                  isThreeOrMore ? 'text-lg sm:text-xl print:text-[22pt]' : 'text-xl sm:text-2xl print:text-[23pt]'
-                } font-black text-[#0a192f] tracking-tight uppercase text-center pointer-events-auto leading-tight`}>
-                  HOTEL VOUCHER
-                </h1>
-                <span className={`${
-                  isThreeOrMore ? 'text-[9.5px] print:text-[10pt]' : 'text-[10px] sm:text-xs print:text-[10.5pt]'
-                } font-extrabold text-slate-700 uppercase tracking-widest mt-0.5 print:text-slate-800`}>
-                  Accommodation Confirmation
-                </span>
-              </div>
+          {/* Below Row: Hotel Voucher Heading (Small, Centered) */}
+          <div className="text-center">
+            <h1 className="text-xs sm:text-sm font-black text-[#0a192f] tracking-widest uppercase">
+              Hotel Voucher
+            </h1>
+          </div>
+        </section>
 
-              {/* Top Right: Confirmed Badge */}
-              <div className="flex items-center justify-end shrink-0 z-10">
-                <span className={`${
-                  isThreeOrMore ? 'px-2 py-0.5 text-[10px] print:text-[10pt]' : 'px-2.5 py-1 text-xs print:text-[10.5pt]'
-                } rounded-md font-black uppercase bg-[#0a192f] text-[#dfba73] tracking-wider shadow-xs inline-flex items-center gap-1.5 print:border print:border-[#dfba73]`}>
-                  <Check className="w-3.5 h-3.5 print:w-4 print:h-4 text-[#dfba73] stroke-[3]" />
-                  <span>CONFIRMED</span>
-                </span>
-              </div>
-            </section>
+        {/* ========================================================= */}
+        {/* B. PRINCIPAL GUEST & ITINERARY MANIFEST */}
+        {/* ========================================================= */}
+        <section className="space-y-1.5">
+          <div className="flex items-center gap-1.5 text-slate-700">
+            <User className="w-3.5 h-3.5 text-[#0a192f]" />
+            <h2 className="text-[10px] font-black uppercase tracking-wider text-slate-900">
+              PRINCIPAL GUEST &amp; ITINERARY MANIFEST
+            </h2>
+          </div>
 
-            {/* ========================================================= */}
-            {/* B. KEY METRIC TILES (3 BOXES) */}
-            {/* ========================================================= */}
-            <section className={`grid grid-cols-1 sm:grid-cols-3 ${
-              isThreeOrMore ? 'gap-1.5 mb-2 print:gap-2 print:mb-2.5' : 'gap-2 mb-2.5 print:gap-2.5 print:mb-3'
-            }`}>
-              <div className={`${isThreeOrMore ? 'p-1.5 print:p-2' : 'p-2 print:p-2.5'} bg-slate-50 border border-slate-200 rounded-lg print:border-slate-300`}>
-                <span className={`${isThreeOrMore ? 'text-[9px] print:text-[9pt]' : 'text-[10px] print:text-[9.5pt]'} font-bold text-slate-500 uppercase tracking-wider block`}>
-                  VOUCHER REFERENCE
-                </span>
-                <span className={`font-mono font-black ${isThreeOrMore ? 'text-xs sm:text-sm print:text-[12pt]' : 'text-sm sm:text-base print:text-[13pt]'} text-slate-900 block mt-0.5`}>
-                  {voucher.voucherNo}
-                </span>
-              </div>
-
-              <div className={`${isThreeOrMore ? 'p-1.5 print:p-2' : 'p-2 print:p-2.5'} bg-slate-50 border border-slate-200 rounded-lg relative group print:border-slate-300`}>
-                <div className="flex items-center justify-between">
-                  <span className={`${isThreeOrMore ? 'text-[9px] print:text-[9pt]' : 'text-[10px] print:text-[9.5pt]'} font-bold text-slate-500 uppercase tracking-wider block`}>
-                    ISSUE DATE
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
+            {/* Left Details Card */}
+            <div className="md:col-span-9 bg-slate-50/80 border border-slate-200/90 rounded-xl p-3 flex flex-col justify-between space-y-2.5">
+              <div className={`grid grid-cols-1 ${hasCustomerPhone ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-2`}>
+                {/* Customer Name */}
+                <div>
+                  <span className="block text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400">
+                    CUSTOMER NAME
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingIssueDate(!isEditingIssueDate)}
-                    className="no-print opacity-0 group-hover:opacity-100 p-0.5 hover:bg-slate-200 rounded text-slate-500 transition cursor-pointer"
-                    title="Edit Issue Date"
-                  >
-                    <Edit3 className="w-3 h-3" />
-                  </button>
+                  <h3 className="font-black text-sm text-slate-900 uppercase truncate mt-0.5">
+                    {leadPrefix}{leadName}
+                  </h3>
                 </div>
-                {isEditingIssueDate ? (
-                  <div className="no-print mt-1 flex items-center gap-1">
-                    <input
-                      type="date"
-                      value={editIssueDate}
-                      onChange={(e) => setEditIssueDate(e.target.value)}
-                      className="px-2 py-0.5 border border-slate-300 rounded font-bold text-xs bg-white text-slate-900 outline-none"
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleSaveIssueDate(editIssueDate)}
-                      className="p-1 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] rounded text-xs cursor-pointer"
-                      title="Save Date"
-                    >
-                      <Check className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingIssueDate(false)}
-                      className="p-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs cursor-pointer"
-                      title="Cancel"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <span className={`font-bold ${isThreeOrMore ? 'text-xs sm:text-sm print:text-[12pt]' : 'text-sm sm:text-base print:text-[13pt]'} text-slate-900 block mt-0.5`}>
-                    {voucher.issueDate}
-                  </span>
-                )}
-                {/* Print version always clean */}
-                {isEditingIssueDate && (
-                  <span className={`font-bold ${isThreeOrMore ? 'text-xs sm:text-sm print:text-[12pt]' : 'text-sm sm:text-base print:text-[13pt]'} text-slate-900 hidden print:block mt-0.5`}>
-                    {voucher.issueDate}
-                  </span>
-                )}
-              </div>
 
-              <div className={`${isThreeOrMore ? 'p-1.5 print:p-2' : 'p-2 print:p-2.5'} bg-slate-50 border border-slate-200 rounded-lg print:border-slate-300`}>
-                <span className={`${isThreeOrMore ? 'text-[9px] print:text-[9pt]' : 'text-[10px] print:text-[9.5pt]'} font-bold text-slate-500 uppercase tracking-wider block`}>
-                  TOTAL DURATION
-                </span>
-                <span className={`font-black ${isThreeOrMore ? 'text-xs sm:text-sm print:text-[12pt]' : 'text-sm sm:text-base print:text-[13pt]'} text-slate-900 block mt-0.5`}>
-                  {totalNights} Nights
-                </span>
-              </div>
-            </section>
-
-            {/* ========================================================= */}
-            {/* C. PRIMARY LEAD GUEST BLOCK (ONLY FAMILY HEAD NAME) */}
-            {/* ========================================================= */}
-            <section className={`border border-slate-200 rounded-lg bg-slate-50/70 relative overflow-hidden print:border-slate-300 ${
-              isThreeOrMore ? 'p-2 mb-1.5 print:p-2.5 print:mb-2.5' : 'p-2.5 mb-2 print:p-3 print:mb-3'
-            }`}>
-              
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                
-                {/* Left: Lead Guest Info */}
-                <div className={`${isThreeOrMore ? 'space-y-1' : 'space-y-1.5'} flex-1`}>
-
-                  {/* Single Guest Card for Family Head */}
-                  <div className={`bg-white border border-slate-200 rounded-md flex items-center justify-between shadow-2xs ${
-                    isThreeOrMore ? 'p-1.5 print:p-2' : 'p-2 print:p-2.5'
-                  }`}>
-                    <div className="flex items-center gap-2.5">
-                      <div className={`${isThreeOrMore ? 'w-7 h-7 print:w-8 print:h-8' : 'w-8 h-8 print:w-10 print:h-10'} rounded-md bg-slate-100 border border-slate-200 text-[#0a192f] flex items-center justify-center font-bold shrink-0`}>
-                        <User className={`${isThreeOrMore ? 'w-3.5 h-3.5 print:w-4 print:h-4' : 'w-4 h-4 print:w-5 print:h-5'} text-slate-700`} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className={`font-black ${isThreeOrMore ? 'text-xs sm:text-sm print:text-[12.5pt]' : 'text-sm sm:text-base print:text-[13.5pt]'} text-slate-900 uppercase`}>
-                            {leadPrefix}{leadName}
-                          </h4>
-                          <span className={`px-1.5 py-0.5 rounded ${isThreeOrMore ? 'text-[8.5px] print:text-[8.5pt]' : 'text-[9.5px] print:text-[9.5pt]'} font-black uppercase bg-[#0a192f] text-[#dfba73] tracking-wider shadow-2xs`}>
-                            Party Head
-                          </span>
-                        </div>
-                        <p className={`${isThreeOrMore ? 'text-[10px] print:text-[9.5pt]' : 'text-xs print:text-[10pt]'} text-slate-600 font-mono font-bold mt-0.5`}>
-                          Adult • Passport #{leadPassport}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Summary Stats Row */}
-                  <div className="flex items-center pt-0.5 print:pt-1">
-                    <span className={`${isThreeOrMore ? 'px-2 py-0.5 text-[10.5px] print:text-[9.5pt]' : 'px-2.5 py-1 text-xs print:text-[10pt]'} rounded-md font-black uppercase bg-[#0a192f] text-[#dfba73] tracking-wider shadow-2xs inline-flex items-center gap-1.5`}>
-                      <Users className={`${isThreeOrMore ? 'w-3 h-3 print:w-3.5 print:h-3.5' : 'w-3.5 h-3.5 print:w-4 print:h-4'} text-[#dfba73]`} />
-                      <span>TOTAL PAX: {totalPax}</span>
+                {/* Customer Phone (Omitted completely if blank) */}
+                {hasCustomerPhone && (
+                  <div>
+                    <span className="block text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400">
+                      CUSTOMER PHONE
+                    </span>
+                    <p className="font-mono font-black text-sm text-slate-900 mt-0.5">
+                      {leadPhone}
+                    </p>
+                    <span className="text-[9.5px] font-medium text-slate-500">
+                      Voice / Roaming Active
                     </span>
                   </div>
+                )}
 
-                </div>
-
-                {/* Right: Live QR Node */}
-                <div className={`flex items-center justify-center bg-white border border-slate-200 rounded-lg shrink-0 shadow-2xs self-center ${
-                  isThreeOrMore ? 'p-1 print:p-1.5' : 'p-1.5 print:p-2'
-                }`}>
-                  <div className="p-1 bg-white rounded border border-slate-100">
-                    <QRCodeSVG 
-                      value={liveQrUrl} 
-                      size={isThreeOrMore ? 74 : 78} 
-                      className="print:w-[86px] print:h-[86px]"
-                      level="M" 
-                      includeMargin={false} 
-                    />
-                  </div>
-                </div>
-
-              </div>
-
-            </section>
-
-            {/* ========================================================= */}
-            {/* D. CHRONOLOGICAL ACCOMMODATION STAYS (AS MANY AS CONFIGURED) */}
-            {/* ========================================================= */}
-            <section className={`${isThreeOrMore ? 'space-y-1.5 mb-1.5 print:space-y-2 print:mb-2.5' : 'space-y-2 mb-2 print:space-y-2.5 print:mb-3'}`}>
-              {(voucher.stays || []).map((stay, idx) => {
-                const cityInfo = formatCityDetails(stay.city, idx);
-                const stayNights = parseInt(stay.nights) || 1;
-                const mealLabel = getMealPlanLabel(stay.mealPlan);
-                const starCount = getStayStars(stay);
-                const roomTypeRaw = (stay.roomType || 'QUAD').toUpperCase();
-                const roomTypeDisplay = (roomTypeRaw.includes('ROOM') || roomTypeRaw.includes('SHARING')) 
-                  ? roomTypeRaw 
-                  : `${roomTypeRaw} ROOM`;
-
-                return (
-                  <div 
-                    key={stay.id || idx}
-                    className={`border border-slate-200 rounded-lg bg-white shadow-2xs break-inside-avoid print:border-slate-300 ${
-                      isThreeOrMore 
-                        ? 'p-2 print:p-2 space-y-1 print:space-y-1' 
-                        : 'p-2.5 print:p-2.5 space-y-1.5 print:space-y-1.5'
-                    }`}
-                  >
-                    {/* Stay Header Bar */}
-                    <div className={`flex items-center justify-between border-b border-slate-100 ${
-                      isThreeOrMore ? 'pb-1 print:pb-1' : 'pb-1.5 print:pb-1.5'
-                    }`}>
-                      <div className="flex items-center">
-                        <span className={`rounded-md bg-[#0a192f] text-white flex items-center justify-center font-black uppercase tracking-wider shadow-2xs ${
-                          isThreeOrMore ? 'px-2 py-0.5 text-[10px] print:text-[9.5pt]' : 'px-2.5 py-0.5 text-xs print:text-[10pt]'
-                        }`}>
-                          {cityInfo.cityName}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className={`rounded-full font-black uppercase bg-slate-100 text-slate-800 border border-slate-200 ${
-                          isThreeOrMore ? 'px-1.5 py-0.5 text-[9px] print:text-[8.5pt]' : 'px-2 py-0.5 text-[10px] print:text-[9.5pt]'
-                        }`}>
-                          {stayNights} NIGHTS
-                        </span>
-                        <span className={`font-mono text-slate-600 font-bold ${
-                          isThreeOrMore ? 'text-[10px] print:text-[8.5pt]' : 'text-xs print:text-[9.5pt]'
-                        }`}>
-                          {stay.hcn || 'HCN-108047'}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Hotel Property Title & Dynamic Category Rating */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-0.5">
-                      <div>
-                        <h4 className={`font-black uppercase tracking-tight text-slate-900 ${
-                          isThreeOrMore ? 'text-xs sm:text-sm print:text-[12pt]' : 'text-sm sm:text-base print:text-[13.5pt]'
-                        }`}>
-                          {stay.hotelName}
-                        </h4>
-                        {stay.view && (
-                          <span className="text-slate-500 font-medium text-[9px] print:text-[8pt] block">
-                            {stay.view}
-                          </span>
-                        )}
-                        {stay.distance && (
-                          <span className={`text-slate-600 font-semibold flex items-center gap-1 ${
-                            isThreeOrMore ? 'text-[9px] print:text-[8pt]' : 'text-[10px] print:text-[8.5pt]'
-                          }`}>
-                            <span>📍</span>
-                            <span>{stay.distance}</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {starCount > 0 && (
-                        <div className="flex items-center gap-1 sm:self-start shrink-0">
-                          <div className="flex items-center text-amber-500">
-                            {Array.from({ length: starCount }).map((_, sIdx) => (
-                              <Star key={sIdx} className="w-3 h-3 print:w-3.5 print:h-3.5 fill-amber-400 stroke-amber-500" />
-                            ))}
-                          </div>
-                          <span className={`${isThreeOrMore ? 'text-[9.5px] print:text-[8.5pt]' : 'text-[10.5px] print:text-[9.5pt]'} font-bold text-slate-600`}>
-                            {stay.category || `${starCount} Star Hotel`}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 4 Clean Metric Boxes for Stay Information */}
-                    <div className={`grid grid-cols-2 sm:grid-cols-4 pt-0.5 print:pt-1 ${
-                      isThreeOrMore ? 'gap-1 print:gap-1.5' : 'gap-1.5 print:gap-2'
-                    }`}>
-                      
-                      {/* Box 1: Check-in */}
-                      <div className={`${isThreeOrMore ? 'p-1 print:p-1.5 print:py-1.5' : 'p-1.5 print:p-2'} bg-slate-50 border border-slate-200 rounded-md`}>
-                        <span className={`${isThreeOrMore ? 'text-[8.5px] print:text-[8.5pt]' : 'text-[9.5px] print:text-[9pt]'} font-bold text-slate-500 uppercase tracking-wider block`}>
-                          CHECK-IN
-                        </span>
-                        <span className={`font-mono font-black ${isThreeOrMore ? 'text-[10.5px] print:text-[10.5pt]' : 'text-xs sm:text-sm print:text-[11.5pt]'} text-slate-900 block mt-0.5`}>
-                          {stay.checkIn}
-                        </span>
-                        <span className={`${isThreeOrMore ? 'text-[8px] print:text-[7.5pt]' : 'text-[9px] print:text-[8.5pt]'} text-slate-500 font-semibold block mt-0.5`}>
-                          From 16:00 (Standard)
-                        </span>
-                      </div>
-
-                      {/* Box 2: Check-out */}
-                      <div className={`${isThreeOrMore ? 'p-1 print:p-1.5 print:py-1.5' : 'p-1.5 print:p-2'} bg-slate-50 border border-slate-200 rounded-md`}>
-                        <span className={`${isThreeOrMore ? 'text-[8.5px] print:text-[8.5pt]' : 'text-[9.5px] print:text-[9pt]'} font-bold text-slate-500 uppercase tracking-wider block`}>
-                          CHECK-OUT
-                        </span>
-                        <span className={`font-mono font-black ${isThreeOrMore ? 'text-[10.5px] print:text-[10.5pt]' : 'text-xs sm:text-sm print:text-[11.5pt]'} text-slate-900 block mt-0.5`}>
-                          {stay.checkOut}
-                        </span>
-                        <span className={`${isThreeOrMore ? 'text-[8px] print:text-[7.5pt]' : 'text-[9px] print:text-[8.5pt]'} text-slate-500 font-semibold block mt-0.5`}>
-                          Until 12:00 PM
-                        </span>
-                      </div>
-
-                      {/* Box 3: Room Type */}
-                      <div className={`${isThreeOrMore ? 'p-1 print:p-1.5 print:py-1.5' : 'p-1.5 print:p-2'} bg-slate-50 border border-slate-200 rounded-md`}>
-                        <span className={`${isThreeOrMore ? 'text-[8.5px] print:text-[8.5pt]' : 'text-[9.5px] print:text-[9pt]'} font-bold text-slate-500 uppercase tracking-wider block`}>
-                          Room Type :
-                        </span>
-                        <span className={`font-black ${isThreeOrMore ? 'text-[10.5px] print:text-[10.5pt]' : 'text-xs sm:text-sm print:text-[11.5pt]'} text-slate-900 block mt-0.5 uppercase`}>
-                          {roomTypeDisplay}
-                        </span>
-                      </div>
-
-                      {/* Box 4: Meal Basis */}
-                      <div className={`${isThreeOrMore ? 'p-1 print:p-1.5 print:py-1.5' : 'p-1.5 print:p-2'} bg-slate-50 border border-slate-200 rounded-md`}>
-                        <span className={`${isThreeOrMore ? 'text-[8.5px] print:text-[8.5pt]' : 'text-[9.5px] print:text-[9pt]'} font-bold text-slate-500 uppercase tracking-wider block`}>
-                          MEAL BASIS
-                        </span>
-                        <span className={`font-black ${isThreeOrMore ? 'text-[10.5px] print:text-[10.5pt]' : 'text-xs sm:text-sm print:text-[11.5pt]'} text-slate-900 block mt-0.5 uppercase`}>
-                          {stay.mealPlan || 'RO'} ({mealLabel})
-                        </span>
-                      </div>
-
-                    </div>
-
-                  </div>
-                );
-              })}
-            </section>
-
-            {/* ========================================================= */}
-            {/* E. BOTTOM: ADVISORIES (BIG) & 24-HR EMERGENCY HELPLINE (SMALL BOTTOM RIGHT) */}
-            {/* ========================================================= */}
-            <section className={`grid grid-cols-1 sm:grid-cols-12 break-inside-avoid items-stretch ${
-              isThreeOrMore ? 'gap-1.5 mb-1.5 print:gap-2 print:mb-2' : 'gap-2 mb-2 print:gap-2.5 print:mb-2.5'
-            }`}>
-              
-              {/* Column 1 (BIG): Important Remarks & Guest Advisories */}
-              <div className={`sm:col-span-8 border border-slate-200 rounded-lg bg-slate-50/70 flex flex-col justify-between ${
-                isThreeOrMore ? 'p-1.5 print:p-2 space-y-1 print:space-y-1' : 'p-2.5 print:p-2.5 space-y-1.5'
-              }`}>
+                {/* Total Pax */}
                 <div>
-                  <div className={`flex items-center gap-1.5 border-b border-slate-200 ${
-                    isThreeOrMore ? 'pb-0.5 mb-0.5 print:pb-1 print:mb-1' : 'pb-1 mb-1'
-                  }`}>
-                    <FileText className="w-3.5 h-3.5 text-slate-700" />
-                    <h4 className={`font-extrabold text-slate-900 uppercase tracking-tight ${
-                      isThreeOrMore ? 'text-[11px] print:text-[9.5pt]' : 'text-xs sm:text-sm print:text-[10.5pt]'
-                    }`}>
-                      Important Remarks &amp; Guest Advisories
-                    </h4>
+                  <span className="block text-[8.5px] font-extrabold uppercase tracking-wider text-slate-400">
+                    TOTAL PAX
+                  </span>
+                  <div className="mt-0.5">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black bg-amber-100 text-amber-950 border border-amber-300 shadow-2xs">
+                      <Users className="w-3.5 h-3.5 text-amber-800" />
+                      <span>{totalPax} {totalPax === 1 ? 'ADULT' : 'ADULTS'}</span>
+                    </span>
                   </div>
-
-                  <ul className={`text-slate-700 list-disc list-inside leading-snug font-medium ${
-                    isThreeOrMore ? 'text-[9.5px] print:text-[8pt] space-y-0.5 print:space-y-0.5' : 'text-[11px] sm:text-xs print:text-[9.5pt] space-y-0.5'
-                  }`}>
-                    <li>Standard check-in begins at 16:00; check-out deadline is strictly 12:00 PM. Late check-out incurs a full-night tariff.</li>
-                    <li>Original Passports, Umrah Visas, and this voucher must be surrendered upon front desk arrival for check-in registry.</li>
-                    <li>Room allocation is strictly as reserved. Upgrades or adjustments are subject to availability and direct hotel fee.</li>
-                    <li>Municipal city taxes and KSA VAT (15%) are fully prepaid. Incidentals (minibar, room phone) are billed directly to guests.</li>
-                  </ul>
-                </div>
-
-                {/* Urdu Compliance Note */}
-                <div className={`bg-amber-50 border border-amber-200 rounded-md text-right font-sans ${
-                  isThreeOrMore ? 'p-1 print:p-1.5' : 'p-1.5 print:p-2'
-                }`} dir="rtl">
-                  <p className={`font-urdu font-bold text-amber-950 leading-normal ${
-                    isThreeOrMore ? 'text-[10px] print:text-[8.5pt]' : 'text-xs print:text-[10.5pt]'
-                  }`}>
-                    ضروری ہدایات: ہوٹل چیک آؤٹ وقت دوپہر 12 بجے ہے اور باقاعدہ واؤچر کا ہمراہ ہونا ضروری ہے۔
-                  </p>
                 </div>
               </div>
 
-              {/* Column 2 (SMALL AT BOTTOM RIGHT): 24-Hour Emergency (Helpline) */}
-              <div className={`sm:col-span-4 border border-slate-200 rounded-lg bg-slate-50/70 flex flex-col justify-between self-end w-full ${
-                isThreeOrMore ? 'p-1.5 print:p-2 space-y-1 print:space-y-1' : 'p-2.5 print:p-2.5 space-y-1.5'
-              }`}>
-                <div>
-                  <div className={`flex items-center justify-between border-b border-slate-200 ${
-                    isThreeOrMore ? 'pb-0.5 mb-0.5 print:pb-1 print:mb-1' : 'pb-1 mb-1'
-                  }`}>
-                    <div className="flex items-center gap-1.5">
-                      <PhoneCall className="w-3 h-3 text-emerald-700" />
-                      <h4 className={`font-extrabold text-slate-900 uppercase tracking-tight ${
-                        isThreeOrMore ? 'text-[10px] print:text-[9pt]' : 'text-[11px] print:text-[10pt]'
-                      }`}>
-                        24-Hour Emergency (Helpline)
-                      </h4>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowEditEmergency(true)}
-                      className="no-print text-[9px] font-bold text-slate-500 hover:text-slate-800 inline-flex items-center gap-0.5 cursor-pointer"
-                    >
-                      <Edit3 className="w-2.5 h-2.5" />
-                      <span>Edit</span>
-                    </button>
-                  </div>
-
-                  <div className={`text-xs ${isThreeOrMore ? 'space-y-0.5 print:space-y-1' : 'space-y-1'}`}>
-                    {Array.isArray(activeContactsList) && activeContactsList.length > 0 ? (
-                      activeContactsList.map((contact, cIdx) => {
-                        const isMulti = (contact.value || '').length > 30 || (contact.label || '').toLowerCase().includes('pk') || (contact.label || '').toLowerCase().includes('head');
-                        if (isMulti) {
-                          return (
-                            <div 
-                              key={contact.id || cIdx} 
-                              className={`bg-white border border-slate-200 rounded-md space-y-0.5 ${
-                                isThreeOrMore ? 'p-0.5 print:p-1' : 'p-1 print:p-1'
-                              }`}
-                            >
-                              <span className={`font-bold text-slate-500 block text-[9px] ${isThreeOrMore ? 'print:text-[8pt]' : 'print:text-[8.5pt]'}`}>
-                                {contact.label}:
-                              </span>
-                              <span className={`font-mono font-black text-slate-900 leading-snug block text-[9.5px] ${isThreeOrMore ? 'print:text-[8.5pt]' : 'print:text-[9pt]'}`}>
-                                {contact.value}
-                              </span>
-                            </div>
-                          );
-                        }
-                        return (
-                          <div 
-                            key={contact.id || cIdx} 
-                            className={`flex items-center justify-between bg-white border border-slate-200 rounded-md ${
-                              isThreeOrMore ? 'p-0.5 print:p-1' : 'p-1 print:p-1'
-                            }`}
-                          >
-                            <span className={`font-bold text-slate-500 text-[10px] ${isThreeOrMore ? 'print:text-[8.5pt]' : 'print:text-[9pt]'}`}>
-                              {contact.label}:
-                            </span>
-                            <span className={`font-mono font-black text-slate-900 text-[10.5px] ${isThreeOrMore ? 'print:text-[9pt]' : 'print:text-[10pt]'}`}>
-                              {contact.value}
-                            </span>
-                          </div>
-                        );
-                      })
+              {/* Inner bottom strip */}
+              <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between text-[9.5px] font-mono">
+                <div className="flex items-center gap-1.5 text-slate-700">
+                  <span className="font-bold text-slate-500 uppercase">VOUCHER NO.:</span>
+                  <span className="font-black text-slate-900">{voucher.voucherNo}</span>
+                  <span className="text-slate-400">/</span>
+                  
+                  {/* Inline edit issue date */}
+                  <div className="relative group inline-flex items-center gap-1">
+                    {isEditingIssueDate ? (
+                      <span className="no-print inline-flex items-center gap-1">
+                        <input
+                          type="date"
+                          value={editIssueDate}
+                          onChange={(e) => setEditIssueDate(e.target.value)}
+                          className="px-1.5 py-0.5 border border-slate-300 rounded font-bold text-[10px] bg-white text-slate-900 outline-none"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveIssueDate(editIssueDate)}
+                          className="p-0.5 bg-[#0a192f] text-[#dfba73] rounded text-[10px] cursor-pointer"
+                          title="Save Date"
+                        >
+                          <Check className="w-2.5 h-2.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingIssueDate(false)}
+                          className="p-0.5 bg-slate-200 text-slate-700 rounded text-[10px] cursor-pointer"
+                          title="Cancel"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
                     ) : (
-                      <>
-                        <div className={`flex items-center justify-between bg-white border border-slate-200 rounded-md ${
-                          isThreeOrMore ? 'p-0.5 print:p-1' : 'p-1 print:p-1'
-                        }`}>
-                          <span className={`font-bold text-slate-500 text-[10px] ${isThreeOrMore ? 'print:text-[8.5pt]' : 'print:text-[9pt]'}`}>KSA Ground:</span>
-                          <span className={`font-mono font-black text-slate-900 text-[10.5px] ${isThreeOrMore ? 'print:text-[9pt]' : 'print:text-[10pt]'}`}>{currentKsaGround}</span>
-                        </div>
-
-                        <div className={`flex items-center justify-between bg-white border border-slate-200 rounded-md ${
-                          isThreeOrMore ? 'p-0.5 print:p-1' : 'p-1 print:p-1'
-                        }`}>
-                          <span className={`font-bold text-slate-500 text-[10px] ${isThreeOrMore ? 'print:text-[8.5pt]' : 'print:text-[9pt]'}`}>Madinah:</span>
-                          <span className={`font-mono font-black text-slate-900 text-[10.5px] ${isThreeOrMore ? 'print:text-[9pt]' : 'print:text-[10pt]'}`}>{currentMadinah}</span>
-                        </div>
-
-                        <div className={`bg-white border border-slate-200 rounded-md space-y-0.5 ${
-                          isThreeOrMore ? 'p-0.5 print:p-1' : 'p-1 print:p-1'
-                        }`}>
-                          <span className={`font-bold text-slate-500 block text-[9px] ${isThreeOrMore ? 'print:text-[8pt]' : 'print:text-[8.5pt]'}`}>PK Head Office:</span>
-                          <span className={`font-mono font-black text-slate-900 leading-snug block text-[9.5px] ${isThreeOrMore ? 'print:text-[8.5pt]' : 'print:text-[9pt]'}`}>
-                            {currentPkHeadOffice}
-                          </span>
-                        </div>
-                      </>
+                      <span className="text-slate-700 font-bold inline-flex items-center gap-1">
+                        <span>{voucher.issueDate}</span>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingIssueDate(true)}
+                          className="no-print opacity-0 group-hover:opacity-100 p-0.5 hover:bg-slate-200 rounded text-slate-500 transition cursor-pointer"
+                          title="Edit Issue Date"
+                        >
+                          <Edit3 className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
                     )}
                   </div>
                 </div>
               </div>
+            </div>
 
-            </section>
+            {/* Right Digital QR Card */}
+            <div className="md:col-span-3 bg-white border border-slate-200/90 rounded-xl p-2.5 flex flex-col items-center justify-center text-center shadow-2xs">
+              <div className="p-1.5 bg-white rounded-lg border border-slate-200">
+                <QRCodeSVG
+                  value={liveQrUrl}
+                  size={72}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
 
-            {/* ========================================================= */}
-            {/* F. DOCUMENT LEGAL FOOTER */}
-            {/* ========================================================= */}
-            <footer className={`border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-1 text-slate-500 font-semibold text-center sm:text-left ${
-              isThreeOrMore ? 'pt-1.5 print:pt-1.5 text-[8.5px] print:text-[8pt]' : 'pt-1.5 print:pt-2 text-[9.5px] print:text-[8.5pt]'
-            }`}>
-              <span>
-                Official Corporate Itinerary &amp; Hospitality Settlement Archive • ISO 216 Ready
+        {/* ========================================================= */}
+        {/* C. CONFIRMED HOTEL ACCOMMODATIONS */}
+        {/* ========================================================= */}
+        <section className="space-y-1.5">
+          <div className="flex items-center gap-1.5 text-slate-700">
+            <Building2 className="w-3.5 h-3.5 text-[#0a192f]" />
+            <h2 className="text-[10px] font-black uppercase tracking-wider text-slate-900">
+              CONFIRMED HOTEL ACCOMMODATIONS
+            </h2>
+          </div>
+
+          <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-[#0a192f] text-white font-mono text-[9px] uppercase font-bold tracking-wider">
+                <tr>
+                  <th className="py-2 px-2.5 text-center w-8">S#</th>
+                  <th className="py-2 px-2.5">Hotel Property &amp; City</th>
+                  <th className="py-2 px-2.5 whitespace-nowrap">Check-In</th>
+                  <th className="py-2 px-2.5 whitespace-nowrap">Check-Out</th>
+                  <th className="py-2 px-2 text-center whitespace-nowrap">Nights</th>
+                  <th className="py-2 px-2.5">Room &amp; Meal</th>
+                  <th className="py-2 px-2 text-center whitespace-nowrap">Rooms</th>
+                  <th className="py-2 px-2.5 text-right whitespace-nowrap">Res / HCN</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {(voucher.stays || []).map((stay, idx) => {
+                  const cityInfo = formatCityDetails(stay.city, idx);
+                  const starCount = getStayStars(stay);
+                  const stayNights = parseInt(stay.nights) || 1;
+                  const mealLabel = getMealPlanLabel(stay.mealPlan);
+
+                  return (
+                    <tr key={stay.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-2.5 px-2.5 text-center font-mono font-bold text-slate-400">
+                        {idx + 1}
+                      </td>
+
+                      <td className="py-2.5 px-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-[#dfba73] shrink-0" />
+                          <span className="font-black text-slate-900 uppercase">
+                            {stay.hotelName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 pl-3.5">
+                          <span className="text-[10px] font-extrabold uppercase text-amber-800">
+                            {cityInfo.cityName}
+                          </span>
+                          {starCount > 0 && (
+                            <span className="flex items-center text-amber-500">
+                              {Array.from({ length: starCount }).map((_, sIdx) => (
+                                <Star key={sIdx} className="w-2.5 h-2.5 fill-amber-400 stroke-amber-500" />
+                              ))}
+                            </span>
+                          )}
+                          {stay.view && (
+                            <span className="text-[9px] text-slate-500">
+                              • {stay.view}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-2.5 px-2.5 whitespace-nowrap font-mono">
+                        <span className="font-bold text-slate-900 block">{stay.checkIn}</span>
+                        <span className="text-[9px] text-slate-500 font-semibold block">From 16:00</span>
+                      </td>
+
+                      <td className="py-2.5 px-2.5 whitespace-nowrap font-mono">
+                        <span className="font-bold text-slate-900 block">{stay.checkOut}</span>
+                        <span className="text-[9px] text-slate-500 font-semibold block">Until 12:00</span>
+                      </td>
+
+                      <td className="py-2.5 px-2 text-center whitespace-nowrap">
+                        <span className="px-2 py-0.5 rounded-md text-[9.5px] font-black uppercase bg-slate-100 text-slate-800 border border-slate-200">
+                          {stayNights} N
+                        </span>
+                      </td>
+
+                      <td className="py-2.5 px-2.5">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-[#0a192f] text-[#dfba73]">
+                          {stay.roomType || 'QUAD'}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-700 block mt-0.5">
+                          {stay.mealPlan || 'RO'} ({mealLabel})
+                        </span>
+                      </td>
+
+                      <td className="py-2.5 px-2 text-center font-bold text-slate-800 whitespace-nowrap">
+                        {stay.rooms || 1}
+                      </td>
+
+                      <td className="py-2.5 px-2.5 text-right font-mono font-black text-slate-900 whitespace-nowrap">
+                        {stay.hcn || stay.bookingRef || 'HCN-108047'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* ========================================================= */}
+        {/* D. KSA HELPLINE & IMMEDIATE OPERATIONAL DISPATCH (24/7 PRIORITY SUPPORT) */}
+        {/* ========================================================= */}
+        <section className="space-y-1.5">
+          <div className="flex items-center justify-between text-slate-700">
+            <div className="flex items-center gap-1.5">
+              <PhoneCall className="w-3.5 h-3.5 text-[#0a192f]" />
+              <h2 className="text-[10px] font-black uppercase tracking-wider text-slate-900">
+                KSA HELPLINE &amp; IMMEDIATE OPERATIONAL DISPATCH
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowEditEmergency(true)}
+                className="no-print text-[9px] font-bold text-slate-500 hover:text-slate-800 inline-flex items-center gap-0.5 cursor-pointer"
+              >
+                <Edit3 className="w-2.5 h-2.5" />
+                <span>Edit</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {/* Makkah */}
+            <div className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-3 flex flex-col justify-center space-y-1">
+              <span className="block text-[10px] font-bold text-slate-600 uppercase">
+                MAKKAH HELPLINE
               </span>
-              <span className="font-mono text-slate-600">
-                CRS Reference: {voucher.pnr || voucher.voucherNo} • Voucher Valid for Direct Check-In Surrender
-              </span>
-            </footer>
+              <p className="font-mono font-black text-xs sm:text-sm text-slate-900 tracking-tight mt-0.5">
+                {currentKsaGround}
+              </p>
+            </div>
 
-          </main>
-        );
-      })()}
+            {/* Madinah */}
+            <div className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-3 flex flex-col justify-center space-y-1">
+              <span className="block text-[10px] font-bold text-slate-600 uppercase">
+                MADINAH HELPLINE
+              </span>
+              <p className="font-mono font-black text-xs sm:text-sm text-slate-900 tracking-tight mt-0.5">
+                {currentMadinah}
+              </p>
+            </div>
+
+            {/* Pakistan */}
+            <div className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-3 flex flex-col justify-center space-y-1">
+              <span className="block text-[10px] font-bold text-slate-600 uppercase">
+                PAKISTAN HELPLINE
+              </span>
+              <p className="font-mono font-bold text-[10.5px] leading-snug text-slate-900 tracking-tight mt-0.5 break-words">
+                {currentPkHeadOffice}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================= */}
+        {/* E. TERMS & CONDITIONS • SERVICE PROTOCOL */}
+        {/* ========================================================= */}
+        <section className="space-y-1.5">
+          <div className="flex items-center gap-1.5 text-slate-700">
+            <FileText className="w-3.5 h-3.5 text-[#0a192f]" />
+            <h2 className="text-[10px] font-black uppercase tracking-wider text-slate-900">
+              TERMS &amp; CONDITIONS • SERVICE PROTOCOL
+            </h2>
+          </div>
+
+          <div className="bg-slate-50/80 border border-slate-200/90 rounded-xl p-3 space-y-2 text-[10px] text-slate-700 leading-relaxed">
+            {/* Item 1 */}
+            <div className="flex items-start gap-2">
+              <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-black text-[9px] flex items-center justify-center shrink-0 mt-0.5">
+                1
+              </span>
+              <p className="flex-1">
+                Cancellation with full refund is permissible only with a notification at least 24 hours prior to travelling.
+              </p>
+            </div>
+
+            {/* Item 2 */}
+            <div className="flex items-start gap-2">
+              <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-black text-[9px] flex items-center justify-center shrink-0 mt-0.5">
+                2
+              </span>
+              <p className="flex-1">
+                It is the responsibility of the agent and/or client to have a valid Saudi number or an active roaming sim they can use to contact their designated driver/hotel coordinator. <strong>100% of the service amount will be charged in case of no show.</strong>
+              </p>
+            </div>
+
+            {/* Item 3 */}
+            <div className="flex items-start gap-2">
+              <span className="w-4 h-4 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-black text-[9px] flex items-center justify-center shrink-0 mt-0.5">
+                3
+              </span>
+              <p className="flex-1">
+                The Transportation &amp; Accommodation Service Company reserves the right to change the rates without any prior notification but will respect booked services with complete payment.
+              </p>
+            </div>
+
+            {/* Sub-bullets with icons */}
+            <div className="pt-2 border-t border-slate-200/70 space-y-1.5 text-[9.5px]">
+              <div className="flex items-center gap-2 text-slate-600">
+                <Wifi className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>The passengers are expected to connect to the wifi as soon as they land at the respective Jeddah or Madinah airport and establish contact with the number provided for their trip.</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-600">
+                <Smartphone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span>Sim Kiosks are also available at both airports for the assistance of the passengers.</span>
+              </div>
+              <div className="flex items-center gap-2 text-rose-700 font-medium">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                <span>In the case that the passengers don't connect to the internet or fail to establish contact with the transporter we will not be responsible for any inconvenience.</span>
+              </div>
+            </div>
+
+            {/* Urdu Note */}
+            <div className="bg-amber-50/70 border border-amber-200 rounded-md p-1.5 text-right font-sans mt-1" dir="rtl">
+              <p className="font-urdu font-bold text-amber-950 text-[10px] leading-normal">
+                ضروری ہدایات: ہوٹل چیک آؤٹ وقت دوپہر 12 بجے ہے اور باقاعدہ واؤچر کا ہمراہ ہونا ضروری ہے۔
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================= */}
+        {/* F. FOOTER */}
+        {/* ========================================================= */}
+        <footer className="pt-1">
+          <div className="bg-slate-50 border border-slate-200/90 rounded-lg px-3 py-1.5 flex items-center justify-between text-[8.5px] font-mono text-slate-500">
+            <span>OPERATOR: NOOR E HARAM OPERATIONS • {voucher.issueDate}</span>
+          </div>
+        </footer>
+
+      </main>
 
       {/* ------------------------------------------------------------- */}
       {/* 4. MODAL: EDIT EMERGENCY NUMBERS (Screen Only) */}

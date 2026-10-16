@@ -260,16 +260,30 @@ export default function TransportVoucherManager({ parties = [], onGenerateHotelV
     setEmergencyContact(v.emergencyContact || '+966 50 627 7492');
 
     const loadedPax = (v.passengers && Array.isArray(v.passengers) && v.passengers.length > 0)
-      ? v.passengers.map((p, idx) => ({
-          sNo: String(p.sNo || idx + 1),
-          prefix: p.prefix || 'MR',
-          name: p.name || (idx === 0 ? v.party : ''),
-          passportNo: p.passportNo || '',
-          group: p.group || '',
-          visaNo: p.visaNo || '',
-          hasBed: p.hasBed !== false,
-        }))
-      : [{ sNo: '1', prefix: 'MR', name: v.party || '', passportNo: '', group: '', visaNo: '', hasBed: true }];
+      ? v.passengers.map((p, idx) => {
+          let resolvedName = p.name || '';
+          if (!resolvedName || resolvedName.toLowerCase().includes('unnamed')) {
+            resolvedName = idx === 0 ? (v.party || '') : '';
+          }
+          let resolvedCategory = p.category;
+          if (!resolvedCategory) {
+            const pref = (p.prefix || '').toUpperCase();
+            if (pref.startsWith('INF')) resolvedCategory = 'Infant';
+            else if (pref.startsWith('CHD') || pref === 'MSTR' || pref === 'MISS') resolvedCategory = 'Child';
+            else resolvedCategory = 'Adult';
+          }
+          return {
+            sNo: String(p.sNo || idx + 1),
+            prefix: p.prefix || (resolvedCategory === 'Child' ? 'CHD_MSTR' : resolvedCategory === 'Infant' ? 'INF_MSTR' : 'MR'),
+            name: resolvedName,
+            passportNo: p.passportNo || '',
+            group: p.group || '',
+            visaNo: p.visaNo || '',
+            hasBed: p.hasBed !== undefined ? p.hasBed !== false : resolvedCategory !== 'Infant',
+            category: resolvedCategory,
+          };
+        })
+      : [{ sNo: '1', prefix: 'MR', name: v.party || '', passportNo: '', group: '', visaNo: '', hasBed: true, category: 'Adult' }];
 
     setPassengers(loadedPax);
     setPaxCounts(v.paxCounts || computePaxSummary(loadedPax));
@@ -342,15 +356,25 @@ export default function TransportVoucherManager({ parties = [], onGenerateHotelV
       setPhone(p.contactPhone);
     }
     if (Array.isArray(p.passengers) && p.passengers.length > 0) {
-      const mapped = p.passengers.map((px, idx) => ({
-        sNo: String(idx + 1),
-        prefix: px.prefix || 'MR',
-        name: px.name || (idx === 0 ? p.partyName : ''),
-        passportNo: px.passportNo || '',
-        group: px.group || '',
-        visaNo: px.visaNo || '',
-        hasBed: px.hasBed !== false,
-      }));
+      const mapped = p.passengers.map((px, idx) => {
+        let cat = px.category;
+        if (!cat) {
+          const pref = (px.prefix || '').toUpperCase();
+          if (pref.startsWith('INF')) cat = 'Infant';
+          else if (pref.startsWith('CHD') || pref === 'MSTR' || pref === 'MISS') cat = 'Child';
+          else cat = 'Adult';
+        }
+        return {
+          sNo: String(idx + 1),
+          prefix: px.prefix || 'MR',
+          name: px.name || (idx === 0 ? p.partyName : ''),
+          passportNo: px.passportNo || '',
+          group: px.group || '',
+          visaNo: px.visaNo || '',
+          hasBed: px.hasBed !== undefined ? px.hasBed !== false : cat !== 'Infant',
+          category: cat,
+        };
+      });
       setPassengers(mapped);
       setPaxCounts(computePaxSummary(mapped));
     }
@@ -365,26 +389,169 @@ export default function TransportVoucherManager({ parties = [], onGenerateHotelV
     }
   };
 
-  // Passenger Handlers
-  const addPassenger = () => {
-    const nextList = [
-      ...passengers,
-      { sNo: String(passengers.length + 1), prefix: 'MR', name: '', passportNo: '', group: '', visaNo: '', hasBed: true },
-    ];
-    setPassengers(nextList);
-    setPaxCounts(computePaxSummary(nextList));
+  // Passenger Helper Functions & Category Stepper Handlers
+  const getPaxCategory = (p) => {
+    if (p.category) return p.category;
+    const pref = (p.prefix || '').toUpperCase();
+    if (pref.startsWith('INF')) return 'Infant';
+    if (pref.startsWith('CHD') || pref === 'MSTR' || pref === 'MISS') return 'Child';
+    return 'Adult';
+  };
+
+  const [paxInputValues, setPaxInputValues] = useState({});
+
+  const adultsCount = passengers.filter(p => getPaxCategory(p).toLowerCase() === 'adult').length;
+  const childrenCount = passengers.filter(p => getPaxCategory(p).toLowerCase() === 'child').length;
+  const infantsCount = passengers.filter(p => getPaxCategory(p).toLowerCase() === 'infant').length;
+
+  const setPaxCategoryCount = (cat, targetCount) => {
+    const minVal = cat.toLowerCase() === 'adult' ? 1 : 0;
+    const target = Math.max(minVal, Math.min(99, targetCount));
+    const catLower = cat.toLowerCase();
+
+    setPassengers(prev => {
+      const currentOfCat = prev.filter(p => getPaxCategory(p).toLowerCase() === catLower);
+      const diff = target - currentOfCat.length;
+      if (diff === 0) return prev;
+
+      let nextList = [];
+      if (diff > 0) {
+        const defaultPrefix = cat === 'Adult' ? 'MR' : cat === 'Child' ? 'CHD_MSTR' : 'INF_MSTR';
+        const newItems = Array.from({ length: diff }, (_, i) => ({
+          sNo: String(prev.length + i + 1),
+          prefix: defaultPrefix,
+          name: '',
+          passportNo: '',
+          group: '',
+          visaNo: '',
+          hasBed: cat !== 'Infant',
+          category: cat,
+        }));
+        nextList = [...prev, ...newItems].map((p, i) => ({ ...p, sNo: String(i + 1) }));
+      } else {
+        let kept = 0;
+        const result = [];
+        for (const p of prev) {
+          if (getPaxCategory(p).toLowerCase() === catLower) {
+            if (kept < target) {
+              result.push(p);
+              kept++;
+            }
+          } else {
+            result.push(p);
+          }
+        }
+        if (result.length === 0) {
+          result.push({
+            sNo: '1',
+            prefix: 'MR',
+            name: '',
+            passportNo: '',
+            group: '',
+            visaNo: '',
+            hasBed: true,
+            category: 'Adult',
+          });
+        }
+        nextList = result.map((p, i) => ({ ...p, sNo: String(i + 1) }));
+      }
+      setPaxCounts(computePaxSummary(nextList));
+      return nextList;
+    });
+  };
+
+  const adjustPaxCategory = (cat, delta) => {
+    const catLower = cat.toLowerCase();
+    const minVal = catLower === 'adult' ? 1 : 0;
+    const currentCount = passengers.filter(p => getPaxCategory(p).toLowerCase() === catLower).length;
+    const target = Math.max(minVal, currentCount + delta);
+    setPaxCategoryCount(cat, target);
+  };
+
+  const handleDirectPaxCountChange = (cat, valStr) => {
+    setPaxInputValues(prev => ({ ...prev, [cat]: valStr }));
+    if (valStr !== '') {
+      const num = parseInt(valStr, 10);
+      const minVal = cat.toLowerCase() === 'adult' ? 1 : 0;
+      if (!isNaN(num) && num >= minVal && num <= 99) {
+        setPaxCategoryCount(cat, num);
+      }
+    }
+  };
+
+  const handlePaxCountBlur = (cat) => {
+    setPaxInputValues(prev => {
+      const currentVal = prev[cat];
+      const minVal = cat.toLowerCase() === 'adult' ? 1 : 0;
+      if (currentVal === '' || isNaN(parseInt(currentVal, 10)) || parseInt(currentVal, 10) < minVal) {
+        setPaxCategoryCount(cat, minVal);
+      }
+      const next = { ...prev };
+      delete next[cat];
+      return next;
+    });
+  };
+
+  const addPassenger = (cat = 'Adult') => {
+    adjustPaxCategory(cat, 1);
   };
 
   const removePassenger = (index) => {
     if (passengers.length <= 1) return;
+    const target = passengers[index];
+    if (getPaxCategory(target).toLowerCase() === 'adult') {
+      const remainingAdults = passengers.filter((p, i) => i !== index && getPaxCategory(p).toLowerCase() === 'adult').length;
+      if (remainingAdults === 0) {
+        alert('Rule: Cannot remove the only Adult. At least 1 Adult is required.');
+        return;
+      }
+    }
     const nextList = passengers.filter((_, i) => i !== index).map((p, i) => ({ ...p, sNo: String(i + 1) }));
     setPassengers(nextList);
     setPaxCounts(computePaxSummary(nextList));
   };
 
   const updatePassenger = (index, field, value) => {
+    if (field === 'category' && value !== 'Adult') {
+      if (index === 0) {
+        alert('Rule: Lead Pilgrim / Party Head must be an Adult.');
+        return;
+      }
+      const otherAdults = passengers.filter((p, i) => i !== index && getPaxCategory(p).toLowerCase() === 'adult').length;
+      if (otherAdults === 0) {
+        alert('Rule: At least 1 Adult is required in the booking.');
+        return;
+      }
+    }
+    if (field === 'prefix' && (value.startsWith('INF') || value.startsWith('CHD')) && index === 0) {
+      alert('Rule: Lead Pilgrim / Party Head must be an Adult.');
+      return;
+    }
+
     const copy = [...passengers];
     copy[index] = { ...copy[index], [field]: value };
+    if (field === 'category') {
+      if (value === 'Infant') {
+        copy[index].hasBed = false;
+        copy[index].prefix = 'INF_MSTR';
+      } else if (value === 'Child') {
+        copy[index].hasBed = true;
+        if (!copy[index].prefix || copy[index].prefix === 'MR') copy[index].prefix = 'CHD_MSTR';
+      } else {
+        copy[index].hasBed = true;
+        if (copy[index].prefix === 'INF_MSTR' || copy[index].prefix === 'CHD_MSTR') copy[index].prefix = 'MR';
+      }
+    } else if (field === 'prefix') {
+      const pref = (value || '').toUpperCase();
+      if (pref.startsWith('INF')) {
+        copy[index].category = 'Infant';
+        copy[index].hasBed = false;
+      } else if (pref.startsWith('CHD') || pref === 'MSTR' || pref === 'MISS') {
+        copy[index].category = 'Child';
+      } else {
+        copy[index].category = 'Adult';
+      }
+    }
     // If updating first passenger name and party is empty, sync party
     if (index === 0 && field === 'name' && (!party || party.trim() === '')) {
       setParty(value);
@@ -1400,126 +1567,298 @@ export default function TransportVoucherManager({ parties = [], onGenerateHotelV
 
                   </div>
 
-                  {/* PASSENGER MANIFEST TABLE */}
-                  <div className="space-y-3 pt-2 border-t border-slate-200">
+                  {/* PASSENGER MANIFEST & DEMOGRAPHIC COUNTERS */}
+                  <div className="space-y-4 pt-2 border-t border-slate-200">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-emerald-600" />
-                        <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
-                          Passenger Manifest ({passengers.length} PAX)
-                        </h4>
-                        <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-                          {paxCounts}
-                        </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-emerald-600" />
+                          <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider">
+                            Passenger Manifest ({passengers.length} PAX)
+                          </h4>
+                          <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            {paxCounts}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Adjust counts directly by <strong className="text-slate-700">Adult, Child, Infant</strong> or edit passenger rows below.
+                        </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={addPassenger}
-                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>Add Passenger</span>
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => addPassenger('Adult')}
+                          className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Add Pax</span>
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                    {/* EDITABLE DEMOGRAPHIC COUNTS: Adult, Child, Infant Steppers */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {/* Adults Stepper */}
+                      <div className="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-0.5">Adults</span>
+                          <input
+                            type="number"
+                            min="1"
+                            max="99"
+                            value={paxInputValues['Adult'] !== undefined ? paxInputValues['Adult'] : adultsCount}
+                            onChange={(e) => handleDirectPaxCountChange('Adult', e.target.value)}
+                            onBlur={() => handlePaxCountBlur('Adult')}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                            onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
+                            className="w-14 h-8 px-1.5 text-left text-base font-black text-slate-900 bg-slate-50 hover:bg-slate-100 focus:bg-white border border-slate-200 hover:border-slate-300 focus:border-emerald-600 rounded-lg outline-none transition-colors cursor-text"
+                            title="Click to edit Adults count directly (min: 1)"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => adjustPaxCategory('Adult', -1)}
+                            disabled={adultsCount <= 1}
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Decrease Adult (minimum 1)"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => adjustPaxCategory('Adult', 1)}
+                            className="w-7 h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Add Adult"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Children Stepper */}
+                      <div className="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 block mb-0.5">Children</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            value={paxInputValues['Child'] !== undefined ? paxInputValues['Child'] : childrenCount}
+                            onChange={(e) => handleDirectPaxCountChange('Child', e.target.value)}
+                            onBlur={() => handlePaxCountBlur('Child')}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                            onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
+                            className="w-14 h-8 px-1.5 text-left text-base font-black text-sky-950 bg-sky-50/50 hover:bg-sky-50 focus:bg-white border border-sky-200 hover:border-sky-300 focus:border-sky-600 rounded-lg outline-none transition-colors cursor-text"
+                            title="Click to edit Children count directly"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => adjustPaxCategory('Child', -1)}
+                            disabled={childrenCount <= 0}
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Decrease Child"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => adjustPaxCategory('Child', 1)}
+                            className="w-7 h-7 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Add Child"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Infants Stepper */}
+                      <div className="p-3 bg-white rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 block mb-0.5">Infants</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="99"
+                            value={paxInputValues['Infant'] !== undefined ? paxInputValues['Infant'] : infantsCount}
+                            onChange={(e) => handleDirectPaxCountChange('Infant', e.target.value)}
+                            onBlur={() => handlePaxCountBlur('Infant')}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                            onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
+                            className="w-14 h-8 px-1.5 text-left text-base font-black text-purple-950 bg-purple-50/50 hover:bg-purple-50 focus:bg-white border border-purple-200 hover:border-purple-300 focus:border-purple-600 rounded-lg outline-none transition-colors cursor-text"
+                            title="Click to edit Infants count directly"
+                          />
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => adjustPaxCategory('Infant', -1)}
+                            disabled={infantsCount <= 0}
+                            className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Decrease Infant"
+                          >
+                            -
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => adjustPaxCategory('Infant', 1)}
+                            className="w-7 h-7 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-black text-xs flex items-center justify-center transition cursor-pointer"
+                            title="Add Infant"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Total PAX */}
+                      <div className="p-3 bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl text-white shadow-2xs flex items-center justify-between">
+                        <div>
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Total Pax</span>
+                          <span className="text-sm sm:text-base font-black text-emerald-400">{passengers.length} Guests</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addPassenger('Adult')}
+                          className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 transition cursor-pointer shadow-xs active:scale-95"
+                          title="Add Passenger Row"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Pax</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs bg-white">
                       <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
                           <thead className="bg-slate-50 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-200">
                             <tr>
                               <th className="py-2.5 px-3 w-12 text-center border-r border-slate-100">#</th>
-                              <th className="py-2.5 px-3 w-28 border-r border-slate-100">Prefix</th>
+                              <th className="py-2.5 px-3 w-24 border-r border-slate-100">Prefix</th>
+                              <th className="py-2.5 px-3 w-28 border-r border-slate-100">Category</th>
                               <th className="py-2.5 px-3 border-r border-slate-100">Full Legal Name *</th>
-                              <th className="py-2.5 px-3 border-r border-slate-100">Passport #</th>
-                              <th className="py-2.5 px-3 border-r border-slate-100">Visa #</th>
-                              <th className="py-2.5 px-3 text-center border-r border-slate-100 w-20">Bed</th>
+                              <th className="py-2.5 px-3 border-r border-slate-100 w-32">Passport #</th>
+                              <th className="py-2.5 px-3 border-r border-slate-100 w-28">Visa #</th>
+                              <th className="py-2.5 px-3 text-center border-r border-slate-100 w-16">Bed</th>
                               <th className="py-2.5 px-3 text-center w-14">Action</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {passengers.map((pax, idx) => (
-                              <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
-                                <td className="py-2 px-3 text-center font-mono font-bold text-slate-400 border-r border-slate-100">
-                                  {idx + 1}
-                                </td>
+                            {passengers.map((pax, idx) => {
+                              const paxCat = getPaxCategory(pax);
+                              return (
+                                <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                                  <td className="py-2 px-3 text-center font-mono font-bold text-slate-400 border-r border-slate-100">
+                                    {idx + 1}
+                                  </td>
 
-                                {/* Prefix */}
-                                <td className="py-2 px-3 border-r border-slate-100">
-                                  <select
-                                    value={pax.prefix || 'MR'}
-                                    onChange={(e) => updatePassenger(idx, 'prefix', e.target.value)}
-                                    className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 bg-white"
-                                  >
-                                    <option value="MR">MR</option>
-                                    <option value="MRS">MRS</option>
-                                    <option value="MS">MS</option>
-                                    <option value="CHD_MSTR">MSTR (Boy)</option>
-                                    <option value="CHD_MISS">MISS (Girl)</option>
-                                    <option value="INF_MSTR">INF (Infant)</option>
-                                  </select>
-                                </td>
+                                  {/* Prefix */}
+                                  <td className="py-2 px-2.5 border-r border-slate-100">
+                                    <select
+                                      value={pax.prefix || 'MR'}
+                                      onChange={(e) => updatePassenger(idx, 'prefix', e.target.value)}
+                                      className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 bg-white"
+                                    >
+                                      <option value="MR">MR</option>
+                                      <option value="MRS">MRS</option>
+                                      <option value="MS">MS</option>
+                                      {idx !== 0 && <option value="CHD_MSTR">MSTR (Boy)</option>}
+                                      {idx !== 0 && <option value="CHD_MISS">MISS (Girl)</option>}
+                                      {idx !== 0 && <option value="INF_MSTR">INF (Infant)</option>}
+                                    </select>
+                                  </td>
 
-                                {/* Name */}
-                                <td className="py-2 px-3 border-r border-slate-100">
-                                  <input
-                                    type="text"
-                                    value={pax.name}
-                                    onChange={(e) => updatePassenger(idx, 'name', e.target.value)}
-                                    placeholder={idx === 0 ? "Lead Passenger Name" : "Passenger Name"}
-                                    className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 bg-white outline-none focus:ring-1 focus:ring-slate-900 uppercase"
-                                    required={idx === 0}
-                                  />
-                                </td>
+                                  {/* Category Dropdown */}
+                                  <td className="py-2 px-2.5 border-r border-slate-100">
+                                    <select
+                                      value={idx === 0 ? 'Adult' : paxCat}
+                                      disabled={idx === 0}
+                                      onChange={(e) => updatePassenger(idx, 'category', e.target.value)}
+                                      title={idx === 0 ? 'Rule: Party Head must always be an Adult' : 'Select Category'}
+                                      className={`w-full px-2 py-1.5 border rounded-lg text-xs font-bold outline-none ${
+                                        idx === 0
+                                          ? 'bg-slate-100 text-slate-500 border-slate-200 cursor-not-allowed'
+                                          : paxCat === 'Infant'
+                                          ? 'bg-purple-50 text-purple-800 border-purple-200 cursor-pointer'
+                                          : paxCat === 'Child'
+                                          ? 'bg-sky-50 text-sky-800 border-sky-200 cursor-pointer'
+                                          : 'bg-slate-50 text-slate-800 border-slate-200 cursor-pointer'
+                                      }`}
+                                    >
+                                      <option value="Adult">Adult</option>
+                                      {idx !== 0 && <option value="Child">Child</option>}
+                                      {idx !== 0 && <option value="Infant">Infant</option>}
+                                    </select>
+                                  </td>
 
-                                {/* Passport # */}
-                                <td className="py-2 px-3 border-r border-slate-100">
-                                  <input
-                                    type="text"
-                                    value={pax.passportNo}
-                                    onChange={(e) => updatePassenger(idx, 'passportNo', e.target.value)}
-                                    placeholder="e.g. PK1234567"
-                                    className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 bg-white outline-none uppercase"
-                                  />
-                                </td>
+                                  {/* Name */}
+                                  <td className="py-2 px-3 border-r border-slate-100">
+                                    <input
+                                      type="text"
+                                      value={pax.name}
+                                      onChange={(e) => updatePassenger(idx, 'name', e.target.value)}
+                                      placeholder={idx === 0 ? "Lead Passenger Name" : "Passenger Name"}
+                                      className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 bg-white outline-none focus:ring-1 focus:ring-slate-900 uppercase"
+                                      required={idx === 0}
+                                    />
+                                  </td>
 
-                                {/* Visa # */}
-                                <td className="py-2 px-3 border-r border-slate-100">
-                                  <input
-                                    type="text"
-                                    value={pax.visaNo}
-                                    onChange={(e) => updatePassenger(idx, 'visaNo', e.target.value)}
-                                    placeholder="e.g. 61789012"
-                                    className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 bg-white outline-none"
-                                  />
-                                </td>
+                                  {/* Passport # */}
+                                  <td className="py-2 px-3 border-r border-slate-100">
+                                    <input
+                                      type="text"
+                                      value={pax.passportNo}
+                                      onChange={(e) => updatePassenger(idx, 'passportNo', e.target.value)}
+                                      placeholder="e.g. PK1234567"
+                                      className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-mono font-bold text-slate-800 bg-white outline-none uppercase"
+                                    />
+                                  </td>
 
-                                {/* Bed */}
-                                <td className="py-2 px-3 text-center border-r border-slate-100">
-                                  <input
-                                    type="checkbox"
-                                    checked={pax.hasBed !== false}
-                                    onChange={(e) => updatePassenger(idx, 'hasBed', e.target.checked)}
-                                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
-                                  />
-                                </td>
+                                  {/* Visa # */}
+                                  <td className="py-2 px-3 border-r border-slate-100">
+                                    <input
+                                      type="text"
+                                      value={pax.visaNo}
+                                      onChange={(e) => updatePassenger(idx, 'visaNo', e.target.value)}
+                                      placeholder="e.g. 61789012"
+                                      className="w-full px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-mono text-slate-800 bg-white outline-none"
+                                    />
+                                  </td>
 
-                                {/* Action */}
-                                <td className="py-2 px-3 text-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => removePassenger(idx)}
-                                    disabled={passengers.length <= 1}
-                                    className={`p-1 rounded text-slate-400 hover:text-rose-600 transition ${
-                                      passengers.length <= 1 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:bg-rose-50'
-                                    }`}
-                                    title="Remove Passenger"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
+                                  {/* Bed */}
+                                  <td className="py-2 px-3 text-center border-r border-slate-100">
+                                    <input
+                                      type="checkbox"
+                                      checked={pax.hasBed !== false}
+                                      onChange={(e) => updatePassenger(idx, 'hasBed', e.target.checked)}
+                                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                                    />
+                                  </td>
+
+                                  {/* Action */}
+                                  <td className="py-2 px-3 text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => removePassenger(idx)}
+                                      disabled={passengers.length <= 1}
+                                      className={`p-1 rounded text-slate-400 hover:text-rose-600 transition ${
+                                        passengers.length <= 1 ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:bg-rose-50'
+                                      }`}
+                                      title="Remove Passenger"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>

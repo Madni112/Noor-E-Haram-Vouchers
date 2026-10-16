@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { QRCodeSVG } from 'qrcode.react';
 import Link from 'next/link';
 import { 
   Calculator, 
@@ -19,8 +18,7 @@ import {
   Receipt,
   Users,
   Compass,
-  MessageCircle,
-  CheckCircle2
+  MessageCircle
 } from 'lucide-react';
 import { getEstimateById, convertEstimateToInvoice } from '../../../lib/erpData';
 
@@ -65,7 +63,7 @@ export default function EstimateViewPage() {
       const quoteUrl = `${origin}/estimate/${estimate.id || id}`;
       const items = estimate.items || {};
       const bDetails = estimate.breakdownDetails || {};
-      const company = estimate.companyName || 'Noor E Haram Travel & Tours';
+      const company = estimate.companyName || 'Noor E Haram Travels';
 
       let computedDur = '';
       if (bDetails.flightDateFrom && bDetails.flightDateTo) {
@@ -289,43 +287,23 @@ export default function EstimateViewPage() {
       {viewMode === 'CUSTOMER' && (
         <div className="max-w-[820px] mx-auto bg-white rounded-xl shadow-lg border border-slate-200/90 overflow-hidden print:shadow-none print:border-none print:rounded-none print:w-full print:max-w-full">
           
-          {/* A. Minimalist Executive Header */}
+          {/* A. Executive Header: Big Company Logo on Left, Package Estimation on Right */}
           <div className="p-6 sm:p-8 border-b border-slate-100 bg-white">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    Official Quotation
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    REF: {estimate.estimateNo}
-                  </span>
-                </div>
-
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase">
-                  {estimate.companyName || 'NOOR E HARAM TRAVELS & TOURS'}
-                </h1>
-                
-                <p className="text-xs text-slate-500 font-medium">
-                  Umrah &amp; Hajj Travel Operations • Authorized Services
-                </p>
-
-                <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-500">
-                  <span>Date: <strong className="text-slate-800 font-semibold">{formattedDate}</strong></span>
-                </div>
+              {/* Left: Company Logo (Big size according to page) */}
+              <div className="flex items-center justify-start shrink-0">
+                <img 
+                  src={estimate.companyLogo || estimate.logo || "/logo.png"} 
+                  alt={estimate.companyName || "Noor E Haram Travels Logo"} 
+                  className="h-20 sm:h-24 md:h-28 max-w-[280px] sm:max-w-[340px] w-auto object-contain drop-shadow-xs" 
+                />
               </div>
 
-              {/* Clean QR Verification Node */}
-              <div className="flex items-center sm:flex-col gap-3 sm:gap-1 text-center shrink-0 border border-slate-200 rounded-lg p-2 bg-slate-50/60 self-start sm:self-auto">
-                <QRCodeSVG 
-                  value={liveQrUrl} 
-                  size={64} 
-                  level="M" 
-                  includeMargin={false}
-                />
-                <span className="text-[8px] font-bold uppercase text-slate-600 tracking-wider">
-                  Scan To Verify
-                </span>
+              {/* Right: Package Estimation Heading */}
+              <div className="sm:text-right">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#0a192f] tracking-tight uppercase">
+                  Package Estimation
+                </h1>
               </div>
             </div>
           </div>
@@ -358,48 +336,7 @@ export default function EstimateViewPage() {
 
           <div className="p-6 sm:p-8 space-y-6">
 
-            {/* C. Clean Luxury Investment Card (What customer actually pays) */}
-            <div className="rounded-xl bg-slate-900 text-white p-5 sm:p-6 shadow-md border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block">
-                  All-Inclusive Package Quotation
-                </span>
-                
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight">
-                    {estimate.currency} {(items.perPaxQuote || 0).toLocaleString()}
-                  </span>
-                  <span className="text-xs text-slate-300 font-semibold">
-                    / Pilgrim (All-Inclusive)
-                  </span>
-                </div>
-
-                <p className="text-xs text-slate-400 pt-0.5">
-                  Total Package for {estimate.paxCount} Travelers: <strong className="text-emerald-300 font-mono text-sm">{estimate.currency} {(items.grandTotal || 0).toLocaleString()}</strong>
-                </p>
-              </div>
-
-              <div className="border-t md:border-t-0 md:border-l border-slate-800 pt-3 md:pt-0 md:pl-5 text-xs text-slate-300 space-y-1 shrink-0">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Visa</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{ticketLabel}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Hotel</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Transport &amp; Ziyarat</span>
-                </div>
-              </div>
-            </div>
-
-            {/* D. Hotels & Accommodations (ONLY Hotel Name, City & Room Type, Deduplicated) */}
+            {/* C. Hotels & Accommodations (ONLY Hotel Name, City & Room Type, Deduplicated) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
                 <Building2 className="w-4 h-4 text-slate-700" />
@@ -449,7 +386,7 @@ export default function EstimateViewPage() {
               </div>
             </div>
 
-            {/* E. Package Inclusions (Clean 5-card grid: Visa, Ticket, Hotel, Transport, Ziyarat) */}
+            {/* D. Package Inclusions (Clean 5-card grid: Visa, Ticket, Hotel, Transport, Ziyarat) */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
                 <Sparkles className="w-4 h-4 text-slate-700" />
@@ -518,6 +455,35 @@ export default function EstimateViewPage() {
               </div>
             </div>
 
+            {/* E. Clean Luxury Investment Card (What customer actually pays) - Hotel Voucher Palette (#0a192f & #dfba73) */}
+            <div className="rounded-xl bg-[#0a192f] text-white p-5 sm:p-6 shadow-lg border border-[#dfba73]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+              <div className="absolute -right-10 -top-10 w-36 h-36 bg-[#dfba73]/10 rounded-full blur-2xl pointer-events-none" />
+              
+              <div className="space-y-1 relative z-10">
+                <span className="text-[9.5px] font-black text-[#dfba73] uppercase tracking-widest px-2.5 py-0.5 rounded bg-[#dfba73]/15 border border-[#dfba73]/40 inline-block shadow-2xs">
+                  All-Inclusive Package Quotation
+                </span>
+                
+                <div className="flex items-baseline gap-2 pt-1">
+                  <span className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight">
+                    {estimate.currency} {(items.perPaxQuote || 0).toLocaleString()}
+                  </span>
+                  <span className="text-xs text-[#dfba73] font-bold">
+                    / Per Pax
+                  </span>
+                </div>
+              </div>
+
+              <div className="border-t sm:border-t-0 sm:border-l border-slate-700/80 pt-3 sm:pt-0 sm:pl-6 sm:text-right relative z-10">
+                <span className="text-[10px] uppercase tracking-wider text-slate-300 font-bold block">
+                  Total Package ({estimate.paxCount} {Number(estimate.paxCount) === 1 ? 'Traveler' : 'Travelers'})
+                </span>
+                <span className="text-xl sm:text-2xl font-black font-mono text-[#dfba73] tracking-tight drop-shadow-xs">
+                  {estimate.currency} {(items.grandTotal || 0).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
             {/* F. Terms & Guidance */}
             <div className="pt-2 border-t border-slate-200 text-[11px] text-slate-500 space-y-1.5">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -528,7 +494,7 @@ export default function EstimateViewPage() {
                   {estimate.companyName || 'NOOR E HARAM TRAVELS & TOURS'}
                 </p>
                 <p className="text-slate-500 font-mono text-[10.5px]">
-                  Helpline: 0311-2324764 / 0312-3608683 • Email: info@nooreharam.com
+                  Helpline: 0311-2264567 / 0312-8039911 • Email: operations@nooreharam.com
                 </p>
               </div>
             </div>

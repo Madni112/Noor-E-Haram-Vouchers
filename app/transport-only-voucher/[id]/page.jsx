@@ -21,6 +21,24 @@ import {
   Plane
 } from 'lucide-react';
 
+function formatTimeWithoutSeconds(timeVal) {
+  if (!timeVal) return '';
+  const str = String(timeVal).trim();
+  if (!str) return '';
+  const match = str.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+  if (match) {
+    const hh = match[1].padStart(2, '0');
+    const mm = match[2];
+    const ampm = match[3] ? ` ${match[3].toUpperCase()}` : '';
+    return `${hh}:${mm}${ampm}`.trim();
+  }
+  if (str.includes('T')) {
+    const part = str.split('T')[1];
+    return part.slice(0, 5);
+  }
+  return str.replace(/:\d{2}$/, '').trim();
+}
+
 export default function TransportVoucherViewPage() {
   const params = useParams();
   const id = params?.id ? decodeURIComponent(params.id) : '';
@@ -393,7 +411,7 @@ export default function TransportVoucherViewPage() {
                       {b.pickupLocation || '—'}
                     </td>
                     <td className="px-2 py-1.5 whitespace-nowrap font-mono font-bold text-slate-700">
-                      {b.time || '12:00'}
+                      {formatTimeWithoutSeconds(b.time) || '12:00'}
                     </td>
                     <td className="px-2 py-1.5 font-bold text-slate-900">
                       {b.dropoffLocation || '—'}
@@ -438,7 +456,9 @@ export default function TransportVoucherViewPage() {
                     <th className="px-3 py-1.5">Flight No.</th>
                     <th className="px-3 py-1.5">Date</th>
                     <th className="px-3 py-1.5">Departure</th>
+                    <th className="px-3 py-1.5">Dep. Time</th>
                     <th className="px-3 py-1.5">Arrival</th>
+                    <th className="px-3 py-1.5">Arr. Time</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 print:divide-slate-200 font-medium">
@@ -453,8 +473,14 @@ export default function TransportVoucherViewPage() {
                       <td className="px-3 py-1.5 text-slate-700 font-semibold">
                         {f.departure || '—'}
                       </td>
+                      <td className="px-3 py-1.5 font-mono font-bold text-slate-800">
+                        {formatTimeWithoutSeconds(f.departureTime || f.depTime) || '—'}
+                      </td>
                       <td className="px-3 py-1.5 text-slate-700 font-semibold">
                         {f.arrival || '—'}
+                      </td>
+                      <td className="px-3 py-1.5 font-mono font-bold text-slate-800">
+                        {formatTimeWithoutSeconds(f.arrivalTime || f.arrTime) || '—'}
                       </td>
                     </tr>
                   ))}

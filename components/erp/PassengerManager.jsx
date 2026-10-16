@@ -478,6 +478,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
   const [showFamilyModal, setShowFamilyModal] = useState(false);
   const [modalMode, setModalMode] = useState('NEW_FAMILY'); // 'NEW_FAMILY' | 'ADD_TO_EXISTING'
   const [targetPartyUid, setTargetPartyUid] = useState(parties[0]?.partyHeadUid || '');
+  const [fillDeclaredSlot, setFillDeclaredSlot] = useState(true);
 
   // In-List Passenger Deletion Mode State
   const [isDeleteMode, setIsDeleteMode] = useState(false);
@@ -535,6 +536,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       hasBed: pax.hasBed !== false,
       visaNo: pax.visaNo || '',
       relationship: pax.relationship || (pax.isPartyHead ? 'Family Head / Lead Pilgrim' : 'Family Member'),
+      isDeclaredSlot: pax.isDeclaredSlot !== false,
     });
     setShowEditPaxModal(true);
   };
@@ -547,6 +549,14 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     }
 
     const updatedList = updatePassenger(editingPax.parentPartyUid, editingPax.id, editingPax);
+    const parentParty = updatedList.find(p => p.partyHeadUid === editingPax.parentPartyUid);
+    if (parentParty) {
+      const declaredCount = Math.max(parseInt(parentParty.declaredPax, 10) || 0, 1);
+      const extraCount = (parentParty.passengers || []).slice(1).filter(p => p.isDeclaredSlot === false).length;
+      parentParty.totalPax = Math.max(declaredCount + extraCount, (parentParty.passengers || []).length);
+      saveParty(parentParty);
+    }
+
     if (onPartiesUpdated) {
       onPartiesUpdated(updatedList);
     }
@@ -687,6 +697,13 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
     setTargetPartyUid(activeUid);
     setModalMode('ADD_TO_EXISTING');
     setFamilyMembers([createDefaultAdditionalMember('Family Member', 'MRS', 'F')]);
+
+    const targetParty = parties.find(p => p.partyHeadUid === activeUid);
+    const declaredCount = Math.max(parseInt(targetParty?.declaredPax, 10) || 0, parseInt(targetParty?.totalPax, 10) || 0, 1);
+    const claimedSlots = (targetParty?.passengers || []).slice(1).filter(p => p.isDeclaredSlot !== false).length;
+    const remaining = Math.max(0, (declaredCount - 1) - claimedSlots);
+    setFillDeclaredSlot(remaining > 0);
+
     setShowFamilyModal(true);
   };
 
@@ -856,7 +873,15 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       party.passengers = party.passengers || [];
       const currentCount = party.passengers.length;
 
+      const declaredCount = Math.max(parseInt(party.declaredPax, 10) || 0, parseInt(party.totalPax, 10) || 0, 1);
+      const totalSlotsAvailable = Math.max(0, declaredCount - 1);
+      let claimedSlots = (party.passengers || []).slice(1).filter(p => p.isDeclaredSlot !== false).length;
+
       familyMembers.forEach((m, idx) => {
+        const canClaimSlot = fillDeclaredSlot && (claimedSlots < totalSlotsAvailable);
+        if (canClaimSlot) {
+          claimedSlots++;
+        }
         const newPax = {
           id: `pax-${party.partyHeadUid}-${currentCount + idx + 1}`,
           sNo: String(currentCount + idx + 1),
@@ -870,11 +895,14 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
           visaNo: m.visaNo.trim() || '',
           relationship: m.relationship || 'Family Member',
           contactPhone: party.contactPhone || '',
+          isDeclaredSlot: canClaimSlot,
         };
         party.passengers.push(newPax);
       });
 
-      party.totalPax = party.passengers.length;
+      const extraCount = party.passengers.slice(1).filter(p => p.isDeclaredSlot === false).length;
+      party.declaredPax = declaredCount;
+      party.totalPax = Math.max(declaredCount + extraCount, party.passengers.length);
       saveParty(party);
       if (onPartiesUpdated) onPartiesUpdated([...parties]);
       setSelectedPartyUid(party.partyHeadUid);
@@ -1340,9 +1368,27 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
 
                       {/* Right: PAX Count Badge, Edit Family Button & + Member Quick Button */}
                       <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                          {paxList.length} PAX
-                        </span>
+                        {(() => {
+                          const displayPax = Math.max(parseInt(party.totalPax, 10) || 0, parseInt(party.declaredPax, 10) || 0, paxList.length || 1);
+                          const hasUnnamedSlots = displayPax > paxList.length;
+                          return (
+                            <span 
+                              className={`px-2.5 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
+                                hasUnnamedSlots 
+                                  ? 'bg-amber-50 text-amber-900 border-amber-200' 
+                                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
+                              title={hasUnnamedSlots ? `${paxList.length} Named Pilgrim(s), ${displayPax - paxList.length} Unnamed Slot(s)` : `${displayPax} Passengers`}
+                            >
+                              <span>{displayPax} PAX</span>
+                              {hasUnnamedSlots && (
+                                <span className="text-[10px] font-semibold text-amber-700 bg-amber-100/70 px-1 rounded">
+                                  {paxList.length}/{displayPax} Named
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })()}
 
                         <button
                           type="button"
@@ -1958,20 +2004,81 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                   </div>
                 </div>
               ) : (
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div className="flex-1">
-                    <label className="block text-slate-700 font-semibold mb-1">
-                      Select Target Family Group *
-                    </label>
-                    <SearchablePartySelect
-                      parties={parties}
-                      value={targetPartyUid}
-                      onChange={(uid) => setTargetPartyUid(uid)}
-                    />
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3 text-xs">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <label className="block text-slate-700 font-semibold mb-1">
+                        Select Target Family Group *
+                      </label>
+                      <SearchablePartySelect
+                        parties={parties}
+                        value={targetPartyUid}
+                        onChange={(uid) => {
+                          setTargetPartyUid(uid);
+                          const sel = parties.find(p => p.partyHeadUid === uid);
+                          const dec = Math.max(parseInt(sel?.declaredPax, 10) || 0, parseInt(sel?.totalPax, 10) || 0, 1);
+                          const clm = (sel?.passengers || []).slice(1).filter(p => p.isDeclaredSlot !== false).length;
+                          const rem = Math.max(0, (dec - 1) - clm);
+                          setFillDeclaredSlot(rem > 0);
+                        }}
+                      />
+                    </div>
+                    <div className="text-xs text-slate-500 sm:text-right sm:max-w-xs">
+                      <span>New members will be added directly into this selected family group.</span>
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-500 sm:text-right sm:max-w-xs">
-                    <span>New members will be added directly into this selected family group.</span>
-                  </div>
+
+                  {/* Slot availability Banner & Checkbox */}
+                  {(() => {
+                    const targetParty = parties.find(p => p.partyHeadUid === targetPartyUid);
+                    const declaredCount = Math.max(parseInt(targetParty?.declaredPax, 10) || 0, parseInt(targetParty?.totalPax, 10) || 0, 1);
+                    const totalSlotsAvailable = Math.max(0, declaredCount - 1);
+                    if (totalSlotsAvailable <= 0) return null;
+
+                    const claimedSlots = (targetParty?.passengers || []).slice(1).filter(p => p.isDeclaredSlot !== false).length;
+                    const remaining = Math.max(0, totalSlotsAvailable - claimedSlots);
+
+                    if (remaining > 0) {
+                      return (
+                        <div className="p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-2xl flex items-start gap-3 transition-all">
+                          <input
+                            type="checkbox"
+                            id="fillDeclaredSlotCheckbox"
+                            checked={fillDeclaredSlot}
+                            onChange={(e) => setFillDeclaredSlot(e.target.checked)}
+                            className="w-4 h-4 mt-0.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                          />
+                          <label htmlFor="fillDeclaredSlotCheckbox" className="text-xs text-slate-800 cursor-pointer select-none flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-extrabold text-emerald-950">
+                                Fill an unnamed slot from declared {declaredCount} PAX ({remaining} slot{remaining === 1 ? '' : 's'} remaining)
+                              </span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full border border-emerald-200">
+                                Slot Available
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-600 block mt-0.5">
+                              {fillDeclaredSlot 
+                                ? `Checking this keeps the family group at ${declaredCount} PAX (fills 1 of the ${remaining} unnamed slots).` 
+                                : `Unchecked: Adds this member as an extra passenger (Increases total to ${Math.max(declaredCount, (targetParty.passengers?.length || 1)) + familyMembers.length} PAX).`}
+                            </span>
+                          </label>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="p-3.5 bg-slate-100/90 border border-slate-200 rounded-2xl flex items-center justify-between text-xs text-slate-700">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900">All {declaredCount} declared slots filled ({totalSlotsAvailable}/{totalSlotsAvailable})</span>
+                          <span className="text-[11px] text-slate-500">• Adding this member will increase total to {Math.max(declaredCount, (targetParty.passengers?.length || 1)) + familyMembers.length} PAX</span>
+                        </div>
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700 border border-slate-300">
+                          0 Slots Left (Disabled)
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -2339,6 +2446,36 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
                     className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-mono text-slate-800 text-xs outline-none focus:ring-1 focus:ring-slate-900"
                   />
                 </div>
+
+                {/* Declared Slot Toggle in Edit Single Passenger */}
+                {!editingPax.isPartyHead && editingPax.relationship !== 'Family Head' && (() => {
+                  const parentParty = parties.find(p => p.partyHeadUid === editingPax.parentPartyUid);
+                  const declaredCount = Math.max(parseInt(parentParty?.declaredPax, 10) || 0, parseInt(parentParty?.totalPax, 10) || 0, 1);
+                  if (declaredCount <= 1) return null;
+
+                  const isChecked = editingPax.isDeclaredSlot !== false;
+                  return (
+                    <div className="sm:col-span-2 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        id="editDeclaredSlotCheckbox"
+                        checked={isChecked}
+                        onChange={(e) => setEditingPax({ ...editingPax, isDeclaredSlot: e.target.checked })}
+                        className="w-4 h-4 mt-0.5 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+                      />
+                      <label htmlFor="editDeclaredSlotCheckbox" className="text-xs text-slate-800 cursor-pointer select-none flex-1">
+                        <span className="font-bold text-slate-900 block">
+                          Count as one of the declared {declaredCount} PAX slots
+                        </span>
+                        <span className="text-[11px] text-slate-500 block mt-0.5">
+                          {isChecked
+                            ? `Currently occupying a declared slot (Keeps family total at ${declaredCount} PAX).`
+                            : `Unchecked: Treated as an extra passenger (Frees up 1 unnamed slot for new members and enables slot checkbox).`}
+                        </span>
+                      </label>
+                    </div>
+                  );
+                })()}
 
               </div>
 
