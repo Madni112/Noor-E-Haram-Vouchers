@@ -1097,13 +1097,23 @@ export default function InvoiceLedger({
               Module D
             </span>
             <h2 className="text-base sm:text-lg font-bold text-slate-900">
-              {viewMode === 'INVOICES' ? 'Bill & Invoices Manager' : 'Party & Customer Accounts Ledger'}
+              {viewMode === 'INVOICES' 
+                ? 'Bill & Invoices Manager' 
+                : ledgerSubTab === 'BANKS'
+                ? 'Bank & Cash Accounts (PKR)'
+                : ledgerSubTab === 'JOURNAL'
+                ? 'General Journal & Audit Trail'
+                : 'Customer Accounts & Ledger'}
             </h2>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
             {viewMode === 'INVOICES' 
               ? 'Issue client bills, track payment status, and manage client billings.'
-              : 'Complete running debit/credit statements, payment receipts history, and customer accounts.'}
+              : ledgerSubTab === 'BANKS'
+              ? 'Cash drawer, corporate bank accounts, live balances, and deposit inflows.'
+              : ledgerSubTab === 'JOURNAL'
+              ? 'Complete chronological debit/credit accounting entries and running ledger audit.'
+              : 'Directory of registered customer accounts, running statements, and receivables.'}
           </p>
         </div>
 
@@ -1117,13 +1127,30 @@ export default function InvoiceLedger({
               <Plus className="w-4 h-4" />
               <span>Create Bill</span>
             </button>
+          ) : ledgerSubTab === 'BANKS' ? (
+            <button
+              type="button"
+              onClick={() => setShowAddBankModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Bank Account</span>
+            </button>
+          ) : ledgerSubTab === 'JOURNAL' ? (
+            <button
+              onClick={handlePrintLedger}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] border border-[#dfba73]/40 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Print Consolidated Journal</span>
+            </button>
           ) : (
             <button
               onClick={handlePrintLedger}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] border border-[#dfba73]/40 rounded-xl text-xs font-bold shadow-xs transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] border border-[#dfba73]/40 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-              <span>Print Statement</span>
+              <span>Print Statements</span>
             </button>
           )}
         </div>
@@ -1281,73 +1308,6 @@ export default function InvoiceLedger({
       {/* ============================================================= */}
       {viewMode === 'LEDGER' && (
         <div className="space-y-4 statement-sheet">
-
-          {/* Sub-Navigation Switcher (print-hide) */}
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/90 shadow-2xs print-hide">
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setLedgerSubTab('CUSTOMERS')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  ledgerSubTab === 'CUSTOMERS' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Customer Ledgers &amp; Statements</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-50 text-indigo-700 font-mono font-bold">
-                  {customerLedgerSummaries.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setLedgerSubTab('BANKS')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  ledgerSubTab === 'BANKS' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Landmark className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Bank &amp; Cash Accounts (PKR)</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 font-mono font-bold">
-                  {bankAccounts.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setLedgerSubTab('JOURNAL')}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  ledgerSubTab === 'JOURNAL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <FileText className="w-3.5 h-3.5 text-blue-600" />
-                <span>All Journal Transactions</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {ledgerSubTab === 'BANKS' && (
-                <button
-                  type="button"
-                  onClick={() => setShowAddBankModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Bank Account</span>
-                </button>
-              )}
-
-              {ledgerSubTab === 'JOURNAL' && (
-                <button
-                  onClick={handlePrintLedger}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] border border-[#dfba73]/40 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Print Consolidated Journal</span>
-                </button>
-              )}
-            </div>
-          </div>
 
           {/* ========================================================= */}
           {/* SUB-VIEW 1: CUSTOMER LEDGERS & STATEMENTS (PARTY HEADS)   */}
