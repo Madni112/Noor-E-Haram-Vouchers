@@ -31,7 +31,8 @@ import {
   FileText,
   UserCheck,
   Settings,
-  RotateCw
+  RotateCw,
+  Landmark
 } from 'lucide-react';
 import { 
   getAllParties, 
@@ -81,6 +82,7 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
   const [passengerMenuOpen, setPassengerMenuOpen] = useState(true); // Dropdown for Passenger
   const [voucherMenuOpen, setVoucherMenuOpen] = useState(true); // Dropdown for Vouchers
   const [salesMenuOpen, setSalesMenuOpen] = useState(true); // Dropdown for Invoice / Sale
+  const [accountsMenuOpen, setAccountsMenuOpen] = useState(true); // Dropdown for Accounts & Ledger
   const [cloudSyncStatus, setCloudSyncStatus] = useState('syncing'); // 'synced' | 'syncing' | 'offline'
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hotelPrefillData, setHotelPrefillData] = useState(null);
@@ -373,12 +375,56 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
       hidden: true,
     },
     {
+      id: 'ACCOUNTS_DROPDOWN',
+      isDropdown: true,
+      label: 'Accounts & Ledger',
+      icon: Landmark,
+      badge: null,
+      section: 'modules',
+      subItems: [
+        {
+          id: 'LEDGER_CUSTOMERS',
+          label: 'Customer Accounts',
+          icon: Users,
+          badge: parties.length || null,
+        },
+        {
+          id: 'LEDGER_BANKS',
+          label: 'Bank & Cash Accounts',
+          icon: Landmark,
+          badge: null,
+        },
+        {
+          id: 'LEDGER_JOURNAL',
+          label: 'General Journal',
+          icon: FileText,
+          badge: null,
+        }
+      ]
+    },
+    {
       id: 'LEDGER',
       label: 'Accounts Ledger',
-      subtitle: 'Module D2',
       icon: FileText,
-      badge: null,
-      section: 'modules'
+      hidden: true,
+    },
+    {
+      id: 'LEDGER_CUSTOMERS',
+      label: 'Customer Accounts',
+      icon: Users,
+      hidden: true,
+    },
+    {
+      id: 'LEDGER_BANKS',
+      label: 'Bank & Cash Accounts',
+      icon: Landmark,
+      hidden: true,
+    },
+    {
+      id: 'LEDGER_JOURNAL',
+      label: 'General Journal',
+      icon: FileText,
+      hidden: true,
     },
     {
       id: 'REMINDERS',
@@ -478,8 +524,9 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
                 if (item.isDropdown) {
                   const isPassenger = item.id === 'PASSENGER_DROPDOWN';
                   const isVoucher = item.id === 'VOUCHER_DROPDOWN';
-                  const isOpen = isPassenger ? passengerMenuOpen : isVoucher ? voucherMenuOpen : salesMenuOpen;
-                  const setIsOpen = isPassenger ? setPassengerMenuOpen : isVoucher ? setVoucherMenuOpen : setSalesMenuOpen;
+                  const isAccounts = item.id === 'ACCOUNTS_DROPDOWN';
+                  const isOpen = isPassenger ? passengerMenuOpen : isVoucher ? voucherMenuOpen : isAccounts ? accountsMenuOpen : salesMenuOpen;
+                  const setIsOpen = isPassenger ? setPassengerMenuOpen : isVoucher ? setVoucherMenuOpen : isAccounts ? setAccountsMenuOpen : setSalesMenuOpen;
                   const isAnySubActive = item.subItems.some(sub => activeTab === sub.id);
                   const DropIcon = item.icon;
 
@@ -841,11 +888,18 @@ export default function ErpPortalPage({ initialTab = 'DASHBOARD' }) {
             />
           )}
 
-          {(activeTab === 'INVOICES' || activeTab === 'LEDGER') && (
+          {(activeTab === 'INVOICES' || activeTab === 'LEDGER' || activeTab === 'LEDGER_CUSTOMERS' || activeTab === 'LEDGER_BANKS' || activeTab === 'LEDGER_JOURNAL') && (
             <InvoiceLedger 
               invoices={invoices}
               parties={parties}
-              initialView={activeTab === 'LEDGER' ? 'LEDGER' : 'INVOICES'}
+              initialView={activeTab === 'INVOICES' ? 'INVOICES' : 'LEDGER'}
+              initialLedgerSubTab={
+                activeTab === 'LEDGER_BANKS' 
+                  ? 'BANKS' 
+                  : activeTab === 'LEDGER_JOURNAL' 
+                  ? 'JOURNAL' 
+                  : 'CUSTOMERS'
+              }
               onViewChange={(newView) => handleTabSwitch(newView)}
               onInvoicesUpdated={(updated) => {
                 setInvoices(updated);

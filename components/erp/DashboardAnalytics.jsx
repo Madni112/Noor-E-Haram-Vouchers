@@ -88,8 +88,8 @@ export default function DashboardAnalytics({
             <span>Manage Manifests</span>
           </button>
           <button
-            onClick={() => onNavigate && onNavigate('INVOICES')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-200/90 shadow-xs transition-all active:scale-95"
+            onClick={() => onNavigate && onNavigate('LEDGER')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold border border-slate-200/90 shadow-xs transition-all active:scale-95 cursor-pointer"
           >
             <Receipt className="w-3.5 h-3.5 text-slate-500" />
             <span>Financial Ledger</span>

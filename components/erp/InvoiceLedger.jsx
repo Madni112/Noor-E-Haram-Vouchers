@@ -61,6 +61,7 @@ export default function InvoiceLedger({
   invoices = [], 
   parties = [], 
   initialView = 'INVOICES', 
+  initialLedgerSubTab = 'CUSTOMERS',
   onViewChange,
   onInvoicesUpdated 
 }) {
@@ -133,7 +134,14 @@ export default function InvoiceLedger({
     initialBalance: ''
   });
 
-  const [ledgerSubTab, setLedgerSubTab] = useState('CUSTOMERS'); // 'CUSTOMERS' | 'BANKS' | 'JOURNAL'
+  const [ledgerSubTab, setLedgerSubTab] = useState(initialLedgerSubTab || 'CUSTOMERS'); // 'CUSTOMERS' | 'BANKS' | 'JOURNAL'
+
+  useEffect(() => {
+    if (initialLedgerSubTab) {
+      setLedgerSubTab(initialLedgerSubTab);
+    }
+  }, [initialLedgerSubTab]);
+
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const [selectedPartyForPrint, setSelectedPartyForPrint] = useState(null);
 
