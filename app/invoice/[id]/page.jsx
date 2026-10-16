@@ -333,6 +333,24 @@ export default function InvoiceViewPage() {
           </div>
         )}
 
+        {/* SAR Currency Conversion Engine Banner */}
+        {invoice.exchangeRateSarPkr && (
+          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200/90 rounded-lg px-3.5 py-1.5 mb-4 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">🇸🇦</span>
+              <span className="font-extrabold uppercase text-emerald-950 text-[10px] tracking-wider">
+                Currency Conversion Engine Applied:
+              </span>
+              <span className="font-mono font-black text-emerald-900 bg-white px-2 py-0.5 rounded border border-emerald-300 shadow-2xs text-[11px]">
+                1 SAR = PKR {invoice.exchangeRateSarPkr}
+              </span>
+            </div>
+            <span className="text-[10px] text-emerald-700 font-bold uppercase tracking-wider">
+              Dual PKR / SAR Valuation
+            </span>
+          </div>
+        )}
+
         {/* Financial Balance Summary Strip */}
         <div className="grid grid-cols-3 gap-3 bg-emerald-950 text-white rounded-lg p-3 mb-4 text-center">
           <div className="border-r border-emerald-800/80 pr-2">
@@ -340,6 +358,11 @@ export default function InvoiceViewPage() {
             <span className="font-black font-mono text-sm sm:text-base text-white mt-0.5 block">
               {invoice.currency} {(invoice.totalAmount || 0).toLocaleString()}
             </span>
+            {invoice.exchangeRateSarPkr && (
+              <span className="text-[10.5px] font-mono font-bold text-emerald-300 block">
+                SAR {((invoice.totalAmount || 0) / invoice.exchangeRateSarPkr).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            )}
           </div>
 
           <div className="border-r border-emerald-800/80 pr-2">
@@ -347,6 +370,11 @@ export default function InvoiceViewPage() {
             <span className="font-black font-mono text-sm sm:text-base text-emerald-300 mt-0.5 block">
               {invoice.currency} {(invoice.paidAmount || 0).toLocaleString()}
             </span>
+            {invoice.exchangeRateSarPkr && (
+              <span className="text-[10.5px] font-mono font-bold text-emerald-300 block">
+                SAR {((invoice.paidAmount || 0) / invoice.exchangeRateSarPkr).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            )}
           </div>
 
           <div>
@@ -354,6 +382,11 @@ export default function InvoiceViewPage() {
             <span className={`font-black font-mono text-sm sm:text-base mt-0.5 block ${invoice.balanceDue > 0 ? 'text-amber-300' : 'text-emerald-400'}`}>
               {invoice.currency} {(invoice.balanceDue || 0).toLocaleString()}
             </span>
+            {invoice.exchangeRateSarPkr && (
+              <span className="text-[10.5px] font-mono font-bold text-amber-300 block">
+                SAR {((invoice.balanceDue || 0) / invoice.exchangeRateSarPkr).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            )}
           </div>
         </div>
 
@@ -373,28 +406,58 @@ export default function InvoiceViewPage() {
               <thead>
                 <tr className="bg-slate-100 text-slate-800 font-extrabold text-[10px] uppercase tracking-wider border-b border-slate-300">
                   <th className="py-2 px-3 border-r border-slate-300">Description</th>
-                  <th className="py-2 px-3 border-r border-slate-300 text-center w-16">Qty</th>
-                  <th className="py-2 px-3 border-r border-slate-300 text-right w-24">Rate ({invoice.currency})</th>
-                  <th className="py-2 px-3 text-right w-32">Total ({invoice.currency})</th>
+                  <th className="py-2 px-3 border-r border-slate-300 text-center w-16">Qty / PAX</th>
+                  <th className="py-2 px-3 border-r border-slate-300 text-right w-36">Rate Breakdown</th>
+                  <th className="py-2 px-3 text-right w-36">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {invoice.lineItems.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50">
-                    <td className="py-2 px-3 border-r border-slate-200 font-medium text-slate-800">
-                      {item.description}
-                    </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">
-                      {item.quantity}
-                    </td>
-                    <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
-                      {(item.rate || 0).toLocaleString()}
-                    </td>
-                    <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
-                      {(item.amount || 0).toLocaleString()}
-                    </td>
-                  </tr>
-                ))}
+                {invoice.lineItems.map((item, idx) => {
+                  const hasDemographicRates = item.childRate !== undefined && item.childRate !== '' || item.infantRate !== undefined && item.infantRate !== '';
+                  const itemAmount = item.amount || 0;
+
+                  return (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="py-2 px-3 border-r border-slate-200 font-medium text-slate-800">
+                        <span>{item.description}</span>
+                        {hasDemographicRates && (
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-[9px] font-mono text-slate-500">
+                            <span>Adult: <strong>{Number(item.adultRate || item.rate || 0).toLocaleString()}</strong></span>
+                            {item.childRate && (
+                              <span>&bull; Child: <strong className="text-amber-800">{Number(item.childRate).toLocaleString()}</strong></span>
+                            )}
+                            {item.infantRate && (
+                              <span>&bull; Infant: <strong className="text-indigo-800">{Number(item.infantRate).toLocaleString()}</strong></span>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">
+                        {item.quantity || invoice.totalPax || 1}
+                      </td>
+                      <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
+                        <div>
+                          <span>PKR {(item.adultRate !== undefined ? item.adultRate : (item.rate || 0)).toLocaleString()}</span>
+                          {invoice.exchangeRateSarPkr && (
+                            <span className="text-[9px] text-emerald-700 block">
+                              SAR {(((item.adultRate !== undefined ? item.adultRate : (item.rate || 0))) / invoice.exchangeRateSarPkr).toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
+                        <div>
+                          <span>PKR {itemAmount.toLocaleString()}</span>
+                          {invoice.exchangeRateSarPkr && (
+                            <span className="text-[9.5px] text-emerald-700 block font-bold">
+                              SAR {(itemAmount / invoice.exchangeRateSarPkr).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

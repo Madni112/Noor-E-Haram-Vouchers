@@ -247,12 +247,39 @@ export default function InvoiceLedger({
   const [initialPaymentMethod, setInitialPaymentMethod] = useState('Online Bank Transfer');
   const [initialPaymentRef, setInitialPaymentRef] = useState('');
 
+  // Currency Conversion Engine (SAR <-> PKR)
+  const [sarEngineActive, setSarEngineActive] = useState(false);
+  const [exchangeRateSarPkr, setExchangeRateSarPkr] = useState(74.5);
+  const [priceInputCurrency, setPriceInputCurrency] = useState('PKR'); // 'PKR' | 'SAR'
+
   // -------------------------------------------------------------
   // PARTY LEDGER STATEMENT FILTER STATE
   // -------------------------------------------------------------
   const [selectedLedgerParty, setSelectedLedgerParty] = useState('ALL');
   const [ledgerDateFrom, setLedgerDateFrom] = useState('');
   const [ledgerDateTo, setLedgerDateTo] = useState('');
+
+  // Calculation Engine: handles single rate and demographic rates (Adult, Child, Infant) + SAR conversion
+  const calcLineItemTotal = (item, aCount = adultsCount, cCount = childrenCount, infCount = infantsCount, isSar = sarEngineActive, exRate = exchangeRateSarPkr, inCurr = priceInputCurrency) => {
+    const hasDemographics = (Number(cCount) > 0 || Number(infCount) > 0);
+    const multiplier = (isSar && inCurr === 'SAR') ? (parseFloat(exRate) || 74.5) : 1;
+
+    if (!hasDemographics) {
+      const q = parseFloat(item.quantity) || 1;
+      const r = (parseFloat(item.rate) || 0) * multiplier;
+      return Math.round(q * r);
+    }
+
+    const adultR = ((item.adultRate !== undefined && item.adultRate !== '') ? parseFloat(item.adultRate) : (parseFloat(item.rate) || 0)) * multiplier;
+    const childR = ((item.childRate !== undefined && item.childRate !== '') ? parseFloat(item.childRate) : 0) * multiplier;
+    const infantR = ((item.infantRate !== undefined && item.infantRate !== '') ? parseFloat(item.infantRate) : 0) * multiplier;
+
+    const adultSub = (Number(aCount) || 1) * adultR;
+    const childSub = (Number(cCount) || 0) * childR;
+    const infantSub = (Number(infCount) || 0) * infantR;
+
+    return Math.round(adultSub + childSub + infantSub);
+  };
 
   // Synchronize demographic PAX from party selection
   const applyPaxFromParty = (p) => {
@@ -269,10 +296,15 @@ export default function InvoiceLedger({
       a = Number(p.totalPax) || 1;
     }
     const tot = a + c + inf;
-    setAdultsCount(a);
+    const finalA = a > 0 ? a : 1;
+    setAdultsCount(finalA);
     setChildrenCount(c);
     setInfantsCount(inf);
     setTotalPax(tot > 0 ? tot : 1);
+    setLineItems(prev => prev.map(item => ({
+      ...item,
+      amount: calcLineItemTotal(item, finalA, c, inf)
+    })));
   };
 
   const handlePaxStep = (type, delta) => {
@@ -280,7 +312,7 @@ export default function InvoiceLedger({
     let nextC = childrenCount;
     let nextInf = infantsCount;
 
-    if (type === 'adults') nextA = Math.max(0, adultsCount + delta);
+    if (type === 'adults') nextA = Math.max(1, adultsCount + delta);
     else if (type === 'children') nextC = Math.max(0, childrenCount + delta);
     else if (type === 'infants') nextInf = Math.max(0, infantsCount + delta);
 
@@ -288,6 +320,11 @@ export default function InvoiceLedger({
     setChildrenCount(nextC);
     setInfantsCount(nextInf);
     setTotalPax(nextA + nextC + nextInf);
+
+    setLineItems(prev => prev.map(item => ({
+      ...item,
+      amount: calcLineItemTotal(item, nextA, nextC, nextInf)
+    })));
   };
 
   const handlePaxInput = (type, val) => {
@@ -296,7 +333,7 @@ export default function InvoiceLedger({
     let nextC = childrenCount;
     let nextInf = infantsCount;
 
-    if (type === 'adults') nextA = num;
+    if (type === 'adults') nextA = Math.max(1, num);
     else if (type === 'children') nextC = num;
     else if (type === 'infants') nextInf = num;
 
@@ -304,17 +341,31 @@ export default function InvoiceLedger({
     setChildrenCount(nextC);
     setInfantsCount(nextInf);
     setTotalPax(nextA + nextC + nextInf);
+
+    setLineItems(prev => prev.map(item => ({
+      ...item,
+      amount: calcLineItemTotal(item, nextA, nextC, nextInf)
+    })));
   };
 
   // Line Items Helper
   const handleItemChange = (index, field, value) => {
     const updated = [...lineItems];
     updated[index][field] = value;
-    if (field === 'quantity' || field === 'rate') {
-      const q = parseFloat(field === 'quantity' ? value : updated[index].quantity) || 0;
-      const r = parseFloat(field === 'rate' ? value : updated[index].rate) || 0;
-      updated[index].amount = Math.round(q * r);
+    if (field === 'rate' && (updated[index].adultRate === undefined || updated[index].adultRate === '')) {
+      updated[index].adultRate = value;
     }
+    updated[index].amount = calcLineItemTotal(updated[index]);
+    setLineItems(updated);
+  };
+
+  const handleDemographicRateChange = (index, paxType, value) => {
+    const updated = [...lineItems];
+    updated[index][paxType] = value;
+    if (paxType === 'adultRate') {
+      updated[index].rate = value;
+    }
+    updated[index].amount = calcLineItemTotal(updated[index]);
     setLineItems(updated);
   };
 
@@ -442,11 +493,14 @@ export default function InvoiceLedger({
     setIssueDate(new Date().toISOString().split('T')[0]);
     setDueDate(new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
     setPaymentTerms('Full Payment Required Prior to Visa Stamp & Flight Issuance.');
+    setSarEngineActive(false);
+    setExchangeRateSarPkr(74.5);
+    setPriceInputCurrency('PKR');
     setLineItems([
-      { id: '1', description: 'Saudi Umrah Electronic Visas & Medical Insurance', quantity: 2, rate: 45000, amount: 90000, selectedPreset: 'Saudi Umrah Electronic Visas & Medical Insurance', originalPresetRate: 45000 },
-      { id: '2', description: 'Makkah & Madinah Hotel Accommodation Blocks', quantity: 1, rate: 180000, amount: 180000, selectedPreset: 'Makkah & Madinah Hotel Accommodation Blocks', originalPresetRate: 180000 },
-      { id: '3', description: 'Dedicated Ground Transport & Holy Ziyarat', quantity: 1, rate: 65000, amount: 65000, selectedPreset: 'Dedicated Ground Transport & Holy Ziyarat', originalPresetRate: 65000 },
-      { id: '4', description: 'Direct International Flight Tickets', quantity: 2, rate: 135000, amount: 270000, selectedPreset: 'Direct International Flight Tickets', originalPresetRate: 135000 }
+      { id: '1', description: 'Saudi Umrah Electronic Visas & Medical Insurance', quantity: 2, rate: 45000, adultRate: 45000, childRate: '', infantRate: '', amount: 90000, selectedPreset: 'Saudi Umrah Electronic Visas & Medical Insurance', originalPresetRate: 45000 },
+      { id: '2', description: 'Makkah & Madinah Hotel Accommodation Blocks', quantity: 1, rate: 180000, adultRate: 180000, childRate: '', infantRate: '', amount: 180000, selectedPreset: 'Makkah & Madinah Hotel Accommodation Blocks', originalPresetRate: 180000 },
+      { id: '3', description: 'Dedicated Ground Transport & Holy Ziyarat', quantity: 1, rate: 65000, adultRate: 65000, childRate: '', infantRate: '', amount: 65000, selectedPreset: 'Dedicated Ground Transport & Holy Ziyarat', originalPresetRate: 65000 },
+      { id: '4', description: 'Direct International Flight Tickets', quantity: 2, rate: 135000, adultRate: 135000, childRate: '', infantRate: '', amount: 270000, selectedPreset: 'Direct International Flight Tickets', originalPresetRate: 135000 }
     ]);
     setHasInitialPayment(false);
     setInitialPaymentAmount('');
@@ -465,6 +519,9 @@ export default function InvoiceLedger({
     setIssueDate(inv.departureDate || inv.issueDate || new Date().toISOString().split('T')[0]);
     setDueDate(inv.arrivalDate || inv.dueDate || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0]);
     setPaymentTerms(inv.paymentTerms || 'Full Payment Required Prior to Visa Stamp & Flight Issuance.');
+    setSarEngineActive(Boolean(inv.sarEngineActive || inv.exchangeRateSarPkr));
+    setExchangeRateSarPkr(parseFloat(inv.exchangeRateSarPkr) || 74.5);
+    setPriceInputCurrency(inv.priceInputCurrency || 'PKR');
 
     const a = inv.adultsCount !== undefined ? Number(inv.adultsCount) : (Number(inv.totalPax) || 1);
     const c = inv.childrenCount !== undefined ? Number(inv.childrenCount) : 0;
@@ -481,13 +538,16 @@ export default function InvoiceLedger({
         description: item.description || '',
         quantity: item.quantity !== undefined ? item.quantity : 1,
         rate: item.rate !== undefined ? item.rate : 0,
-        amount: item.amount !== undefined ? item.amount : (item.quantity * item.rate),
+        adultRate: item.adultRate !== undefined ? item.adultRate : item.rate,
+        childRate: item.childRate !== undefined ? item.childRate : '',
+        infantRate: item.infantRate !== undefined ? item.infantRate : '',
+        amount: item.amount !== undefined ? item.amount : calcLineItemTotal(item, a, c, inf, Boolean(inv.sarEngineActive || inv.exchangeRateSarPkr), parseFloat(inv.exchangeRateSarPkr) || 74.5, inv.priceInputCurrency || 'PKR'),
         selectedPreset: item.description || '',
         originalPresetRate: item.rate !== undefined ? item.rate : 0
       })));
     } else {
       setLineItems([
-        { id: '1', description: 'Umrah Package Services', quantity: 1, rate: 0, amount: 0, selectedPreset: '', originalPresetRate: 0 }
+        { id: '1', description: 'Umrah Package Services', quantity: 1, rate: 0, adultRate: 0, childRate: '', infantRate: '', amount: 0, selectedPreset: '', originalPresetRate: 0 }
       ]);
     }
 
@@ -531,7 +591,10 @@ export default function InvoiceLedger({
         description: item.description,
         quantity: parseFloat(item.quantity) || 1,
         rate: parseFloat(item.rate) || 0,
-        amount: Math.round((parseFloat(item.quantity) || 1) * (parseFloat(item.rate) || 0))
+        adultRate: item.adultRate !== undefined ? item.adultRate : item.rate,
+        childRate: item.childRate !== undefined ? item.childRate : '',
+        infantRate: item.infantRate !== undefined ? item.infantRate : '',
+        amount: calcLineItemTotal(item)
       }));
 
     const finalInvoiceObj = {
@@ -554,6 +617,11 @@ export default function InvoiceLedger({
       childrenCount: Number(childrenCount) || 0,
       infantsCount: Number(infantsCount) || 0,
       totalPax: Number(totalPax) || ((Number(adultsCount) || 0) + (Number(childrenCount) || 0) + (Number(infantsCount) || 0)),
+      sarEngineActive: sarEngineActive,
+      exchangeRateSarPkr: sarEngineActive ? exchangeRateSarPkr : null,
+      priceInputCurrency: sarEngineActive ? priceInputCurrency : 'PKR',
+      totalAmountSar: sarEngineActive ? Math.round((calculatedTotalBilled / exchangeRateSarPkr) * 100) / 100 : null,
+      balanceDueSar: sarEngineActive ? Math.round((balanceDue / exchangeRateSarPkr) * 100) / 100 : null,
       totalAmount: calculatedTotalBilled,
       paidAmount: currentPaid,
       balanceDue,
@@ -1547,57 +1615,132 @@ export default function InvoiceLedger({
 
               {/* ITEMIZED LINE ITEMS & PRESET CATALOG */}
               <div className="space-y-2.5 pt-2 border-t border-slate-100">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-800 uppercase tracking-wide">
                       Itemized Line Items &amp; Services
                     </label>
                     <p className="text-[10px] text-slate-400">
-                      Select item from saved presets, edit description/rate, and use (✔ / ✖) to save default price per qty
+                      Select item, specify demographic rates (Adult, Child, Infant), and toggle SAR Currency Engine
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={addLineItem}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition-colors shadow-xs"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 text-xs font-bold transition-colors shadow-xs shrink-0"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>+ Add Line Item</span>
                   </button>
                 </div>
 
-                {/* Table Header */}
-                <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-wider">
-                  <div className="sm:col-span-5">Item / Service Description</div>
-                  <div className="sm:col-span-2 text-center">Qty</div>
-                  <div className="sm:col-span-3 text-right">Price per Qty (Rate)</div>
-                  <div className="sm:col-span-2 text-right">Total (PKR)</div>
+                {/* SAR CURRENCY CONVERSION ENGINE BAR */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-gradient-to-r from-emerald-50/70 via-slate-50 to-emerald-50/70 border border-emerald-200/90 rounded-2xl p-2.5 shadow-2xs">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSarEngineActive(!sarEngineActive)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1.5 transition-all shadow-xs border cursor-pointer ${
+                        sarEngineActive
+                          ? 'bg-emerald-700 text-white border-emerald-800 ring-2 ring-emerald-500/20'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span className="text-sm">🇸🇦</span>
+                      <span>SAR Currency Engine</span>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[8.5px] uppercase tracking-wider font-black ${
+                        sarEngineActive ? 'bg-emerald-950 text-emerald-200' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {sarEngineActive ? 'ACTIVE' : 'OFF'}
+                      </span>
+                    </button>
+
+                    {sarEngineActive && (
+                      <div className="flex items-center gap-1.5 bg-white border border-emerald-300 rounded-full px-3 py-1 text-xs shadow-xs animate-in fade-in">
+                        <span className="font-bold text-slate-600 text-[11px]">1 SAR =</span>
+                        <span className="text-[11px] font-black text-emerald-800">PKR</span>
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="1"
+                          value={exchangeRateSarPkr}
+                          onChange={(e) => setExchangeRateSarPkr(parseFloat(e.target.value) || 74.5)}
+                          className="w-16 px-1.5 py-0.5 text-center font-mono font-black text-slate-900 border border-slate-300 rounded-md text-xs focus:outline-none focus:border-emerald-600"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {sarEngineActive && (
+                    <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-2xs animate-in fade-in">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase px-1.5">Input Rates In:</span>
+                      <button
+                        type="button"
+                        onClick={() => setPriceInputCurrency('PKR')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-black transition-colors cursor-pointer ${
+                          priceInputCurrency === 'PKR' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        PKR
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPriceInputCurrency('SAR')}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-black transition-colors cursor-pointer ${
+                          priceInputCurrency === 'SAR' ? 'bg-emerald-700 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        SAR (Riyal)
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {/* Table Header */}
+                {(childrenCount >= 1 || infantsCount >= 1) ? (
+                  <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                    <div className="sm:col-span-4">Item / Service Description</div>
+                    <div className="sm:col-span-1 text-center">PAX</div>
+                    <div className="sm:col-span-5 text-right">
+                      Price per Category ({priceInputCurrency}) — Adult {childrenCount >= 1 ? '/ Child' : ''} {infantsCount >= 1 ? '/ Infant' : ''}
+                    </div>
+                    <div className="sm:col-span-2 text-right">Total</div>
+                  </div>
+                ) : (
+                  <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                    <div className="sm:col-span-5">Item / Service Description</div>
+                    <div className="sm:col-span-2 text-center">Qty</div>
+                    <div className="sm:col-span-3 text-right">Price per Qty ({priceInputCurrency})</div>
+                    <div className="sm:col-span-2 text-right">Total</div>
+                  </div>
+                )}
+
+                <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
                   {lineItems.map((item, idx) => {
-                    const lineTotal = Math.round((parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0));
+                    const lineTotal = calcLineItemTotal(item);
                     const isPriceDirty = item.originalPresetRate !== undefined && Number(item.rate) !== Number(item.originalPresetRate);
                     const isSavedNotice = !!savedNoticeMap[item.id];
+                    const hasDemographics = (childrenCount >= 1 || infantsCount >= 1);
 
                     return (
                       <div 
                         key={item.id} 
                         className="bg-slate-50 border border-slate-200/90 rounded-2xl p-2.5 sm:p-3 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center hover:bg-slate-100/50 transition-colors"
                       >
-                        {/* Single Typable Combobox like Hotel Combobox */}
-                        <div className="sm:col-span-5">
+                        {/* Item Description Combobox */}
+                        <div className={hasDemographics ? "sm:col-span-4" : "sm:col-span-5"}>
                           <ItemCombobox
                             value={item.description}
                             onChange={(val) => handleItemChange(idx, 'description', val)}
                             onSelectPreset={(preset) => {
                               const updated = [...lineItems];
+                              const defaultPresetRate = priceInputCurrency === 'SAR' ? Math.round((preset.defaultRate / exchangeRateSarPkr) * 10) / 10 : preset.defaultRate;
                               updated[idx].description = preset.name;
-                              updated[idx].rate = preset.defaultRate;
-                              updated[idx].originalPresetRate = preset.defaultRate;
+                              updated[idx].rate = defaultPresetRate;
+                              updated[idx].adultRate = defaultPresetRate;
+                              updated[idx].originalPresetRate = defaultPresetRate;
                               updated[idx].selectedPreset = preset.name;
-                              const q = parseFloat(updated[idx].quantity) || 1;
-                              updated[idx].amount = Math.round(q * preset.defaultRate);
+                              updated[idx].amount = calcLineItemTotal(updated[idx]);
                               setLineItems(updated);
                             }}
                             presets={itemPresets}
@@ -1612,95 +1755,214 @@ export default function InvoiceLedger({
                           />
                         </div>
 
-                        {/* Qty Input */}
-                        <div className="sm:col-span-2 flex items-center justify-between sm:justify-center gap-1">
-                          <span className="sm:hidden text-[10px] font-bold text-slate-500 uppercase">Qty:</span>
-                          <input
-                            type="number"
-                            min="1"
-                            step="any"
-                            value={item.quantity}
-                            onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                            placeholder="Qty"
-                            className="w-20 sm:w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 text-center font-mono font-bold focus:outline-none focus:border-indigo-500"
-                            required
-                          />
-                        </div>
+                        {/* Qty Column */}
+                        {hasDemographics ? (
+                          <div className="sm:col-span-1 flex items-center justify-center">
+                            <span className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10.5px] font-mono font-black text-slate-800 shadow-2xs">
+                              {totalPax || (adultsCount + childrenCount + infantsCount)} P
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="sm:col-span-2 flex items-center justify-between sm:justify-center gap-1">
+                            <span className="sm:hidden text-[10px] font-bold text-slate-500 uppercase">Qty:</span>
+                            <input
+                              type="number"
+                              min="1"
+                              step="any"
+                              value={item.quantity}
+                              onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                              placeholder="Qty"
+                              className="w-20 sm:w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 text-center font-mono font-bold focus:outline-none focus:border-indigo-500"
+                              required
+                            />
+                          </div>
+                        )}
 
-                        {/* Price per Qty (Rate) + Inline Save/Dismiss Controls */}
-                        <div className="sm:col-span-3 space-y-1">
-                          <div className="flex items-center justify-between sm:justify-end gap-1.5">
-                            <span className="sm:hidden text-[10px] font-bold text-slate-500 uppercase">Rate:</span>
-                            <div className="relative flex-1 max-w-[140px] sm:max-w-none">
-                              <input
-                                type="number"
-                                min="0"
-                                step="any"
-                                value={item.rate}
-                                onChange={(e) => handleItemChange(idx, 'rate', e.target.value)}
-                                placeholder="Rate"
-                                className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-indigo-500"
-                                required
-                              />
+                        {/* Price Inputs: Demographic Breakdown OR Single Rate */}
+                        {hasDemographics ? (
+                          <div className="sm:col-span-5 space-y-1">
+                            <div className={`grid gap-1.5 ${childrenCount >= 1 && infantsCount >= 1 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                              {/* Adult Input */}
+                              <div>
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <label className="text-[9px] font-black text-slate-700 uppercase tracking-tight">
+                                    Adult {adultsCount > 1 ? `(x${adultsCount})` : ''}
+                                  </label>
+                                  {sarEngineActive && (
+                                    <span className="text-[8px] font-mono text-emerald-700 font-bold">
+                                      {priceInputCurrency === 'SAR'
+                                        ? `PKR ${Math.round((parseFloat(item.adultRate !== undefined ? item.adultRate : item.rate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                        : `SAR ${(((parseFloat(item.adultRate !== undefined ? item.adultRate : item.rate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                    </span>
+                                  )}
+                                </div>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  placeholder="Adult"
+                                  value={item.adultRate !== undefined ? item.adultRate : item.rate}
+                                  onChange={(e) => handleDemographicRateChange(idx, 'adultRate', e.target.value)}
+                                  className="w-full px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-indigo-500 shadow-2xs"
+                                />
+                              </div>
+
+                              {/* Child Input (if childrenCount >= 1) */}
+                              {childrenCount >= 1 && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <label className="text-[9px] font-black text-amber-700 uppercase tracking-tight">
+                                      Child (x{childrenCount})
+                                    </label>
+                                    {sarEngineActive && (
+                                      <span className="text-[8px] font-mono text-emerald-700 font-bold">
+                                        {priceInputCurrency === 'SAR'
+                                          ? `PKR ${Math.round((parseFloat(item.childRate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                          : `SAR ${(((parseFloat(item.childRate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    placeholder="Child"
+                                    value={item.childRate !== undefined ? item.childRate : ''}
+                                    onChange={(e) => handleDemographicRateChange(idx, 'childRate', e.target.value)}
+                                    className="w-full px-2 py-1 bg-white border border-amber-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-amber-500 shadow-2xs"
+                                  />
+                                </div>
+                              )}
+
+                              {/* Infant Input (if infantsCount >= 1) */}
+                              {infantsCount >= 1 && (
+                                <div>
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <label className="text-[9px] font-black text-indigo-700 uppercase tracking-tight">
+                                      Infant (x{infantsCount})
+                                    </label>
+                                    {sarEngineActive && (
+                                      <span className="text-[8px] font-mono text-emerald-700 font-bold">
+                                        {priceInputCurrency === 'SAR'
+                                          ? `PKR ${Math.round((parseFloat(item.infantRate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                          : `SAR ${(((parseFloat(item.infantRate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="any"
+                                    placeholder="Infant"
+                                    value={item.infantRate !== undefined ? item.infantRate : ''}
+                                    onChange={(e) => handleDemographicRateChange(idx, 'infantRate', e.target.value)}
+                                    className="w-full px-2 py-1 bg-white border border-indigo-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-indigo-500 shadow-2xs"
+                                  />
+                                </div>
+                              )}
                             </div>
 
-                            {/* Inline (✔ / ✖) Price Preset Save Actions */}
-                            <div className="flex items-center gap-1 shrink-0">
+                            <div className="flex items-center justify-end gap-1.5 pt-0.5">
                               {isPriceDirty && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleSaveRateToPreset(idx)}
-                                    title="✔ Save this price per qty for this item into preset catalog"
-                                    className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-colors shadow-xs"
-                                  >
-                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleResetRateToPreset(idx)}
-                                    title="✖ Reset price back to default saved rate"
-                                    className="p-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors"
-                                  >
-                                    <X className="w-3.5 h-3.5 stroke-[2.5]" />
-                                  </button>
-                                </>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveRateToPreset(idx)}
+                                  className="text-[9.5px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 transition-colors cursor-pointer"
+                                  title="✔ Save this adult rate to preset catalog in Supabase"
+                                >
+                                  <Check className="w-3 h-3 stroke-[3]" />
+                                  <span>Save Adult Rate</span>
+                                </button>
                               )}
-                              
                               {isSavedNotice && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold bg-emerald-100 text-emerald-800 animate-pulse">
-                                  <Check className="w-3 h-3" /> Saved!
+                                <span className="text-[9.5px] font-bold text-emerald-700 animate-in fade-in">
+                                  Saved!
                                 </span>
                               )}
                             </div>
                           </div>
-                          
-                          <div className="flex items-center justify-end text-[9.5px] text-slate-400">
-                            {item.originalPresetRate ? (
-                              <span>Default: PKR {Number(item.originalPresetRate).toLocaleString()}</span>
-                            ) : (
-                              <span>Custom Rate</span>
-                            )}
+                        ) : (
+                          <div className="sm:col-span-3 space-y-1">
+                            <div className="flex items-center justify-between sm:justify-end gap-1.5">
+                              <span className="sm:hidden text-[10px] font-bold text-slate-500 uppercase">Rate:</span>
+                              <div className="relative flex-1 max-w-[140px] sm:max-w-none">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={item.rate}
+                                  onChange={(e) => handleItemChange(idx, 'rate', e.target.value)}
+                                  placeholder={priceInputCurrency === 'SAR' ? "Rate (SAR)" : "Rate (PKR)"}
+                                  className="w-full px-2 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 text-right font-mono font-bold focus:outline-none focus:border-indigo-500"
+                                  required
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                {isPriceDirty && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveRateToPreset(idx)}
+                                      title="✔ Save this price per qty for this item into preset catalog in Supabase"
+                                      className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-colors shadow-xs cursor-pointer"
+                                    >
+                                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResetRateToPreset(idx)}
+                                      title="✖ Reset price back to default saved rate"
+                                      className="p-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors cursor-pointer"
+                                    >
+                                      <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-end gap-1.5 text-[9.5px]">
+                              {sarEngineActive && (
+                                <span className="font-mono text-emerald-700 font-bold">
+                                  {priceInputCurrency === 'SAR'
+                                    ? `≈ PKR ${Math.round((parseFloat(item.rate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                    : `≈ SAR ${(((parseFloat(item.rate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                </span>
+                              )}
+                              {isSavedNotice && (
+                                <span className="font-bold text-emerald-700 animate-in fade-in">
+                                  Saved!
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        )}
 
                         {/* Line Total & Remove Button */}
                         <div className="sm:col-span-2 flex items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200">
                           <div className="text-right">
                             <span className="sm:hidden text-[10px] text-slate-500 mr-2 uppercase font-bold">Total:</span>
-                            <span className="font-mono font-black text-slate-900 text-xs">
+                            <span className="font-mono font-black text-slate-900 text-xs block">
                               PKR {lineTotal.toLocaleString()}
                             </span>
+                            {sarEngineActive && (
+                              <span className="font-mono font-bold text-[10px] text-emerald-700 block">
+                                SAR {(lineTotal / exchangeRateSarPkr).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            )}
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => removeLineItem(idx)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                            title="Remove Line Item"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {lineItems.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeLineItem(idx)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="Remove Line Item"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
@@ -1708,16 +1970,30 @@ export default function InvoiceLedger({
                 </div>
               </div>
 
-              {/* Total Calculation Card */}
+              {/* Total Calculation Card with SAR Engine Summary */}
               <div className="bg-slate-900 text-white p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono shadow-md">
                 <div>
                   <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Grand Total Billed</span>
-                  <span className="text-lg font-black text-white">PKR {calculatedTotalBilled.toLocaleString()}</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-black text-white">PKR {calculatedTotalBilled.toLocaleString()}</span>
+                    {sarEngineActive && (
+                      <span className="text-sm font-black text-emerald-400">
+                        (SAR {(calculatedTotalBilled / exchangeRateSarPkr).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {hasInitialPayment && (
                   <div className="text-right">
                     <span className="text-[10px] text-emerald-400 block uppercase font-bold tracking-wider">Net Balance Due</span>
-                    <span className="text-lg font-black text-emerald-300">PKR {calculatedBalanceDue.toLocaleString()}</span>
+                    <div className="flex items-baseline justify-end gap-2">
+                      <span className="text-lg font-black text-emerald-300">PKR {calculatedBalanceDue.toLocaleString()}</span>
+                      {sarEngineActive && (
+                        <span className="text-sm font-black text-emerald-400">
+                          (SAR {(calculatedBalanceDue / exchangeRateSarPkr).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
