@@ -38,7 +38,13 @@ import {
   deleteInvoice,
   getCloudPackages,
   saveCloudPackage,
-  deleteCloudPackage
+  deleteCloudPackage,
+  getCloudInvoices,
+  saveCloudInvoice,
+  deleteCloudInvoice,
+  getCloudItemPresets,
+  saveCloudItemPreset,
+  deleteCloudItemPreset
 } from '../../lib/erpData';
 import CustomDatePicker from './CustomDatePicker';
 
@@ -50,10 +56,33 @@ export default function InvoiceLedger({
   onInvoicesUpdated 
 }) {
   const [viewMode, setViewMode] = useState(initialView || 'INVOICES'); // 'INVOICES' | 'LEDGER'
+  const [invoiceList, setInvoiceList] = useState(invoices || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [activeInvoiceForPay, setActiveInvoiceForPay] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  useEffect(() => {
+    if (invoices && invoices.length > 0) {
+      setInvoiceList(invoices);
+    }
+  }, [invoices]);
+
+  // Load Invoices and Item Presets directly from Supabase on mount
+  useEffect(() => {
+    let isMounted = true;
+    getCloudInvoices().then(cloudInvs => {
+      if (isMounted && Array.isArray(cloudInvs) && cloudInvs.length > 0) {
+        setInvoiceList(cloudInvs);
+      }
+    });
+    getCloudItemPresets().then(cloudPresets => {
+      if (isMounted && Array.isArray(cloudPresets) && cloudPresets.length > 0) {
+        setItemPresets(cloudPresets);
+      }
+    });
+    return () => { isMounted = false; };
+  }, []);
 
   // Sync internal viewMode with initialView prop when it changes
   useEffect(() => {
@@ -305,31 +334,25 @@ export default function InvoiceLedger({
     setLineItems(updated);
   };
 
-  const handleSaveRateToPreset = (index) => {
+  const handleSaveRateToPreset = async (index) => {
     const item = lineItems[index];
     if (!item || !item.description) return;
     const currentRate = parseFloat(item.rate) || 0;
     const itemName = item.description.trim();
 
-    setItemPresets(prev => {
-      let next;
-      const existingIndex = prev.findIndex(p => p.name.trim().toLowerCase() === itemName.toLowerCase());
-      if (existingIndex !== -1) {
-        next = [...prev];
-        next[existingIndex] = { ...next[existingIndex], defaultRate: currentRate };
-      } else {
-        next = [
-          ...prev,
-          { id: `preset-${Date.now()}`, name: itemName, defaultRate: currentRate }
-        ];
+    try {
+      await saveCloudItemPreset({
+        name: itemName,
+        defaultRate: currentRate,
+        companyName: customCompany || 'NOOR E HARAM TRAVELS & TOURS'
+      });
+      const cloudPresets = await getCloudItemPresets();
+      if (Array.isArray(cloudPresets) && cloudPresets.length > 0) {
+        setItemPresets(cloudPresets);
       }
-      try {
-        localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(next));
-      } catch (e) {
-        console.warn('Failed saving presets', e);
-      }
-      return next;
-    });
+    } catch (e) {
+      console.warn('Failed saving preset to Supabase', e);
+    }
 
     const updated = [...lineItems];
     updated[index].originalPresetRate = currentRate;
@@ -471,7 +494,7 @@ export default function InvoiceLedger({
   };
 
   // Submit Create or Edit Invoice
-  const handleCreateInvoiceSubmit = (e) => {
+  const handleCreateInvoiceSubmit = async (e) => {
     e.preventDefault();
     const finalPartyName = selectedPartyUid === 'CUSTOM' ? (customPartyName || 'WALK-IN CLIENT') : customPartyName;
     const finalPhone = selectedPartyUid === 'CUSTOM' ? customPhone : (parties.find(p => p.partyHeadUid === selectedPartyUid)?.contactPhone || '');
@@ -538,45 +561,55 @@ export default function InvoiceLedger({
       updatedAt: new Date().toISOString()
     };
 
-    saveInvoice(finalInvoiceObj);
-    if (onInvoicesUpdated) onInvoicesUpdated(getAllInvoices());
+    await saveCloudInvoice(finalInvoiceObj);
+    const updated = await getCloudInvoices();
+    setInvoiceList(updated);
+    if (onInvoicesUpdated) onInvoicesUpdated(updated);
     setShowCreateModal(false);
     setEditingInvoiceId(null);
   };
 
-  const handleDeleteInvoice = (id, invoiceNo) => {
-    if (confirm(`Are you sure you want to delete invoice ${invoiceNo}? This cannot be undone.`)) {
-      deleteInvoice(id);
-      if (onInvoicesUpdated) onInvoicesUpdated(getAllInvoices());
+  const handleDeleteInvoice = async (id, invoiceNo) => {
+    if (confirm(`Are you sure you want to delete invoice ${invoiceNo}? This will delete it directly from Supabase database.`)) {
+      await deleteCloudInvoice(id);
+      const updated = await getCloudInvoices();
+      setInvoiceList(updated);
+      if (onInvoicesUpdated) onInvoicesUpdated(updated);
     }
   };
 
-  const handleRecordPayment = (e) => {
+  const handleRecordPayment = async (e) => {
     e.preventDefault();
     if (!activeInvoiceForPay || !payAmount || parseFloat(payAmount) <= 0) {
       alert('Please enter a valid payment amount.');
       return;
     }
     try {
-      addLedgerTransaction(activeInvoiceForPay.id, {
+      const updatedInv = addLedgerTransaction(activeInvoiceForPay.id, {
         date: payDate || new Date().toISOString().split('T')[0],
         amount: parseFloat(payAmount),
         method: payMethod,
         referenceNo: payRef || `PAY-${Date.now().toString().slice(-6)}`,
         notes: payNotes || 'Payment recorded',
       });
+      if (updatedInv) {
+        await saveCloudInvoice(updatedInv);
+      }
       setActiveInvoiceForPay(null);
       setPayAmount('');
       setPayRef('');
       setPayNotes('');
-      if (onInvoicesUpdated) onInvoicesUpdated(getAllInvoices());
+      const updated = await getCloudInvoices();
+      setInvoiceList(updated);
+      if (onInvoicesUpdated) onInvoicesUpdated(updated);
     } catch (err) {
       alert(`Error logging payment: ${err.message}`);
     }
   };
 
-  // Filtered invoices for Invoices view
-  const filteredInvoices = invoices.filter(inv => {
+  // Filtered invoices for Invoices view (backed by live Supabase invoiceList)
+  const displayInvoices = invoiceList.length > 0 ? invoiceList : invoices;
+  const filteredInvoices = displayInvoices.filter(inv => {
     const q = searchTerm.toLowerCase();
     const matchSearch = (
       (inv.invoiceNo || '').toLowerCase().includes(q) ||
@@ -622,7 +655,7 @@ export default function InvoiceLedger({
   // -------------------------------------------------------------
   const allLedgerEntries = useMemo(() => {
     const list = [];
-    invoices.forEach(inv => {
+    displayInvoices.forEach(inv => {
       // 1. Invoice Debit Entry
       list.push({
         id: `inv-${inv.id || inv.invoiceNo}`,

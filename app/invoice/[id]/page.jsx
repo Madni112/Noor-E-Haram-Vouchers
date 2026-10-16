@@ -20,7 +20,8 @@ import {
   CreditCard,
   Users
 } from 'lucide-react';
-import { getInvoiceById, addLedgerTransaction } from '../../../lib/erpData';
+import { getInvoiceById, addLedgerTransaction, saveCloudInvoice } from '../../../lib/erpData';
+import { supabase } from '../../../lib/supabaseClient';
 
 export default function InvoiceViewPage() {
   const params = useParams();
@@ -43,7 +44,56 @@ export default function InvoiceViewPage() {
     }
   }, [id]);
 
-  const loadInvoice = () => {
+  const loadInvoice = async () => {
+    try {
+      const cleanId = (id || '').trim();
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .or(`id.eq.${cleanId},invoice_no.eq.${cleanId}`)
+        .maybeSingle();
+
+      if (data) {
+        setInvoice({
+          id: data.id,
+          invoiceNo: data.invoice_no || data.id,
+          partyHeadUid: data.party_head_uid || 'CUSTOM-DEBTOR',
+          partyName: data.party_name || 'Valued Client',
+          contactPhone: data.contact_phone || '',
+          companyName: data.company_name || 'NOOR E HARAM TRAVELS & TOURS',
+          packageTitle: data.package_name || 'Umrah Tour Package',
+          packageName: data.package_name || 'Umrah Tour Package',
+          departureDate: data.departure_date || '',
+          arrivalDate: data.arrival_date || '',
+          issueDate: data.departure_date || '',
+          dueDate: data.arrival_date || '',
+          currency: data.currency || 'PKR',
+          totalAmount: parseFloat(data.total_amount) || 0,
+          paidAmount: parseFloat(data.paid_amount) || 0,
+          balanceDue: parseFloat(data.balance_due) || 0,
+          status: data.status,
+          adultsCount: data.adults_count,
+          childrenCount: data.children_count,
+          infantsCount: data.infants_count,
+          totalPax: data.total_pax,
+          items: Array.isArray(data.items) ? data.items : [],
+          lineItems: Array.isArray(data.items) ? data.items : [],
+          ledgerTransactions: Array.isArray(data.ledger_transactions) ? data.ledger_transactions : [],
+          notes: data.notes || '',
+          bankDetails: {
+            bankName: 'Meezan Bank Limited',
+            accountTitle: data.company_name || 'NOOR E HARAM TRAVELS & TOURS',
+            accountNumber: '0289-0105829101',
+            iban: 'PK49MEZN0002890105829101',
+            branch: 'Main Boulevard Branch',
+          }
+        });
+        setLoading(false);
+        return;
+      }
+    } catch (e) {
+      console.warn('Could not load invoice directly from Supabase, checking local:', e);
+    }
     const data = getInvoiceById(id);
     setInvoice(data);
     setLoading(false);
@@ -64,24 +114,27 @@ export default function InvoiceViewPage() {
     }
   };
 
-  const handleRecordPayment = (e) => {
+  const handleRecordPayment = async (e) => {
     e.preventDefault();
     if (!payAmount || parseFloat(payAmount) <= 0) {
       alert('Please enter a valid payment amount.');
       return;
     }
     try {
-      addLedgerTransaction(invoice.id, {
+      const updatedInv = addLedgerTransaction(invoice.id, {
         amount: parseFloat(payAmount),
         method: payMethod,
         referenceNo: payRef || `PAY-${Date.now().toString().slice(-6)}`,
         notes: payNotes || 'Payment recorded',
       });
+      if (updatedInv) {
+        await saveCloudInvoice(updatedInv);
+      }
       setShowPaymentModal(false);
       setPayAmount('');
       setPayRef('');
       setPayNotes('');
-      loadInvoice();
+      await loadInvoice();
     } catch (err) {
       alert(`Error logging payment: ${err.message}`);
     }
