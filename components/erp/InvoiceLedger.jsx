@@ -1699,8 +1699,7 @@ export default function InvoiceLedger({
                 {/* Table Header */}
                 {(childrenCount >= 1 || infantsCount >= 1) ? (
                   <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-wider">
-                    <div className="sm:col-span-4">Item / Service Description</div>
-                    <div className="sm:col-span-1 text-center">PAX</div>
+                    <div className="sm:col-span-5">Item / Service Description</div>
                     <div className="sm:col-span-5 text-right">
                       Price per Category ({priceInputCurrency}) — Adult {childrenCount >= 1 ? '/ Child' : ''} {infantsCount >= 1 ? '/ Infant' : ''}
                     </div>
@@ -1728,7 +1727,7 @@ export default function InvoiceLedger({
                         className="bg-slate-50 border border-slate-200/90 rounded-2xl p-2.5 sm:p-3 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-2 sm:items-center hover:bg-slate-100/50 transition-colors"
                       >
                         {/* Item Description Combobox */}
-                        <div className={hasDemographics ? "sm:col-span-4" : "sm:col-span-5"}>
+                        <div className="sm:col-span-5">
                           <ItemCombobox
                             value={item.description}
                             onChange={(val) => handleItemChange(idx, 'description', val)}
@@ -1755,14 +1754,8 @@ export default function InvoiceLedger({
                           />
                         </div>
 
-                        {/* Qty Column */}
-                        {hasDemographics ? (
-                          <div className="sm:col-span-1 flex items-center justify-center">
-                            <span className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10.5px] font-mono font-black text-slate-800 shadow-2xs">
-                              {totalPax || (adultsCount + childrenCount + infantsCount)} P
-                            </span>
-                          </div>
-                        ) : (
+                        {/* Qty Column (only shown when no demographic breakdown) */}
+                        {!hasDemographics && (
                           <div className="sm:col-span-2 flex items-center justify-between sm:justify-center gap-1">
                             <span className="sm:hidden text-[10px] font-bold text-slate-500 uppercase">Qty:</span>
                             <input

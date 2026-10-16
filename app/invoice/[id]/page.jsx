@@ -406,8 +406,10 @@ export default function InvoiceViewPage() {
               <thead>
                 <tr className="bg-slate-100 text-slate-800 font-extrabold text-[10px] uppercase tracking-wider border-b border-slate-300">
                   <th className="py-2 px-3 border-r border-slate-300">Description</th>
-                  <th className="py-2 px-3 border-r border-slate-300 text-center w-16">Qty / PAX</th>
-                  <th className="py-2 px-3 border-r border-slate-300 text-right w-36">Rate Breakdown</th>
+                  {!(invoice.childrenCount > 0 || invoice.infantsCount > 0) && (
+                    <th className="py-2 px-3 border-r border-slate-300 text-center w-16">Qty</th>
+                  )}
+                  <th className="py-2 px-3 border-r border-slate-300 text-right w-44">Rate Breakdown</th>
                   <th className="py-2 px-3 text-right w-36">Total</th>
                 </tr>
               </thead>
@@ -415,6 +417,7 @@ export default function InvoiceViewPage() {
                 {invoice.lineItems.map((item, idx) => {
                   const hasDemographicRates = item.childRate !== undefined && item.childRate !== '' || item.infantRate !== undefined && item.infantRate !== '';
                   const itemAmount = item.amount || 0;
+                  const hasInvoiceDemographics = (invoice.childrenCount > 0 || invoice.infantsCount > 0);
 
                   return (
                     <tr key={idx} className="hover:bg-slate-50">
@@ -432,9 +435,11 @@ export default function InvoiceViewPage() {
                           </div>
                         )}
                       </td>
-                      <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">
-                        {item.quantity || invoice.totalPax || 1}
-                      </td>
+                      {!hasInvoiceDemographics && (
+                        <td className="py-2 px-3 border-r border-slate-200 text-center font-mono">
+                          {item.quantity || 1}
+                        </td>
+                      )}
                       <td className="py-2 px-3 border-r border-slate-200 text-right font-mono">
                         <div>
                           <span>PKR {(item.adultRate !== undefined ? item.adultRate : (item.rate || 0)).toLocaleString()}</span>
