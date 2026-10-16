@@ -527,7 +527,7 @@ export default function InvoiceViewPage() {
           {/* Bank Payment Coordinates */}
           <div className="bg-amber-50/60 border border-amber-200 rounded-lg p-3 text-[10px] space-y-1">
             <span className="font-bold text-amber-950 uppercase tracking-wide block border-b border-amber-200 pb-1 mb-1.5">
-              Official Wire &amp; Bank Coordinates (Cheepa FJ Travels)
+              Official Wire &amp; Bank Coordinates (Noor E Haram Travels & Tours)
             </span>
             <p><strong className="text-slate-800">Bank Name:</strong> {invoice.bankDetails?.bankName || 'Meezan Bank Limited'}</p>
             <p><strong className="text-slate-800">Account Title:</strong> {invoice.bankDetails?.accountTitle || 'NOOR E HARAM TRAVELS & TOURS'}</p>

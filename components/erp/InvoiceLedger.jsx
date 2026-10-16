@@ -30,7 +30,10 @@ import {
   Users,
   Check,
   Minus,
-  Tag
+  Tag,
+  Landmark,
+  Wallet,
+  Building2
 } from 'lucide-react';
 import { 
   addLedgerTransaction, 
@@ -45,7 +48,10 @@ import {
   deleteCloudInvoice,
   getCloudItemPresets,
   saveCloudItemPreset,
-  deleteCloudItemPreset
+  deleteCloudItemPreset,
+  getBankAccounts,
+  saveBankAccount,
+  deleteBankAccount
 } from '../../lib/erpData';
 import CustomDatePicker from './CustomDatePicker';
 import ItemCombobox from './ItemCombobox';
@@ -109,6 +115,31 @@ export default function InvoiceLedger({
   const [payMethod, setPayMethod] = useState('Online Bank Transfer');
   const [payRef, setPayRef] = useState('');
   const [payNotes, setPayNotes] = useState('');
+  const [payBankAccountId, setPayBankAccountId] = useState('acc-cash-counter');
+
+  // -------------------------------------------------------------
+  // BANK & CASH ACCOUNTS (PKR ONLY) & LEDGER SUB-VIEW STATE
+  // -------------------------------------------------------------
+  const [bankAccounts, setBankAccounts] = useState([]);
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState('acc-cash-counter');
+  const [showAddBankModal, setShowAddBankModal] = useState(false);
+  const [newBankForm, setNewBankForm] = useState({
+    accountName: '',
+    bankName: '',
+    accountTitle: 'NOOR E HARAM TRAVELS & TOURS',
+    accountNumber: '',
+    iban: '',
+    type: 'BANK',
+    initialBalance: ''
+  });
+
+  const [ledgerSubTab, setLedgerSubTab] = useState('CUSTOMERS'); // 'CUSTOMERS' | 'BANKS' | 'JOURNAL'
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [selectedPartyForPrint, setSelectedPartyForPrint] = useState(null);
+
+  useEffect(() => {
+    setBankAccounts(getBankAccounts('NOOR E HARAM TRAVELS & TOURS'));
+  }, []);
 
   // -------------------------------------------------------------
   // PRESET ITEMS & DEMOGRAPHIC PAX STATE
@@ -570,13 +601,16 @@ export default function InvoiceLedger({
 
     let transactions = existingInv?.ledgerTransactions ? [...existingInv.ledgerTransactions] : [];
     if (!editingInvoiceId && hasInitialPayment && initialPaidNum > 0) {
+      const targetAcc = bankAccounts.find(b => b.id === selectedBankAccountId);
       transactions.push({
         id: `tx-init-${Date.now()}`,
         date: issueDate,
         amount: initialPaidNum,
         method: initialPaymentMethod,
+        bankAccountId: selectedBankAccountId,
+        bankAccountName: targetAcc ? targetAcc.accountName : initialPaymentMethod,
         referenceNo: initialPaymentRef || `INIT-${invoiceNo}`,
-        notes: 'Initial Advance Payment upon invoice creation',
+        notes: `Initial Advance Payment deposited into ${targetAcc ? targetAcc.accountName : initialPaymentMethod}`,
         receivedBy: 'System Cashier'
       });
     }
@@ -656,12 +690,15 @@ export default function InvoiceLedger({
       return;
     }
     try {
+      const targetAcc = bankAccounts.find(b => b.id === payBankAccountId);
       const updatedInv = addLedgerTransaction(activeInvoiceForPay.id, {
         date: payDate || new Date().toISOString().split('T')[0],
         amount: parseFloat(payAmount),
         method: payMethod,
+        bankAccountId: payBankAccountId,
+        bankAccountName: targetAcc ? targetAcc.accountName : payMethod,
         referenceNo: payRef || `PAY-${Date.now().toString().slice(-6)}`,
-        notes: payNotes || 'Payment recorded',
+        notes: payNotes || `Payment received into ${targetAcc ? targetAcc.accountName : payMethod}`,
       });
       if (updatedInv) {
         await saveCloudInvoice(updatedInv);
@@ -821,6 +858,189 @@ export default function InvoiceLedger({
     if (selectedLedgerParty === 'ALL') return null;
     return uniqueLedgerParties.find(p => p.uid === selectedLedgerParty || p.name === selectedLedgerParty) || null;
   }, [selectedLedgerParty, uniqueLedgerParties]);
+
+  const handleSaveNewBank = (e) => {
+    e.preventDefault();
+    if (!newBankForm.accountName.trim() && !newBankForm.bankName.trim()) {
+      alert('Please enter account name / bank name');
+      return;
+    }
+    const acc = {
+      id: `acc-${Date.now()}`,
+      accountName: newBankForm.accountName || newBankForm.bankName,
+      bankName: newBankForm.bankName || newBankForm.accountName,
+      accountTitle: newBankForm.accountTitle || 'NOOR E HARAM TRAVELS & TOURS',
+      accountNumber: newBankForm.accountNumber || '-',
+      iban: newBankForm.iban || '-',
+      type: newBankForm.type || 'BANK',
+      initialBalance: parseFloat(newBankForm.initialBalance) || 0,
+      currency: 'PKR',
+      isDefault: false
+    };
+    const updated = saveBankAccount(acc, 'NOOR E HARAM TRAVELS & TOURS');
+    setBankAccounts(updated);
+    setShowAddBankModal(false);
+    setNewBankForm({
+      accountName: '',
+      bankName: '',
+      accountTitle: 'NOOR E HARAM TRAVELS & TOURS',
+      accountNumber: '',
+      iban: '',
+      type: 'BANK',
+      initialBalance: ''
+    });
+  };
+
+  const handleDeleteBank = (id) => {
+    if (confirm('Are you sure you want to delete this bank account?')) {
+      const updated = deleteBankAccount(id, 'NOOR E HARAM TRAVELS & TOURS');
+      setBankAccounts(updated);
+    }
+  };
+
+  // Dynamic live balances for each bank account
+  const bankAccountBalances = useMemo(() => {
+    const balances = {};
+    bankAccounts.forEach(acc => {
+      balances[acc.id] = parseFloat(acc.initialBalance) || 0;
+    });
+
+    const currentInvs = invoiceList.length > 0 ? invoiceList : invoices;
+    currentInvs.forEach(inv => {
+      const txs = Array.isArray(inv.ledgerTransactions) ? inv.ledgerTransactions : [];
+      txs.forEach(tx => {
+        const amt = parseFloat(tx.amount) || 0;
+        if (tx.bankAccountId && balances[tx.bankAccountId] !== undefined) {
+          balances[tx.bankAccountId] += amt;
+        } else if (tx.method === 'Cash Deposit' || (tx.notes && tx.notes.toLowerCase().includes('cash'))) {
+          if (balances['acc-cash-counter'] !== undefined) balances['acc-cash-counter'] += amt;
+        } else {
+          const firstBank = bankAccounts.find(b => b.type === 'BANK');
+          if (firstBank && balances[firstBank.id] !== undefined) {
+            balances[firstBank.id] += amt;
+          }
+        }
+      });
+    });
+
+    return balances;
+  }, [bankAccounts, invoiceList, invoices]);
+
+  // Account collections & inflow history
+  const allAccountInflows = useMemo(() => {
+    const list = [];
+    const currentInvs = invoiceList.length > 0 ? invoiceList : invoices;
+    currentInvs.forEach(inv => {
+      const txs = Array.isArray(inv.ledgerTransactions) ? inv.ledgerTransactions : [];
+      txs.forEach((tx, idx) => {
+        let matchedAccName = tx.bankAccountName;
+        if (!matchedAccName) {
+          if (tx.bankAccountId) {
+            matchedAccName = bankAccounts.find(b => b.id === tx.bankAccountId)?.accountName;
+          }
+          if (!matchedAccName) {
+            matchedAccName = tx.method === 'Cash Deposit' ? 'Cash in Hand (Counter)' : 'Meezan Bank Limited';
+          }
+        }
+        list.push({
+          id: tx.id || `inflow-${inv.id}-${idx}`,
+          date: tx.date || inv.issueDate,
+          amount: parseFloat(tx.amount) || 0,
+          method: tx.method || 'Online Bank Transfer',
+          referenceNo: tx.referenceNo || `TX-${idx + 1}`,
+          bankAccountName: matchedAccName,
+          partyName: inv.partyName || 'Valued Client',
+          invoiceNo: inv.invoiceNo || inv.id
+        });
+      });
+    });
+    return list.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [invoiceList, invoices, bankAccounts]);
+
+  // Master customer summary aggregated across parties and invoices
+  const customerLedgerSummaries = useMemo(() => {
+    const map = new Map();
+
+    parties.forEach(p => {
+      const uid = p.partyHeadUid || p.fid || p.id;
+      if (!uid) return;
+      map.set(uid, {
+        partyUid: uid,
+        partyName: p.partyName || p.name || 'Valued Client',
+        contactPhone: p.contactPhone || p.phone || '',
+        companyName: p.companyName || 'NOOR E HARAM TRAVELS & TOURS',
+        departureDate: p.departureDate || '',
+        arrivalDate: p.arrivalDate || '',
+        passengersCount: Array.isArray(p.passengers) ? p.passengers.length : 1,
+        totalBilled: 0,
+        totalPaid: 0,
+        balanceDue: 0,
+        invoices: []
+      });
+    });
+
+    const currentInvs = invoiceList.length > 0 ? invoiceList : invoices;
+    currentInvs.forEach(inv => {
+      const uid = inv.partyHeadUid || inv.partyName || 'UNKNOWN';
+      let entry = map.get(uid);
+      if (!entry) {
+        entry = {
+          partyUid: uid,
+          partyName: inv.partyName || 'Valued Client',
+          contactPhone: inv.contactPhone || '',
+          companyName: inv.companyName || 'NOOR E HARAM TRAVELS & TOURS',
+          departureDate: inv.departureDate || inv.issueDate || '',
+          arrivalDate: inv.arrivalDate || inv.dueDate || '',
+          passengersCount: inv.totalPax || 1,
+          totalBilled: 0,
+          totalPaid: 0,
+          balanceDue: 0,
+          invoices: []
+        };
+        map.set(uid, entry);
+      }
+      entry.totalBilled += (parseFloat(inv.totalAmount) || 0);
+      entry.totalPaid += (parseFloat(inv.paidAmount) || 0);
+      entry.balanceDue += (parseFloat(inv.balanceDue) || 0);
+      entry.invoices.push(inv);
+      if (!entry.departureDate && inv.departureDate) entry.departureDate = inv.departureDate;
+      if (!entry.arrivalDate && inv.arrivalDate) entry.arrivalDate = inv.arrivalDate;
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.balanceDue - a.balanceDue);
+  }, [parties, invoiceList, invoices]);
+
+  const filteredCustomerLedgers = useMemo(() => {
+    if (!customerSearchTerm.trim()) return customerLedgerSummaries;
+    const q = customerSearchTerm.toLowerCase();
+    return customerLedgerSummaries.filter(c => 
+      (c.partyName || '').toLowerCase().includes(q) ||
+      (c.partyUid || '').toLowerCase().includes(q) ||
+      (c.contactPhone || '').toLowerCase().includes(q)
+    );
+  }, [customerLedgerSummaries, customerSearchTerm]);
+
+  // Total metrics across all customers
+  const customerOverallStats = useMemo(() => {
+    let tBilled = 0;
+    let tPaid = 0;
+    let tBalance = 0;
+    customerLedgerSummaries.forEach(c => {
+      tBilled += c.totalBilled;
+      tPaid += c.totalPaid;
+      tBalance += c.balanceDue;
+    });
+    return { tBilled, tPaid, tBalance };
+  }, [customerLedgerSummaries]);
+
+  // Entries for single customer print statement
+  const printPartyEntries = useMemo(() => {
+    if (!selectedPartyForPrint) return [];
+    return allLedgerEntries.filter(e => 
+      e.partyHeadUid === selectedPartyForPrint.partyUid ||
+      (e.partyName && e.partyName.toLowerCase() === selectedPartyForPrint.partyName.toLowerCase())
+    );
+  }, [selectedPartyForPrint, allLedgerEntries]);
 
   const handlePrintLedger = () => {
     window.print();
@@ -1054,269 +1274,703 @@ export default function InvoiceLedger({
       {viewMode === 'LEDGER' && (
         <div className="space-y-4 statement-sheet">
 
-          {/* Statement Header for Print Only */}
-          <div className="print-only pb-4 mb-4 border-b-2 border-slate-900">
-            <div className="flex items-start justify-between">
-              <div>
-                <h1 className="text-xl font-black text-[#0a192f] uppercase tracking-tight">
-                  NOOR E HARAM TRAVELS & TOURS
-                </h1>
-                <p className="text-xs text-slate-600">
-                  Customer Account Ledger &bull; Statement of Account
-                </p>
-                <p className="text-[10px] text-slate-500 font-mono mt-1">
-                  Generated On: {new Date().toLocaleDateString('en-GB')}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="px-2.5 py-1 bg-[#0a192f] text-[#dfba73] font-mono font-bold text-xs rounded uppercase">
-                  Statement
+          {/* Sub-Navigation Switcher (print-hide) */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/90 shadow-2xs print-hide">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setLedgerSubTab('CUSTOMERS')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  ledgerSubTab === 'CUSTOMERS' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Customer Ledgers &amp; Statements</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-indigo-50 text-indigo-700 font-mono font-bold">
+                  {customerLedgerSummaries.length}
                 </span>
-                <p className="text-xs font-bold text-slate-800 mt-1">
-                  Account: {selectedPartyObj ? selectedPartyObj.name : 'All Accounts'}
-                </p>
-              </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLedgerSubTab('BANKS')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  ledgerSubTab === 'BANKS' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Landmark className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Bank &amp; Cash Accounts (PKR)</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 font-mono font-bold">
+                  {bankAccounts.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setLedgerSubTab('JOURNAL')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  ledgerSubTab === 'JOURNAL' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                <span>All Journal Transactions</span>
+              </button>
             </div>
-          </div>
 
-          {/* Filter Bar & Account Selector */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3 print-hide">
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-              
-              {/* Account / Party Dropdown */}
-              <div className="sm:col-span-5 space-y-1">
-                <label className="block text-[10px] font-bold text-slate-700 uppercase">
-                  Select Customer / Account
-                </label>
-                <div className="relative">
-                  <User className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <select
-                    value={selectedLedgerParty}
-                    onChange={(e) => setSelectedLedgerParty(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-slate-800 cursor-pointer"
-                  >
-                    <option value="ALL">All Parties / Master Consolidated Ledger</option>
-                    {uniqueLedgerParties.map(p => (
-                      <option key={p.uid} value={p.uid}>
-                        {p.name} ({p.uid})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Date From */}
-              <div className="sm:col-span-3 space-y-1">
-                <label className="block text-[10px] font-bold text-slate-700 uppercase">
-                  From Date
-                </label>
-                <CustomDatePicker
-                  value={ledgerDateFrom}
-                  onChange={(val) => setLedgerDateFrom(val)}
-                  placeholder="DD-MM-YYYY"
-                />
-              </div>
-
-              {/* Date To */}
-              <div className="sm:col-span-3 space-y-1">
-                <label className="block text-[10px] font-bold text-slate-700 uppercase">
-                  To Date
-                </label>
-                <CustomDatePicker
-                  value={ledgerDateTo}
-                  onChange={(val) => setLedgerDateTo(val)}
-                  minDate={ledgerDateFrom || undefined}
-                  placeholder="DD-MM-YYYY"
-                />
-              </div>
-
-              {/* Reset Filters */}
-              <div className="sm:col-span-1">
+            <div className="flex items-center gap-2">
+              {ledgerSubTab === 'BANKS' && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedLedgerParty('ALL');
-                    setLedgerDateFrom('');
-                    setLedgerDateTo('');
-                  }}
-                  title="Reset Filters"
-                  className="w-full p-2 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 flex items-center justify-center transition-colors"
+                  onClick={() => setShowAddBankModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Bank Account</span>
                 </button>
-              </div>
+              )}
 
-            </div>
-          </div>
-
-          {/* KPI Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            
-            {/* Total Invoiced (Debit) */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Total Billed (Debits)
-                </span>
-                <span className="text-xl font-black font-mono text-slate-900 block">
-                  PKR {ledgerTotalDebit.toLocaleString()}
-                </span>
-                <span className="text-[10px] text-slate-400">Total charges invoiced to client</span>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Total Received (Credit) */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Total Received (Credits)
-                </span>
-                <span className="text-xl font-black font-mono text-emerald-700 block">
-                  PKR {ledgerTotalCredit.toLocaleString()}
-                </span>
-                <span className="text-[10px] text-slate-400">Payments collected &amp; cleared</span>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                <CreditCard className="w-5 h-5" />
-              </div>
-            </div>
-
-            {/* Net Balance Due */}
-            <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Net Outstanding Balance
-                </span>
-                <span className={`text-xl font-black font-mono block ${
-                  ledgerNetBalance > 0 ? 'text-rose-600' : (ledgerNetBalance === 0 ? 'text-emerald-700' : 'text-indigo-600')
-                }`}>
-                  PKR {ledgerNetBalance.toLocaleString()}
-                </span>
-                <span className="text-[10px] text-slate-400">
-                  {ledgerNetBalance > 0 ? 'Outstanding receivable' : (ledgerNetBalance === 0 ? 'Account fully settled' : 'Advance credit balance')}
-                </span>
-              </div>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                ledgerNetBalance > 0 ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'
-              }`}>
-                {ledgerNetBalance > 0 ? <AlertCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
-              </div>
-            </div>
-
-          </div>
-
-          {/* Chronological Ledger Entries Table */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
-            <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 print-hide">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-emerald-600" />
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                  Account Ledger Transactions ({filteredLedgerEntries.length})
-                </span>
-              </div>
-
-              {selectedPartyObj && (
-                <span className="text-xs font-mono font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded border border-slate-200">
-                  {selectedPartyObj.name} &bull; {selectedPartyObj.phone}
-                </span>
+              {ledgerSubTab === 'JOURNAL' && (
+                <button
+                  onClick={handlePrintLedger}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] border border-[#dfba73]/40 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Consolidated Journal</span>
+                </button>
               )}
             </div>
+          </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-mono text-[10px]">
-                  <tr>
-                    <th className="py-3 px-3.5 font-bold">Date</th>
-                    <th className="py-3 px-3.5 font-bold">Entry Type</th>
-                    <th className="py-3 px-3.5 font-bold">Voucher / Ref #</th>
-                    <th className="py-3 px-3.5 font-bold">Customer / Party</th>
-                    <th className="py-3 px-3.5 font-bold">Particulars &amp; Details</th>
-                    <th className="py-3 px-3.5 font-bold text-right">Debit (+)</th>
-                    <th className="py-3 px-3.5 font-bold text-right">Credit (-)</th>
-                    <th className="py-3 px-3.5 font-bold text-right">Balance</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredLedgerEntries.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" className="py-12 text-center text-slate-400">
-                        <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        <p className="font-semibold">No ledger entries found for this selection</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredLedgerEntries.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="py-3 px-3.5 font-mono text-[11px] text-slate-700 whitespace-nowrap">
-                          {entry.date}
-                        </td>
-                        <td className="py-3 px-3.5 whitespace-nowrap">
-                          {entry.type === 'INVOICE' ? (
-                            <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">
-                              INVOICE
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              RECEIPT
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
-                          {entry.invoiceId ? (
-                            <Link 
-                              href={`/invoice/${encodeURIComponent(entry.refNo)}`} 
-                              className="text-indigo-600 hover:underline flex items-center gap-1"
-                            >
-                              <span>{entry.refNo}</span>
-                            </Link>
-                          ) : (
-                            <span>{entry.refNo}</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-3.5">
-                          <span className="font-bold text-slate-900 uppercase block text-[11px]">
-                            {entry.partyName}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3.5 text-slate-600 text-[11px]">
-                          {entry.particulars}
-                        </td>
-                        <td className="py-3 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
-                          {entry.debit > 0 ? `PKR ${entry.debit.toLocaleString()}` : '-'}
-                        </td>
-                        <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
-                          {entry.credit > 0 ? `PKR ${entry.credit.toLocaleString()}` : '-'}
-                        </td>
-                        <td className="py-3 px-3.5 text-right font-mono font-black whitespace-nowrap">
-                          <span className={entry.runningBalance > 0 ? 'text-rose-600' : 'text-emerald-700'}>
-                            PKR {entry.runningBalance.toLocaleString()}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Print Sign-off Footer */}
-            <div className="print-only pt-8 mt-6 border-t border-slate-300">
-              <div className="flex items-center justify-between text-xs text-slate-600">
-                <div className="text-center">
-                  <div className="w-48 border-b border-slate-400 mb-1" />
-                  <span>Prepared By / Cashier</span>
+          {/* ========================================================= */}
+          {/* SUB-VIEW 1: CUSTOMER LEDGERS & STATEMENTS (PARTY HEADS)   */}
+          {/* ========================================================= */}
+          {ledgerSubTab === 'CUSTOMERS' && (
+            <div className="space-y-4">
+              
+              {/* Customer Top KPI Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Active Accounts / Debtors
+                  </span>
+                  <span className="text-xl font-black font-mono text-slate-900 block mt-0.5">
+                    {customerLedgerSummaries.length}
+                  </span>
+                  <span className="text-[10px] text-slate-400">Total client accounts registered</span>
                 </div>
-                <div className="text-center">
-                  <div className="w-48 border-b border-slate-400 mb-1" />
-                  <span>Authorized Signature &amp; Stamp</span>
+
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Total Invoiced (Debits)
+                  </span>
+                  <span className="text-xl font-black font-mono text-slate-900 block mt-0.5">
+                    PKR {customerOverallStats.tBilled.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-blue-600 font-semibold">Total package charges billed</span>
+                </div>
+
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Total Advances &amp; Received
+                  </span>
+                  <span className="text-xl font-black font-mono text-emerald-700 block mt-0.5">
+                    PKR {customerOverallStats.tPaid.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-emerald-600 font-semibold">Cleared into bank / cash</span>
+                </div>
+
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Net Outstanding Receivables
+                  </span>
+                  <span className={`text-xl font-black font-mono block mt-0.5 ${
+                    customerOverallStats.tBalance > 0 ? 'text-rose-600' : 'text-emerald-700'
+                  }`}>
+                    PKR {customerOverallStats.tBalance.toLocaleString()}
+                  </span>
+                  <span className="text-[10px] text-slate-400">Remaining to be collected</span>
                 </div>
               </div>
-            </div>
 
-          </div>
+              {/* Search Bar for Customer Ledgers */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-xs flex items-center justify-between gap-3">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search by Customer Name, Phone, or Party UID (e.g. PHU-0001)..."
+                    value={customerSearchTerm}
+                    onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-600"
+                  />
+                </div>
+                {customerSearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setCustomerSearchTerm('')}
+                    className="px-2.5 py-1 text-xs text-slate-500 hover:text-slate-800"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Customer Accounts Summary Table */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+                <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-indigo-600" />
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                      Customer Ledgers Master Directory ({filteredCustomerLedgers.length})
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-500">
+                    Click <strong>Print Statement</strong> on any client to view or print their formal running ledger.
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-mono text-[10px]">
+                      <tr>
+                        <th className="py-3 px-3.5 font-bold">Party UID</th>
+                        <th className="py-3 px-3.5 font-bold">Customer / Party Head</th>
+                        <th className="py-3 px-3.5 font-bold">Travel Dates &amp; PAX</th>
+                        <th className="py-3 px-3.5 font-bold text-right">Total Billed</th>
+                        <th className="py-3 px-3.5 font-bold text-right">Total Paid (Advance)</th>
+                        <th className="py-3 px-3.5 font-bold text-right">Balance Due</th>
+                        <th className="py-3 px-3.5 font-bold text-center">Status</th>
+                        <th className="py-3 px-3.5 font-bold text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredCustomerLedgers.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="py-12 text-center text-slate-400">
+                            <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                            <p className="font-semibold">No customer accounts match your search</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredCustomerLedgers.map((cust) => {
+                          const isSettled = cust.balanceDue <= 0;
+                          const isPartial = !isSettled && cust.totalPaid > 0;
+                          return (
+                            <tr key={cust.partyUid} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3 px-3.5 font-mono text-[11px] font-bold text-slate-700 whitespace-nowrap">
+                                <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
+                                  {cust.partyUid}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3.5">
+                                <div className="font-bold text-slate-900 text-xs">
+                                  {cust.partyName}
+                                </div>
+                                <div className="text-[10px] text-slate-500 font-mono">
+                                  {cust.contactPhone || 'No Phone'}
+                                </div>
+                              </td>
+                              <td className="py-3 px-3.5 text-[11px] text-slate-600">
+                                <div className="font-semibold">
+                                  {cust.passengersCount} PAX {cust.departureDate ? `• Dep: ${cust.departureDate}` : ''}
+                                </div>
+                                {cust.invoices.length > 0 && (
+                                  <div className="text-[10px] text-slate-400 font-mono">
+                                    {cust.invoices.length} Bill{cust.invoices.length > 1 ? 's' : ''} Linked
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-3 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                                PKR {cust.totalBilled.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
+                                PKR {cust.totalPaid.toLocaleString()}
+                              </td>
+                              <td className="py-3 px-3.5 text-right font-mono font-black whitespace-nowrap">
+                                <span className={cust.balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}>
+                                  PKR {cust.balanceDue.toLocaleString()}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3.5 text-center whitespace-nowrap">
+                                {getStatusChip(isSettled ? 'Settled' : (isPartial ? 'Partially Unlocked Balance' : 'Outstanding Overdue Collections'), cust.balanceDue, cust.totalPaid)}
+                              </td>
+                              <td className="py-3 px-3.5 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  
+                                  {/* Print Statement Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedPartyForPrint(cust)}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10.5px] font-bold shadow-2xs transition-colors cursor-pointer"
+                                    title="View / Print Customer Statement"
+                                  >
+                                    <Printer className="w-3 h-3 text-[#dfba73]" />
+                                    <span>Print Ledger</span>
+                                  </button>
+
+                                  {/* View Entries in Journal */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedLedgerParty(cust.partyUid);
+                                      setLedgerSubTab('JOURNAL');
+                                    }}
+                                    className="p-1 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 transition-colors cursor-pointer"
+                                    title="View Itemized Journal Entries"
+                                  >
+                                    <FileText className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  {/* Log Payment if balance due */}
+                                  {cust.balanceDue > 0 && cust.invoices.length > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const firstUnpaid = cust.invoices.find(i => (i.balanceDue || 0) > 0) || cust.invoices[0];
+                                        setActiveInvoiceForPay(firstUnpaid);
+                                        setPayAmount(firstUnpaid.balanceDue || cust.balanceDue);
+                                      }}
+                                      className="p-1 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border border-emerald-200 transition-colors cursor-pointer"
+                                      title="Log Payment for this Customer"
+                                    >
+                                      <CreditCard className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* SUB-VIEW 2: BANK & CASH ACCOUNTS (PKR WALLETS)            */}
+          {/* ========================================================= */}
+          {ledgerSubTab === 'BANKS' && (
+            <div className="space-y-4">
+              
+              {/* Bank Accounts Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {bankAccounts.map((acc) => {
+                  const bal = bankAccountBalances[acc.id] || 0;
+                  const isCash = acc.type === 'CASH';
+                  return (
+                    <div 
+                      key={acc.id}
+                      className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs relative overflow-hidden flex flex-col justify-between"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                              isCash ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                            }`}>
+                              {isCash ? <Wallet className="w-4 h-4" /> : <Landmark className="w-4 h-4" />}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-900 text-xs">{acc.accountName}</h4>
+                              <p className="text-[10px] text-slate-400 font-semibold">{acc.bankName}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase ${
+                              isCash ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            }`}>
+                              {acc.type}
+                            </span>
+                            {!acc.isDefault && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteBank(acc.id)}
+                                className="text-slate-400 hover:text-rose-600 p-1 rounded cursor-pointer"
+                                title="Delete Bank Account"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-100 text-[10.5px] space-y-1">
+                          <div className="flex justify-between text-slate-500">
+                            <span>Account Title:</span>
+                            <span className="font-semibold text-slate-800">{acc.accountTitle}</span>
+                          </div>
+                          <div className="flex justify-between text-slate-500">
+                            <span>Account / Drawer #:</span>
+                            <span className="font-mono font-bold text-slate-800">{acc.accountNumber}</span>
+                          </div>
+                          {acc.iban && acc.iban !== '-' && (
+                            <div className="flex justify-between text-slate-500">
+                              <span>IBAN:</span>
+                              <span className="font-mono text-[9.5px] text-slate-600">{acc.iban}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="pt-3 mt-3 border-t border-slate-100 flex items-baseline justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase">Available Funds</span>
+                        <span className="font-mono font-black text-emerald-700 text-base">
+                          PKR {bal.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Inflow Transactions History for Bank Accounts */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+                <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                      Bank &amp; Cash Inflow Receipts Log ({allAccountInflows.length})
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-mono">
+                    All advance payments &amp; receipts deposited into company accounts
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-mono text-[10px]">
+                      <tr>
+                        <th className="py-3 px-3.5 font-bold">Date</th>
+                        <th className="py-3 px-3.5 font-bold">Receipt / Ref #</th>
+                        <th className="py-3 px-3.5 font-bold">Customer / Client</th>
+                        <th className="py-3 px-3.5 font-bold">Deposit Account</th>
+                        <th className="py-3 px-3.5 font-bold">Method</th>
+                        <th className="py-3 px-3.5 font-bold text-right">Amount Deposited</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {allAccountInflows.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="py-12 text-center text-slate-400">
+                            <Landmark className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                            <p className="font-semibold">No bank or cash deposit receipts recorded yet</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        allAccountInflows.map((item) => (
+                          <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-3.5 font-mono text-[11px] text-slate-700 whitespace-nowrap">
+                              {item.date}
+                            </td>
+                            <td className="py-3 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
+                              {item.referenceNo}
+                            </td>
+                            <td className="py-3 px-3.5">
+                              <span className="font-bold text-slate-900 text-xs block">{item.partyName}</span>
+                              <span className="text-[10px] text-slate-400 font-mono">Bill: {item.invoiceNo}</span>
+                            </td>
+                            <td className="py-3 px-3.5">
+                              <span className="inline-flex items-center gap-1 font-semibold text-slate-800 text-xs">
+                                <Landmark className="w-3 h-3 text-emerald-600" />
+                                {item.bankAccountName}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3.5 text-slate-600 text-xs">
+                              {item.method}
+                            </td>
+                            <td className="py-3 px-3.5 text-right font-mono font-black text-emerald-700 whitespace-nowrap">
+                              + PKR {item.amount.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ========================================================= */}
+          {/* SUB-VIEW 3: ALL CONSOLIDATED JOURNAL ENTRIES               */}
+          {/* ========================================================= */}
+          {ledgerSubTab === 'JOURNAL' && (
+            <div className="space-y-4">
+
+              {/* Statement Header for Print Only */}
+              <div className="print-only pb-4 mb-4 border-b-2 border-slate-900">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h1 className="text-xl font-black text-[#0a192f] uppercase tracking-tight">
+                      NOOR E HARAM TRAVELS & TOURS
+                    </h1>
+                    <p className="text-xs text-slate-600">
+                      Customer Account Ledger &bull; Statement of Account
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-mono mt-1">
+                      Generated On: {new Date().toLocaleDateString('en-GB')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="px-2.5 py-1 bg-[#0a192f] text-[#dfba73] font-mono font-bold text-xs rounded uppercase">
+                      Statement
+                    </span>
+                    <p className="text-xs font-bold text-slate-800 mt-1">
+                      Account: {selectedPartyObj ? selectedPartyObj.name : 'All Accounts'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter Bar & Account Selector */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3 print-hide">
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                  
+                  {/* Account / Party Dropdown */}
+                  <div className="sm:col-span-5 space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-700 uppercase">
+                      Select Customer / Account
+                    </label>
+                    <div className="relative">
+                      <User className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <select
+                        value={selectedLedgerParty}
+                        onChange={(e) => setSelectedLedgerParty(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-slate-800 cursor-pointer"
+                      >
+                        <option value="ALL">All Parties / Master Consolidated Ledger</option>
+                        {uniqueLedgerParties.map(p => (
+                          <option key={p.uid} value={p.uid}>
+                            {p.name} ({p.uid})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Date From */}
+                  <div className="sm:col-span-3 space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-700 uppercase">
+                      From Date
+                    </label>
+                    <CustomDatePicker
+                      value={ledgerDateFrom}
+                      onChange={(val) => setLedgerDateFrom(val)}
+                      placeholder="DD-MM-YYYY"
+                    />
+                  </div>
+
+                  {/* Date To */}
+                  <div className="sm:col-span-3 space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-700 uppercase">
+                      To Date
+                    </label>
+                    <CustomDatePicker
+                      value={ledgerDateTo}
+                      onChange={(val) => setLedgerDateTo(val)}
+                      minDate={ledgerDateFrom || undefined}
+                      placeholder="DD-MM-YYYY"
+                    />
+                  </div>
+
+                  {/* Reset Filters */}
+                  <div className="sm:col-span-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedLedgerParty('ALL');
+                        setLedgerDateFrom('');
+                        setLedgerDateTo('');
+                      }}
+                      title="Reset Filters"
+                      className="w-full p-2 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* KPI Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                
+                {/* Total Invoiced (Debit) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Total Billed (Debits)
+                    </span>
+                    <span className="text-xl font-black font-mono text-slate-900 block">
+                      PKR {ledgerTotalDebit.toLocaleString()}
+                    </span>
+                    <span className="text-[10px] text-slate-400">Total charges invoiced to client</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Total Received (Credit) */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Total Received (Credits)
+                    </span>
+                    <span className="text-xl font-black font-mono text-emerald-700 block">
+                      PKR {ledgerTotalCredit.toLocaleString()}
+                    </span>
+                    <span className="text-[10px] text-slate-400">Payments collected &amp; cleared</span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Net Balance Due */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Net Outstanding Balance
+                    </span>
+                    <span className={`text-xl font-black font-mono block ${
+                      ledgerNetBalance > 0 ? 'text-rose-600' : (ledgerNetBalance === 0 ? 'text-emerald-700' : 'text-indigo-600')
+                    }`}>
+                      PKR {ledgerNetBalance.toLocaleString()}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {ledgerNetBalance > 0 ? 'Outstanding receivable' : (ledgerNetBalance === 0 ? 'Account fully settled' : 'Advance credit balance')}
+                    </span>
+                  </div>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    ledgerNetBalance > 0 ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'
+                  }`}>
+                    {ledgerNetBalance > 0 ? <AlertCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Chronological Ledger Entries Table */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+                <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 print-hide">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-emerald-600" />
+                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                      Account Ledger Transactions ({filteredLedgerEntries.length})
+                    </span>
+                  </div>
+
+                  {selectedPartyObj && (
+                    <span className="text-xs font-mono font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded border border-slate-200">
+                      {selectedPartyObj.name} &bull; {selectedPartyObj.phone}
+                    </span>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-mono text-[10px]">
+                      <tr>
+                        <th className="py-3 px-3.5 font-bold">Date</th>
+                        <th className="py-3 px-3.5 font-bold">Entry Type</th>
+                        <th className="py-3 px-3.5 font-bold">Voucher / Ref #</th>
+                        <th className="py-3 px-3.5 font-bold">Customer / Party</th>
+                        <th className="py-3 px-3.5 font-bold">Particulars &amp; Details</th>
+                        <th className="py-3 px-3.5 font-bold text-right">Debit (+)</th>
+                        <th className="py-3 px-3.5 font-bold text-right">Credit (-)</th>
+                        <th className="py-3 px-3.5 font-bold text-right">Balance</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredLedgerEntries.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="py-12 text-center text-slate-400">
+                            <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                            <p className="font-semibold">No ledger entries found for this selection</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredLedgerEntries.map((entry) => (
+                          <tr key={entry.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="py-3 px-3.5 font-mono text-[11px] text-slate-700 whitespace-nowrap">
+                              {entry.date}
+                            </td>
+                            <td className="py-3 px-3.5 whitespace-nowrap">
+                              {entry.type === 'INVOICE' ? (
+                                <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">
+                                  INVOICE
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  RECEIPT
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
+                              {entry.invoiceId ? (
+                                <Link 
+                                  href={`/invoice/${encodeURIComponent(entry.refNo)}`} 
+                                  className="text-indigo-600 hover:underline flex items-center gap-1"
+                                >
+                                  <span>{entry.refNo}</span>
+                                </Link>
+                              ) : (
+                                <span>{entry.refNo}</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3.5">
+                              <span className="font-bold text-slate-900 uppercase block text-[11px]">
+                                {entry.partyName}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3.5 text-slate-600 text-[11px]">
+                              {entry.particulars}
+                            </td>
+                            <td className="py-3 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                              {entry.debit > 0 ? `PKR ${entry.debit.toLocaleString()}` : '-'}
+                            </td>
+                            <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
+                              {entry.credit > 0 ? `PKR ${entry.credit.toLocaleString()}` : '-'}
+                            </td>
+                            <td className="py-3 px-3.5 text-right font-mono font-black whitespace-nowrap">
+                              <span className={entry.runningBalance > 0 ? 'text-rose-600' : 'text-emerald-700'}>
+                                PKR {entry.runningBalance.toLocaleString()}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Print Sign-off Footer */}
+                <div className="print-only pt-8 mt-6 border-t border-slate-300">
+                  <div className="flex items-center justify-between text-xs text-slate-600">
+                    <div className="text-center">
+                      <div className="w-48 border-b border-slate-400 mb-1" />
+                      <span>Prepared By / Cashier</span>
+                    </div>
+                    <div className="text-center">
+                      <div className="w-48 border-b border-slate-400 mb-1" />
+                      <span>Authorized Signature &amp; Stamp</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          )}
 
         </div>
       )}
@@ -2006,24 +2660,38 @@ export default function InvoiceLedger({
                   </label>
 
                   {hasInitialPayment && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-emerald-50/70 p-3 rounded-2xl border border-emerald-200 text-xs">
                       <div>
-                        <label className="block text-[9.5px] font-bold text-emerald-900 uppercase">Paid Amount (PKR)</label>
+                        <label className="block text-[9.5px] font-bold text-emerald-900 uppercase mb-1">Paid Amount (PKR) *</label>
                         <input
                           type="number"
                           value={initialPaymentAmount}
                           onChange={(e) => setInitialPaymentAmount(e.target.value)}
                           placeholder="e.g. 100000"
-                          className="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs font-mono font-bold focus:outline-none"
+                          className="w-full px-2.5 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-mono font-bold focus:outline-none"
                           required={hasInitialPayment}
                         />
                       </div>
                       <div>
-                        <label className="block text-[9.5px] font-bold text-emerald-900 uppercase">Payment Method</label>
+                        <label className="block text-[9.5px] font-bold text-emerald-900 uppercase mb-1">Deposit Into Account</label>
+                        <select
+                          value={selectedBankAccountId}
+                          onChange={(e) => setSelectedBankAccountId(e.target.value)}
+                          className="w-full px-2.5 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-semibold focus:outline-none cursor-pointer"
+                        >
+                          {bankAccounts.map(b => (
+                            <option key={b.id} value={b.id}>
+                              {b.accountName} {b.accountNumber !== 'CASH-PKR' ? `(${b.accountNumber})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9.5px] font-bold text-emerald-900 uppercase mb-1">Payment Method</label>
                         <select
                           value={initialPaymentMethod}
                           onChange={(e) => setInitialPaymentMethod(e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs focus:outline-none"
+                          className="w-full px-2.5 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs focus:outline-none cursor-pointer"
                         >
                           <option>Online Bank Transfer</option>
                           <option>Cash Deposit</option>
@@ -2032,13 +2700,13 @@ export default function InvoiceLedger({
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[9.5px] font-bold text-emerald-900 uppercase">Reference #</label>
+                        <label className="block text-[9.5px] font-bold text-emerald-900 uppercase mb-1">Reference # / Slip</label>
                         <input
                           type="text"
                           value={initialPaymentRef}
                           onChange={(e) => setInitialPaymentRef(e.target.value)}
                           placeholder="e.g. TRX-90412"
-                          className="w-full px-2.5 py-1.5 bg-white border border-emerald-200 rounded-lg text-xs font-mono focus:outline-none"
+                          className="w-full px-2.5 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-mono focus:outline-none"
                         />
                       </div>
                     </div>
@@ -2156,6 +2824,21 @@ export default function InvoiceLedger({
               </div>
 
               <div>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Deposit Into Account</label>
+                <select
+                  value={payBankAccountId}
+                  onChange={(e) => setPayBankAccountId(e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-xl bg-white text-slate-800 text-xs outline-none cursor-pointer"
+                >
+                  {bankAccounts.map(b => (
+                    <option key={b.id} value={b.id}>
+                      {b.accountName} {b.accountNumber !== 'CASH-PKR' ? `(${b.accountNumber})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Bank Reference / Cheque #</label>
                 <input
                   type="text"
@@ -2181,13 +2864,13 @@ export default function InvoiceLedger({
                 <button
                   type="button"
                   onClick={() => setActiveInvoiceForPay(null)}
-                  className="px-3.5 py-1.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  className="px-3.5 py-1.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs"
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer"
                 >
                   Log Payment &amp; Credit Ledger
                 </button>
@@ -2195,6 +2878,318 @@ export default function InvoiceLedger({
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================= */}
+      {/* 6. MODAL: CUSTOMER STATEMENT OF ACCOUNT PRINT PREVIEW         */}
+      {/* ============================================================= */}
+      {selectedPartyForPrint && (
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6 my-6 max-h-[92vh] overflow-y-auto print:max-h-none print:overflow-visible print:border-none print:shadow-none print:p-0 print:my-0">
+            
+            {/* Action Bar (print-hide) */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 print-hide">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#0a192f] text-[#dfba73] flex items-center justify-center font-bold shadow-xs">
+                  <Printer className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                    Customer Statement of Account Preview
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-mono">
+                    Account: {selectedPartyForPrint.partyName} ({selectedPartyForPrint.partyUid})
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] border border-[#dfba73]/40 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Statement (Ctrl + P)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPartyForPrint(null)}
+                  className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* A4 PRINT SHEET WRAPPER */}
+            <div className="statement-print-sheet space-y-6 bg-white p-2 sm:p-4 text-slate-800">
+              
+              {/* Header: Company & Statement Title */}
+              <div className="border-b-2 border-slate-900 pb-5 flex flex-col sm:flex-row items-start justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center p-1.5 shrink-0">
+                    <img 
+                      src="/logo.png" 
+                      alt="Company Logo" 
+                      className="w-full h-full object-contain" 
+                    />
+                  </div>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-[#0a192f] tracking-tight uppercase">
+                      {selectedPartyForPrint.companyName || 'NOOR E HARAM TRAVELS & TOURS'}
+                    </h1>
+                    <p className="text-xs text-slate-600 font-medium">
+                      Umrah Operations, Group Aviation &amp; Luxury Hospitality Ledger
+                    </p>
+                    <p className="text-[10.5px] text-slate-500 font-mono mt-0.5">
+                      Phone: +92 300 2433721 &bull; Authorized Travel Operations
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-left sm:text-right">
+                  <span className="px-3 py-1 bg-[#0a192f] text-[#dfba73] font-mono font-bold text-xs rounded-lg uppercase tracking-wider inline-block">
+                    CUSTOMER STATEMENT
+                  </span>
+                  <p className="text-[11px] text-slate-500 font-mono mt-1.5">
+                    Date: {new Date().toLocaleDateString('en-GB')}
+                  </p>
+                  <p className="text-[11px] font-mono font-bold text-slate-800">
+                    Currency: PKR (Pakistani Rupee)
+                  </p>
+                </div>
+              </div>
+
+              {/* Debtor Profile Card */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 text-xs">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Customer Details</span>
+                  <div className="font-black text-slate-900 text-sm">{selectedPartyForPrint.partyName}</div>
+                  <div className="text-slate-600 font-mono">Contact Phone: <strong>{selectedPartyForPrint.contactPhone || 'N/A'}</strong></div>
+                  <div className="text-slate-500 font-mono text-[10.5px]">Account UID: <strong>{selectedPartyForPrint.partyUid}</strong></div>
+                </div>
+
+                <div className="space-y-1 sm:text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Booking &amp; Travel Leg</span>
+                  <div className="font-bold text-slate-800">Total Group Passengers: {selectedPartyForPrint.passengersCount} PAX</div>
+                  <div className="text-slate-600 text-[11px]">
+                    Departure: {selectedPartyForPrint.departureDate || 'Standard Leg'} {selectedPartyForPrint.arrivalDate ? `• Return: ${selectedPartyForPrint.arrivalDate}` : ''}
+                  </div>
+                  <div className="text-[10px] text-emerald-700 font-mono font-bold">
+                    Financial Status: {selectedPartyForPrint.balanceDue <= 0 ? 'Fully Settled' : 'Open Balance Payable'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Itemized Running Transactions Table */}
+              <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#0a192f] text-white font-mono text-[10px] uppercase tracking-wider">
+                    <tr>
+                      <th className="py-2.5 px-3.5">Date</th>
+                      <th className="py-2.5 px-3.5">Voucher / Ref #</th>
+                      <th className="py-2.5 px-3.5">Particulars / Description</th>
+                      <th className="py-2.5 px-3.5 text-right">Debit (+)</th>
+                      <th className="py-2.5 px-3.5 text-right">Credit (-)</th>
+                      <th className="py-2.5 px-3.5 text-right">Running Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-sans">
+                    {printPartyEntries.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="py-8 text-center text-slate-400 font-semibold">
+                          No direct transaction lines recorded for this customer yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      printPartyEntries.map((e) => (
+                        <tr key={e.id} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3.5 font-mono text-[11px] text-slate-700 whitespace-nowrap">{e.date}</td>
+                          <td className="py-2.5 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">{e.refNo}</td>
+                          <td className="py-2.5 px-3.5 text-slate-700 text-[11px]">{e.particulars}</td>
+                          <td className="py-2.5 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                            {e.debit > 0 ? `PKR ${e.debit.toLocaleString()}` : '-'}
+                          </td>
+                          <td className="py-2.5 px-3.5 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
+                            {e.credit > 0 ? `PKR ${e.credit.toLocaleString()}` : '-'}
+                          </td>
+                          <td className="py-2.5 px-3.5 text-right font-mono font-black whitespace-nowrap">
+                            <span className={e.runningBalance > 0 ? 'text-rose-600' : 'text-emerald-700'}>
+                              PKR {e.runningBalance.toLocaleString()}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Statement Total Summary Box */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-sm">
+                <div className="space-y-1 text-center sm:text-left">
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-[#dfba73]">Account Settlement Overview</span>
+                  <div className="text-xs text-slate-300">
+                    Total Billed: <span className="font-mono font-bold text-white">PKR {selectedPartyForPrint.totalBilled.toLocaleString()}</span> &bull; Total Paid: <span className="font-mono font-bold text-emerald-400">PKR {selectedPartyForPrint.totalPaid.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div className="text-center sm:text-right">
+                  <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Net Outstanding Balance Due</span>
+                  <span className={`text-xl sm:text-2xl font-black font-mono block ${
+                    selectedPartyForPrint.balanceDue > 0 ? 'text-rose-400' : 'text-emerald-400'
+                  }`}>
+                    PKR {selectedPartyForPrint.balanceDue.toLocaleString()}
+                  </span>
+                  <span className="text-[9.5px] text-slate-400 font-mono">
+                    {selectedPartyForPrint.balanceDue > 0 ? 'Payable upon ticket & visa issuance' : 'Account fully cleared & settled'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Sign-off Signatures */}
+              <div className="pt-8 mt-6 border-t border-slate-300">
+                <div className="flex items-center justify-between text-xs text-slate-600">
+                  <div className="text-center">
+                    <div className="w-48 border-b border-slate-400 mb-1" />
+                    <span>Prepared By / Cashier</span>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-48 border-b border-slate-400 mb-1" />
+                    <span>Authorized Signature &amp; Stamp</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================= */}
+      {/* 7. MODAL: ADD COMPANY BANK / CASH ACCOUNT (PKR)               */}
+      {/* ============================================================= */}
+      {showAddBankModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 print-hide">
+          <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
+                  <Landmark className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm">Add Bank / Cash Account</h3>
+                  <p className="text-[10px] text-slate-400">Pakistani PKR Currency Account</p>
+                </div>
+              </div>
+              <button onClick={() => setShowAddBankModal(false)} className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewBank} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Account Name *</label>
+                <input
+                  type="text"
+                  value={newBankForm.accountName}
+                  onChange={(e) => setNewBankForm({ ...newBankForm, accountName: e.target.value })}
+                  placeholder="e.g. Meezan Bank Main Branch"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-xl text-xs outline-none focus:border-slate-800"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Bank Name *</label>
+                  <input
+                    type="text"
+                    value={newBankForm.bankName}
+                    onChange={(e) => setNewBankForm({ ...newBankForm, bankName: e.target.value })}
+                    placeholder="e.g. Meezan Bank / HBL"
+                    className="w-full px-3 py-1.5 border border-slate-300 rounded-xl text-xs outline-none focus:border-slate-800"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Account Type</label>
+                  <select
+                    value={newBankForm.type}
+                    onChange={(e) => setNewBankForm({ ...newBankForm, type: e.target.value })}
+                    className="w-full px-3 py-1.5 border border-slate-300 rounded-xl bg-white text-xs outline-none cursor-pointer"
+                  >
+                    <option value="BANK">Bank Account</option>
+                    <option value="CASH">Cash Drawer</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Account Title</label>
+                <input
+                  type="text"
+                  value={newBankForm.accountTitle}
+                  onChange={(e) => setNewBankForm({ ...newBankForm, accountTitle: e.target.value })}
+                  placeholder="e.g. NOOR E HARAM TRAVELS & TOURS"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-xl text-xs outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Account / Drawer #</label>
+                  <input
+                    type="text"
+                    value={newBankForm.accountNumber}
+                    onChange={(e) => setNewBankForm({ ...newBankForm, accountNumber: e.target.value })}
+                    placeholder="e.g. 010203040506"
+                    className="w-full px-3 py-1.5 border border-slate-300 rounded-xl font-mono text-xs outline-none focus:border-slate-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">Opening Balance (PKR)</label>
+                  <input
+                    type="number"
+                    value={newBankForm.initialBalance}
+                    onChange={(e) => setNewBankForm({ ...newBankForm, initialBalance: e.target.value })}
+                    placeholder="0"
+                    className="w-full px-3 py-1.5 border border-slate-300 rounded-xl font-mono text-xs outline-none focus:border-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-700 uppercase mb-1">IBAN (Optional)</label>
+                <input
+                  type="text"
+                  value={newBankForm.iban}
+                  onChange={(e) => setNewBankForm({ ...newBankForm, iban: e.target.value })}
+                  placeholder="PK45MEZN0001020304050607"
+                  className="w-full px-3 py-1.5 border border-slate-300 rounded-xl font-mono text-xs outline-none focus:border-slate-800"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddBankModal(false)}
+                  className="px-3.5 py-1.5 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-black shadow-xs cursor-pointer"
+                >
+                  Save Bank Account
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
