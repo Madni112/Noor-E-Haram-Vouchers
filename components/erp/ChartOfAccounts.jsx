@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, 
   Search, 
@@ -18,13 +18,16 @@ import {
   ShieldCheck, 
   ArrowUpRight,
   ArrowDownRight,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from 'lucide-react';
 import { 
   getChartOfAccounts, 
   saveChartOfAccount, 
   deleteChartOfAccount,
-  getBankAccounts
+  getBankAccounts,
+  getCustomSubCategories,
+  saveCustomSubCategory
 } from '../../lib/erpData';
 
 const SUB_CATEGORIES_BY_CATEGORY = {
@@ -71,6 +74,15 @@ const SUB_CATEGORIES_BY_CATEGORY = {
   ]
 };
 
+const CATEGORIES_LIST = [
+  { id: 'ASSETS', name: 'Assets (1000s)', range: '1000s', type: 'DEBIT', desc: 'Cash, Banks, Receivables, Fixed Assets' },
+  { id: 'LIABILITIES', name: 'Liabilities (2000s)', range: '2000s', type: 'CREDIT', desc: 'Payables, Customer Advances, Loans' },
+  { id: 'EQUITY', name: 'Equity (3000s)', range: '3000s', type: 'CREDIT', desc: "Owner's Capital, Retained Earnings, Drawings" },
+  { id: 'REVENUE', name: 'Revenue (4000s)', range: '4000s', type: 'CREDIT', desc: 'Umrah Packages, Tickets, Margins' },
+  { id: 'DIRECT_COSTS', name: 'Cost of Sales (5000s)', range: '5000s', type: 'DEBIT', desc: 'Saudi Visas, Hotel Blocks, Transport' },
+  { id: 'EXPENSES', name: 'Operating Expenses (6000s)', range: '6000s', type: 'DEBIT', desc: 'Rent, Staff Salaries, Marketing, Utilities' },
+];
+
 export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & TOURS', invoices = [], parties = [] }) {
   const [accounts, setAccounts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,6 +100,48 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
     balance: ''
   });
 
+  // Searchable & Addable Dropdowns State
+  const [customSubCategories, setCustomSubCategories] = useState({});
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [categorySearch, setCategorySearch] = useState('');
+  const [isSubCategoryOpen, setIsSubCategoryOpen] = useState(false);
+  const [subCategorySearch, setSubCategorySearch] = useState('');
+  const categoryRef = useRef(null);
+  const subCategoryRef = useRef(null);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (categoryRef.current && !categoryRef.current.contains(event.target)) {
+        setIsCategoryOpen(false);
+      }
+      if (subCategoryRef.current && !subCategoryRef.current.contains(event.target)) {
+        setIsSubCategoryOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const getAvailableSubCategories = (category) => {
+    const defaults = SUB_CATEGORIES_BY_CATEGORY[category] || [];
+    const customs = customSubCategories[category] || [];
+    const fromAccounts = accounts
+      .filter(a => a.category === category && a.subCategory)
+      .map(a => a.subCategory);
+
+    const seen = new Set();
+    const result = [];
+    [...defaults, ...customs, ...fromAccounts].forEach(item => {
+      const trimmed = (item || '').trim();
+      if (trimmed && !seen.has(trimmed.toLowerCase())) {
+        seen.add(trimmed.toLowerCase());
+        result.push(trimmed);
+      }
+    });
+    return result;
+  };
+
   const suggestCodeForSubCategory = (cat, subCat, currentList) => {
     const list = currentList || accounts;
     const sub = (subCat || '').toLowerCase();
@@ -101,7 +155,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
         const codes = list.filter(a => a.category === 'ASSETS' && a.code.startsWith('101')).map(a => parseInt(a.code, 10)).filter(n => !isNaN(n));
         return codes.length === 0 ? '1010' : String(Math.max(...codes) + 1);
       }
-      if (sub.includes('fixed')) {
+      if (sub.includes('fixed') || sub.includes('furniture') || sub.includes('equipment') || sub.includes('vehicle') || sub.includes('asset')) {
         const codes = list.filter(a => a.category === 'ASSETS' && a.code.startsWith('15')).map(a => parseInt(a.code, 10)).filter(n => !isNaN(n));
         return codes.length === 0 ? '1510' : String(Math.max(...codes) + 10);
       }
@@ -135,6 +189,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
 
   const loadAccounts = () => {
     const list = getChartOfAccounts(companyName);
+    setCustomSubCategories(getCustomSubCategories(companyName));
     
     // Invoices total billed and customer debt
     const totalBilled = invoices.reduce((sum, inv) => sum + (parseFloat(inv.netTotal || inv.totalAmount) || 0), 0);
@@ -162,6 +217,10 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
 
   const handleOpenCreate = () => {
     setEditingAccount(null);
+    setIsCategoryOpen(false);
+    setCategorySearch('');
+    setIsSubCategoryOpen(false);
+    setSubCategorySearch('');
     const defaultSub = 'Bank Account';
     const nextCode = suggestCodeForSubCategory('ASSETS', defaultSub, accounts);
     setFormData({
@@ -177,8 +236,8 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
   };
 
   const handleCategoryChangeInModal = (cat) => {
-    const subs = SUB_CATEGORIES_BY_CATEGORY[cat] || ['General'];
-    const defaultSub = subs[0];
+    const subs = getAvailableSubCategories(cat);
+    const defaultSub = subs[0] || 'General';
     let typ = 'DEBIT';
     if (['LIABILITIES', 'EQUITY', 'REVENUE'].includes(cat)) {
       typ = 'CREDIT';
@@ -204,8 +263,32 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
     });
   };
 
+  const selectCategory = (catId) => {
+    handleCategoryChangeInModal(catId);
+    setIsCategoryOpen(false);
+    setCategorySearch('');
+  };
+
+  const selectSubCategory = (sub) => {
+    handleSubCategoryChangeInModal(sub);
+    setIsSubCategoryOpen(false);
+    setSubCategorySearch('');
+  };
+
+  const handleAddNewSubCategory = (newSubName) => {
+    const trimmed = (newSubName || '').trim();
+    if (!trimmed) return;
+    const updated = saveCustomSubCategory(formData.category, trimmed, companyName);
+    setCustomSubCategories(updated);
+    selectSubCategory(trimmed);
+  };
+
   const handleOpenEdit = (acc) => {
     setEditingAccount(acc);
+    setIsCategoryOpen(false);
+    setCategorySearch('');
+    setIsSubCategoryOpen(false);
+    setSubCategorySearch('');
     setFormData({
       code: acc.code,
       name: acc.name,
@@ -571,155 +654,311 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
       </div>
 
       {/* Add / Edit Account Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
-            <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-sm">
-                  {editingAccount ? `Edit Account: ${editingAccount.code}` : 'Add New General Ledger Account'}
-                </h3>
-                <p className="text-[11px] text-slate-300">
-                  Standard double-entry Chart of Accounts classification
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="p-1 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {showAddModal && (() => {
+        const filteredCategories = CATEGORIES_LIST.filter(c => 
+          c.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+          c.id.toLowerCase().includes(categorySearch.toLowerCase()) ||
+          c.desc.toLowerCase().includes(categorySearch.toLowerCase())
+        );
 
-            <form onSubmit={handleSave} className="p-5 space-y-4">
-              {/* 1. Category & Sub-Category */}
-              <div className="grid grid-cols-2 gap-3">
+        const availableSubs = getAvailableSubCategories(formData.category);
+        const filteredSubs = availableSubs.filter(sub => 
+          sub.toLowerCase().includes(subCategorySearch.toLowerCase())
+        );
+        const isExactSubMatch = availableSubs.some(
+          sub => sub.toLowerCase() === subCategorySearch.trim().toLowerCase()
+        );
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 my-auto">
+              {/* Modal Header */}
+              <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between rounded-t-2xl">
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">
-                      Category *
-                    </label>
-                    <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border ${
-                      formData.type === 'DEBIT'
-                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    }`}>
-                      {formData.type === 'DEBIT' ? 'Debit (DR)' : 'Credit (CR)'}
+                  <h3 className="font-bold text-base flex items-center gap-2">
+                    {editingAccount ? `Edit Account: ${editingAccount.code}` : 'Add New General Ledger Account'}
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-indigo-300 border border-slate-700">
+                      {editingAccount ? 'Update Mode' : 'New Entry'}
                     </span>
-                  </div>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => handleCategoryChangeInModal(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-slate-900 bg-white"
-                  >
-                    <option value="ASSETS">Assets (1000s)</option>
-                    <option value="LIABILITIES">Liabilities (2000s)</option>
-                    <option value="EQUITY">Equity (3000s)</option>
-                    <option value="REVENUE">Revenue (4000s)</option>
-                    <option value="DIRECT_COSTS">Cost of Sales (5000s)</option>
-                    <option value="EXPENSES">Operating Expenses (6000s)</option>
-                  </select>
+                  </h3>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Standard double-entry Chart of Accounts classification with auto-ledger sync
+                  </p>
                 </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                    Sub-Category *
-                  </label>
-                  <select
-                    value={formData.subCategory}
-                    onChange={(e) => handleSubCategoryChangeInModal(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-slate-900 bg-white"
-                  >
-                    {(SUB_CATEGORIES_BY_CATEGORY[formData.category] || []).map((sub) => (
-                      <option key={sub} value={sub}>
-                        {sub}
-                      </option>
-                    ))}
-                    {/* Preserve custom subCategory if editing legacy account */}
-                    {formData.subCategory && !(SUB_CATEGORIES_BY_CATEGORY[formData.category] || []).includes(formData.subCategory) && (
-                      <option value={formData.subCategory}>{formData.subCategory}</option>
-                    )}
-                  </select>
-                </div>
-              </div>
-
-              {/* 2. Account Code (Auto-suggested) & Opening Balance */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">
-                      Account Code *
-                    </label>
-                    <span className="text-[10px] text-indigo-600 font-semibold flex items-center gap-0.5">
-                      <Sparkles className="w-2.5 h-2.5" /> Auto-suggested
-                    </span>
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 1060"
-                    value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-slate-900 bg-slate-50/70"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-bold text-slate-600 uppercase">
-                      Opening Balance (Rs.)
-                    </label>
-                    <span className="text-[10px] font-mono font-semibold text-slate-500">
-                      ({formData.type === 'DEBIT' ? 'Debit / DR' : 'Credit / CR'})
-                    </span>
-                  </div>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    placeholder="0"
-                    value={formData.balance}
-                    onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-slate-900"
-                  />
-                </div>
-              </div>
-
-              {/* 3. Account Name */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                  Account Name / Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Cash in Hand - Petty Cash / Standard Chartered"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-slate-900"
-                />
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
-                >
-                  {editingAccount ? 'Save Changes' : 'Confirm & Create Account'}
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleSave} className="p-6 space-y-5">
+                {/* 1. Category & Sub-Category */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Category Dropdown (Searchable) */}
+                  <div className="relative" ref={categoryRef}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">
+                        Category *
+                      </label>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                        formData.type === 'DEBIT'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      }`}>
+                        {formData.type === 'DEBIT' ? 'Debit (DR)' : 'Credit (CR)'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCategoryOpen(!isCategoryOpen);
+                        setIsSubCategoryOpen(false);
+                      }}
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-left flex items-center justify-between transition-colors shadow-xs group cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                    >
+                      <div className="truncate">
+                        <span className="font-bold text-xs text-slate-800 block truncate">
+                          {CATEGORIES_LIST.find(c => c.id === formData.category)?.name || formData.category}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block truncate">
+                          {CATEGORIES_LIST.find(c => c.id === formData.category)?.desc}
+                        </span>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 shrink-0 ml-2 ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isCategoryOpen && (
+                      <div className="absolute z-30 mt-1.5 w-full bg-white rounded-xl shadow-2xl border border-slate-200 p-2 animate-in fade-in zoom-in-95 duration-150">
+                        <div className="relative mb-2">
+                          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="text"
+                            autoFocus
+                            value={categorySearch}
+                            onChange={(e) => setCategorySearch(e.target.value)}
+                            placeholder="Search category or range..."
+                            className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-900 font-medium"
+                          />
+                        </div>
+                        <div className="max-h-56 overflow-y-auto space-y-1">
+                          {filteredCategories.length === 0 ? (
+                            <div className="p-3 text-center text-xs text-slate-400">No categories found</div>
+                          ) : (
+                            filteredCategories.map((cat) => {
+                              const isSelected = formData.category === cat.id;
+                              return (
+                                <button
+                                  key={cat.id}
+                                  type="button"
+                                  onClick={() => selectCategory(cat.id)}
+                                  className={`w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                                    isSelected ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-700'
+                                  }`}
+                                >
+                                  <div>
+                                    <div className="font-bold">{cat.name}</div>
+                                    <div className={`text-[10px] ${isSelected ? 'text-slate-300' : 'text-slate-400'}`}>
+                                      {cat.desc}
+                                    </div>
+                                  </div>
+                                  <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold shrink-0 ml-2 ${
+                                    isSelected 
+                                      ? 'bg-slate-800 text-white' 
+                                      : cat.type === 'DEBIT' ? 'bg-blue-50 text-blue-700' : 'bg-emerald-50 text-emerald-700'
+                                  }`}>
+                                    {cat.type}
+                                  </span>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sub-Category Dropdown (Searchable & Addable) */}
+                  <div className="relative" ref={subCategoryRef}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">
+                        Sub-Category *
+                      </label>
+                      <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Search or Add Custom
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSubCategoryOpen(!isSubCategoryOpen);
+                        setIsCategoryOpen(false);
+                      }}
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-left flex items-center justify-between transition-colors shadow-xs group cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900/10 min-h-[46px]"
+                    >
+                      <div className="truncate">
+                        <span className="font-bold text-xs text-slate-800 block truncate">
+                          {formData.subCategory || 'Select or type sub-category...'}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block truncate">
+                          {formData.category} classification
+                        </span>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-transform duration-200 shrink-0 ml-2 ${isSubCategoryOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isSubCategoryOpen && (
+                      <div className="absolute z-30 mt-1.5 w-full bg-white rounded-xl shadow-2xl border border-slate-200 p-2 animate-in fade-in zoom-in-95 duration-150">
+                        <div className="relative mb-2">
+                          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            type="text"
+                            autoFocus
+                            value={subCategorySearch}
+                            onChange={(e) => setSubCategorySearch(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                if (filteredSubs.length > 0 && isExactSubMatch) {
+                                  selectSubCategory(filteredSubs[0]);
+                                } else if (subCategorySearch.trim() && !isExactSubMatch) {
+                                  handleAddNewSubCategory(subCategorySearch.trim());
+                                } else if (filteredSubs.length > 0) {
+                                  selectSubCategory(filteredSubs[0]);
+                                }
+                              }
+                            }}
+                            placeholder="Type to search or add custom..."
+                            className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-900 font-medium"
+                          />
+                        </div>
+
+                        <div className="max-h-56 overflow-y-auto space-y-1">
+                          {/* Quick Add Custom Sub-Category button if search text has no exact match */}
+                          {subCategorySearch.trim() && !isExactSubMatch && (
+                            <button
+                              type="button"
+                              onClick={() => handleAddNewSubCategory(subCategorySearch.trim())}
+                              className="w-full text-left p-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-between transition-colors border border-dashed border-emerald-300 mb-1 cursor-pointer"
+                            >
+                              <span className="flex items-center gap-1.5 truncate">
+                                <Plus className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                Add "{subCategorySearch.trim()}"
+                              </span>
+                              <span className="text-[10px] bg-emerald-200/80 px-1.5 py-0.5 rounded text-emerald-900 font-semibold shrink-0">
+                                New Sub-Category
+                              </span>
+                            </button>
+                          )}
+
+                          {filteredSubs.length === 0 && !subCategorySearch.trim() ? (
+                            <div className="p-3 text-center text-xs text-slate-400">No sub-categories available</div>
+                          ) : (
+                            filteredSubs.map((sub) => {
+                              const isSelected = formData.subCategory === sub;
+                              return (
+                                <button
+                                  key={sub}
+                                  type="button"
+                                  onClick={() => selectSubCategory(sub)}
+                                  className={`w-full text-left px-3 py-2 rounded-lg text-xs flex items-center justify-between transition-colors cursor-pointer ${
+                                    isSelected ? 'bg-slate-900 text-white font-bold' : 'hover:bg-slate-100 text-slate-700'
+                                  }`}
+                                >
+                                  <span className="truncate">{sub}</span>
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0 ml-2" />}
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Account Code (Auto-suggested) & Opening Balance */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">
+                        Account Code *
+                      </label>
+                      <span className="text-[10px] text-indigo-600 font-semibold flex items-center gap-0.5">
+                        <Sparkles className="w-3 h-3 text-indigo-500" /> Auto-suggested
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 1060"
+                      value={formData.code}
+                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-slate-900 bg-slate-50/70"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-[11px] font-bold text-slate-600 uppercase">
+                        Opening Balance (Rs.)
+                      </label>
+                      <span className="text-[10px] font-mono font-semibold text-slate-500">
+                        ({formData.type === 'DEBIT' ? 'Debit / DR' : 'Credit / CR'})
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0"
+                      value={formData.balance}
+                      onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-slate-900"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Account Name */}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1.5">
+                    Account Name / Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Cash in Hand - Petty Cash / Standard Chartered / Office Rent"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-slate-900"
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-colors cursor-pointer"
+                  >
+                    {editingAccount ? 'Save Changes' : 'Confirm & Create Account'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
+
