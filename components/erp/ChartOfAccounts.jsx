@@ -518,9 +518,18 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
               {/* 1. Category & Sub-Category */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                    Category *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">
+                      Category *
+                    </label>
+                    <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-bold border ${
+                      formData.type === 'DEBIT'
+                        ? 'bg-blue-50 text-blue-700 border-blue-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
+                      {formData.type === 'DEBIT' ? 'Debit (DR)' : 'Credit (CR)'}
+                    </span>
+                  </div>
                   <select
                     value={formData.category}
                     onChange={(e) => handleCategoryChangeInModal(e.target.value)}
@@ -570,9 +579,14 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                    Opening / Initial Balance (Rs.)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">
+                      Opening Balance (Rs.)
+                    </label>
+                    <span className="text-[10px] font-mono font-semibold text-slate-500">
+                      ({formData.type === 'DEBIT' ? 'Debit / DR' : 'Credit / CR'})
+                    </span>
+                  </div>
                   <input
                     type="number"
                     min="0"
