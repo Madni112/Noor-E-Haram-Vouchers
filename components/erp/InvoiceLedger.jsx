@@ -57,7 +57,8 @@ import CustomDatePicker from './CustomDatePicker';
 import ItemCombobox from './ItemCombobox';
 import PackageCombobox from './PackageCombobox';
 
-export default function InvoiceLedger({ 
+export default function InvoiceLedger({
+ 
   invoices = [], 
   parties = [], 
   initialView = 'INVOICES', 
@@ -1936,8 +1937,8 @@ export default function InvoiceLedger({
       {/* ============================================================= */}
       {/* 4. MODAL: CREATE / EDIT INVOICE                               */}
       {/* ============================================================= */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto print-hide">
+      {showCreateModal && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[9999] flex items-center justify-center p-3 sm:p-4 overflow-y-auto print-hide">
           <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl p-6 sm:p-7 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -2705,14 +2706,15 @@ export default function InvoiceLedger({
             </form>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ============================================================= */}
       {/* 5. MODAL: RECORD PAYMENT                                      */}
       {/* ============================================================= */}
-      {activeInvoiceForPay && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-4 print-hide">
+      {activeInvoiceForPay && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[9999] flex items-center justify-center p-4 print-hide">
           <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95">
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -2843,8 +2845,8 @@ export default function InvoiceLedger({
       {/* ============================================================= */}
       {/* 6. MODAL: CUSTOMER STATEMENT OF ACCOUNT PRINT PREVIEW         */}
       {/* ============================================================= */}
-      {selectedPartyForPrint && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+      {selectedPartyForPrint && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[9999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6 my-6 max-h-[92vh] overflow-y-auto print:max-h-none print:overflow-visible print:border-none print:shadow-none print:p-0 print:my-0">
             
             {/* Action Bar (print-hide) */}
@@ -3031,8 +3033,8 @@ export default function InvoiceLedger({
       {/* ============================================================= */}
       {/* 7. MODAL: ADD COMPANY BANK / CASH ACCOUNT (PKR)               */}
       {/* ============================================================= */}
-      {showAddBankModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-4 print-hide">
+      {showAddBankModal && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[9999] flex items-center justify-center p-4 print-hide">
           <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -3149,9 +3151,9 @@ export default function InvoiceLedger({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-
     </div>
   );
 }

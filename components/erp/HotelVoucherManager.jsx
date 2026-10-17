@@ -141,14 +141,18 @@ import HotelCombobox from './HotelCombobox';
 // -------------------------------------------------------------
 // MAIN HOTEL VOUCHER MANAGER COMPONENT
 // -------------------------------------------------------------
-export default function HotelVoucherManager({ 
-  hotelVouchers = [], 
-  parties = [], 
+export default function HotelVoucherManager({
+  parties = [],
+  hotelVouchers = [],
   onVouchersUpdated,
-  onPartiesUpdated,
   prefillData = null,
-  onClearPrefill = null
+  onClearPrefill,
+  onPartiesUpdated
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -754,11 +758,11 @@ export default function HotelVoucherManager({
       },
       issueDate: issueDate || new Date().toISOString().split('T')[0],
       urduComplianceText: [
-        'ہوٹل اور پیکیج اس دستاویز میں لکھ دیا گیا ہے۔',
-        'سفری سامان حرمین شریفین کی طرف لے جانا سعودی انتظامیہ کی طرف سے ممنوع ہے۔ خلاف ورزی پر جرمانہ ہوگا۔',
-        'نشہ آور اشیاء کا لانا قانوناً ممنوع ہے، سعودیہ میں منشیات لے جانے کی سزا موت ہے۔',
-        'حرمین شریفین کے اندر زمین پر گری پڑی چیز (پرس، موبائل فون یا کوئی قیمتی چیز) ہرگز نہ اٹھائیں۔',
-        'ہوٹل سے چیک آؤٹ ٹائم دوپہر 2 بجے ہے۔ اس کے بعد اگلی Night چارج ہوگی، واؤچر کی 4 کاپیاں پاس رکھیں۔'
+        'ÛÙˆÙ¹Ù„ Ø§ÙˆØ± Ù¾ÛŒÚ©ÛŒØ¬ Ø§Ø³ Ø¯Ø³ØªØ§ÙˆÛŒØ² Ù…ÛŒÚº Ù„Ú©Ú¾ Ø¯ÛŒØ§ Ú¯ÛŒØ§ ÛÛ’Û”',
+        'Ø³ÙØ±ÛŒ Ø³Ø§Ù…Ø§Ù† Ø­Ø±Ù…ÛŒÙ† Ø´Ø±ÛŒÙÛŒÙ† Ú©ÛŒ Ø·Ø±Ù Ù„Û’ Ø¬Ø§Ù†Ø§ Ø³Ø¹ÙˆØ¯ÛŒ Ø§Ù†ØªØ¸Ø§Ù…ÛŒÛ Ú©ÛŒ Ø·Ø±Ù Ø³Û’ Ù…Ù…Ù†ÙˆØ¹ ÛÛ’Û” Ø®Ù„Ø§Ù ÙˆØ±Ø²ÛŒ Ù¾Ø± Ø¬Ø±Ù…Ø§Ù†Û ÛÙˆÚ¯Ø§Û”',
+        'Ù†Ø´Û Ø¢ÙˆØ± Ø§Ø´ÛŒØ§Ø¡ Ú©Ø§ Ù„Ø§Ù†Ø§ Ù‚Ø§Ù†ÙˆÙ†Ø§Ù‹ Ù…Ù…Ù†ÙˆØ¹ ÛÛ’ØŒ Ø³Ø¹ÙˆØ¯ÛŒÛ Ù…ÛŒÚº Ù…Ù†Ø´ÛŒØ§Øª Ù„Û’ Ø¬Ø§Ù†Û’ Ú©ÛŒ Ø³Ø²Ø§ Ù…ÙˆØª ÛÛ’Û”',
+        'Ø­Ø±Ù…ÛŒÙ† Ø´Ø±ÛŒÙÛŒÙ† Ú©Û’ Ø§Ù†Ø¯Ø± Ø²Ù…ÛŒÙ† Ù¾Ø± Ú¯Ø±ÛŒ Ù¾Ú‘ÛŒ Ú†ÛŒØ² (Ù¾Ø±Ø³ØŒ Ù…ÙˆØ¨Ø§Ø¦Ù„ ÙÙˆÙ† ÛŒØ§ Ú©ÙˆØ¦ÛŒ Ù‚ÛŒÙ…ØªÛŒ Ú†ÛŒØ²) ÛØ±Ú¯Ø² Ù†Û Ø§Ù¹Ú¾Ø§Ø¦ÛŒÚºÛ”',
+        'ÛÙˆÙ¹Ù„ Ø³Û’ Ú†ÛŒÚ© Ø¢Ø¤Ù¹ Ù¹Ø§Ø¦Ù… Ø¯ÙˆÙ¾ÛØ± 2 Ø¨Ø¬Û’ ÛÛ’Û” Ø§Ø³ Ú©Û’ Ø¨Ø¹Ø¯ Ø§Ú¯Ù„ÛŒ Night Ú†Ø§Ø±Ø¬ ÛÙˆÚ¯ÛŒØŒ ÙˆØ§Ø¤Ú†Ø± Ú©ÛŒ 4 Ú©Ø§Ù¾ÛŒØ§Úº Ù¾Ø§Ø³ Ø±Ú©Ú¾ÛŒÚºÛ”'
       ],
       emergencyHelpline: 'UBAID RAZA MEMON 0311-2264567 / BACKUP: MADNI RAZA MEMON 0312-8039911',
       status: 'Confirmed & Verified',
@@ -863,7 +867,7 @@ export default function HotelVoucherManager({
                         {v.partyName}
                       </h3>
                       <p className="text-[10px] text-slate-500 font-medium">
-                        {v.totalPax} Passengers • {totalN} Nights Total
+                        {v.totalPax} Passengers â€¢ {totalN} Nights Total
                       </p>
                     </div>
 
@@ -883,13 +887,13 @@ export default function HotelVoucherManager({
                           <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                           <div>
                             <span className="font-bold text-slate-800 uppercase block">{stay.city}: {stay.hotelName}</span>
-                            <span className="text-[9px] text-slate-500 font-mono">{stay.checkIn} ➔ {stay.checkOut}</span>
+                            <span className="text-[9px] text-slate-500 font-mono">{stay.checkIn} âž” {stay.checkOut}</span>
                           </div>
                         </div>
 
                         <div className="text-right">
                           <span className="font-bold text-emerald-900 bg-emerald-100/70 px-1.5 py-0.5 rounded text-[9px] block">
-                            {stay.roomType} • {stay.mealPlan}
+                            {stay.roomType} â€¢ {stay.mealPlan}
                           </span>
                           <span className="text-[9px] text-slate-500 font-bold block mt-0.5">{stay.nights}N</span>
                         </div>
@@ -948,8 +952,8 @@ export default function HotelVoucherManager({
       {/* ============================================================== */}
       {/* WIDESCREEN MODAL: GENERATE MULTI-STAY HOTEL VOUCHER */}
       {/* ============================================================== */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+      {showCreateModal && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-4xl lg:max-w-5xl w-full flex flex-col max-h-[92vh] overflow-hidden my-4 animate-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
@@ -1041,7 +1045,7 @@ export default function HotelVoucherManager({
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Itinerary</span>
                       <span className="text-xs font-black text-slate-800">
-                        {stays.length} Stays • <span className="text-emerald-700">{totalNights} Nights</span>
+                        {stays.length} Stays â€¢ <span className="text-emerald-700">{totalNights} Nights</span>
                       </span>
                     </div>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -1304,7 +1308,7 @@ export default function HotelVoucherManager({
                                 {stay.stars > 0 && (
                                   <span className="text-[9.5px] text-amber-600 font-extrabold flex items-center gap-0.5">
                                     <Star className="w-3 h-3 fill-amber-400 stroke-amber-500" />
-                                    <span>{stay.stars}★</span>
+                                    <span>{stay.stars}â˜…</span>
                                   </span>
                                 )}
                               </div>
@@ -1322,11 +1326,11 @@ export default function HotelVoucherManager({
                                 }}
                                 className="w-full px-2.5 py-2 border border-slate-300 rounded-xl bg-white text-xs font-bold text-slate-800 shadow-2xs outline-none cursor-pointer focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800"
                               >
-                                <option value={5}>★★★★★ 5 Star</option>
-                                <option value={4}>★★★★ 4 Star</option>
-                                <option value={3}>★★★ 3 Star</option>
-                                <option value={2}>★★ 2 Star</option>
-                                <option value={1}>★ 1 Star</option>
+                                <option value={5}>â˜…â˜…â˜…â˜…â˜… 5 Star</option>
+                                <option value={4}>â˜…â˜…â˜…â˜… 4 Star</option>
+                                <option value={3}>â˜…â˜…â˜… 3 Star</option>
+                                <option value={2}>â˜…â˜… 2 Star</option>
+                                <option value={1}>â˜… 1 Star</option>
                                 <option value={0}>No Star (Blank)</option>
                               </select>
                             </div>
@@ -1807,7 +1811,7 @@ export default function HotelVoucherManager({
                 <div className="text-xs text-slate-500 font-semibold space-y-0.5">
                   <div>
                     <span>Itinerary: </span>
-                    <span className="font-bold text-slate-800">{stays.map(s => s.city).join(' ➔ ')}</span>
+                    <span className="font-bold text-slate-800">{stays.map(s => s.city).join(' âž” ')}</span>
                     <span className="text-slate-400 ml-1">({totalNights} Nights)</span>
                   </div>
                   <div className="text-[11px]">
@@ -1841,14 +1845,15 @@ export default function HotelVoucherManager({
             </form>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ============================================================== */}
       {/* DELETE CONFIRMATION MODAL WITH PASSWORD PROTECTION */}
       {/* ============================================================== */}
-      {deletingVoucher && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
+      {deletingVoucher && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden p-6 animate-in zoom-in-95 duration-150 space-y-4">
             
             <div className="flex items-center gap-3">
@@ -1860,7 +1865,7 @@ export default function HotelVoucherManager({
                   Delete Hotel Voucher?
                 </h3>
                 <p className="text-xs text-slate-500 font-mono">
-                  {deletingVoucher.voucherNo || deletingVoucher.id} • {deletingVoucher.partyName}
+                  {deletingVoucher.voucherNo || deletingVoucher.id} â€¢ {deletingVoucher.partyName}
                 </p>
               </div>
             </div>
@@ -1920,9 +1925,9 @@ export default function HotelVoucherManager({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-
     </div>
   );
 }

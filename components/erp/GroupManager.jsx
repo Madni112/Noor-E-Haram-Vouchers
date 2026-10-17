@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Users, 
   PlusCircle, 
@@ -238,12 +239,15 @@ function SearchableGroupFamilySelect({
   );
 }
 
-export default function GroupManager({ 
+export default function GroupManager({
+ 
   groups = [], 
   parties = [], 
   onGroupsUpdated,
   onNavigateToPassengers 
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGroupForView, setSelectedGroupForView] = useState(null);
   const [editingGroup, setEditingGroup] = useState(null);
@@ -756,8 +760,8 @@ export default function GroupManager({
       )}
 
       {/* CREATE / EDIT GROUP MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
+      {showModal && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md overflow-y-auto">
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-2xl my-8 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
@@ -1076,8 +1080,8 @@ export default function GroupManager({
       )}
 
       {/* VIEW MANIFEST MODAL */}
-      {selectedGroupForView && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto">
+      {selectedGroupForView && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md overflow-y-auto">
           <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl w-full max-w-3xl my-8 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
@@ -1206,8 +1210,8 @@ export default function GroupManager({
       )}
 
       {/* DELETE CONFIRMATION MODAL */}
-      {deletingGroup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+      {deletingGroup && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md">
           <div className="bg-white rounded-3xl border border-slate-200 p-6 max-w-sm w-full space-y-4 shadow-2xl">
             <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
               <Trash2 className="w-5 h-5" />
@@ -1233,9 +1237,9 @@ export default function GroupManager({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-
     </div>
   );
 }

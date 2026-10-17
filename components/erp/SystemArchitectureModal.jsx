@@ -1,4 +1,5 @@
 'use client';
+import { createPortal } from 'react-dom';
 
 import { 
   Network, 
@@ -21,8 +22,8 @@ import {
 export default function SystemArchitectureModal({ isOpen, onClose }) {
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white border border-slate-200 text-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 space-y-6 animate-in fade-in zoom-in-95 duration-150 my-8">
         
         {/* Header */}
@@ -73,7 +74,7 @@ export default function SystemArchitectureModal({ isOpen, onClose }) {
 
           <div className="flex justify-center -my-2">
             <span className="text-xs font-mono font-semibold bg-white text-slate-500 px-3 py-1 rounded-full border border-slate-200 shadow-2xs">
-              ↓ Cascading 1-to-Many Relational Foreign Links ↓
+              â†“ Cascading 1-to-Many Relational Foreign Links â†“
             </span>
           </div>
 
@@ -93,7 +94,7 @@ export default function SystemArchitectureModal({ isOpen, onClose }) {
                 Full legal name, passport number, date of birth, demographics (Adult / Child / Infant), bed assignment, and Saudi visa hash.
               </p>
               <div className="bg-white p-2 rounded-lg text-[10px] font-mono text-slate-600 border border-slate-200">
-                paxId • passportNo • dob • category • visaNo
+                paxId â€¢ passportNo â€¢ dob â€¢ category â€¢ visaNo
               </div>
             </div>
 
@@ -107,10 +108,10 @@ export default function SystemArchitectureModal({ isOpen, onClose }) {
                 <span className="text-[10px] font-mono text-slate-400">1 : N Stay Blocks</span>
               </div>
               <p className="text-xs text-slate-500">
-                Makkah ➔ Madinah chronological stays, check-in/out dates, room configurations, meal plan flags, and dual Urdu/English compliance terms.
+                Makkah âž” Madinah chronological stays, check-in/out dates, room configurations, meal plan flags, and dual Urdu/English compliance terms.
               </p>
               <div className="bg-white p-2 rounded-lg text-[10px] font-mono text-slate-600 border border-slate-200">
-                stayId • city • checkIn • checkOut • roomType • hcn
+                stayId â€¢ city â€¢ checkIn â€¢ checkOut â€¢ roomType â€¢ hcn
               </div>
             </div>
 
@@ -127,7 +128,7 @@ export default function SystemArchitectureModal({ isOpen, onClose }) {
                 Itemized allocations for Saudi Umrah visas, carrier tickets, ground circuits, and hotel night tariffs. Dynamic markup overrides &amp; 1-Click invoice converter.
               </p>
               <div className="bg-white p-2 rounded-lg text-[10px] font-mono text-slate-600 border border-slate-200">
-                estimateNo • visaCost • flightCost • margin% • perPax
+                estimateNo â€¢ visaCost â€¢ flightCost â€¢ margin% â€¢ perPax
               </div>
             </div>
 
@@ -144,7 +145,7 @@ export default function SystemArchitectureModal({ isOpen, onClose }) {
                 Formal corporate accounting registers, status flags (Settled / Partial / Overdue), and audit-trailed payment receipts log.
               </p>
               <div className="bg-white p-2 rounded-lg text-[10px] font-mono text-slate-600 border border-slate-200">
-                invoiceNo • totalAmount • paidAmount • balanceDue • txLog
+                invoiceNo â€¢ totalAmount â€¢ paidAmount â€¢ balanceDue â€¢ txLog
               </div>
             </div>
 
@@ -186,6 +187,7 @@ export default function SystemArchitectureModal({ isOpen, onClose }) {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

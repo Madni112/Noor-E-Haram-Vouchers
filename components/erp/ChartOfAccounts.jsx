@@ -83,7 +83,8 @@ const CATEGORIES_LIST = [
   { id: 'EXPENSES', name: 'Operating Expenses (6000s)', range: '6000s', type: 'DEBIT', desc: 'Rent, Staff Salaries, Marketing, Utilities' },
 ];
 
-export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & TOURS', invoices = [], parties = [] }) {
+export default function ChartOfAccounts({
+ companyName = 'NOOR E HARAM TRAVELS & TOURS', invoices = [], parties = [] }) {
   const [accounts, setAccounts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('ALL'); // 'ALL' | 'ASSETS' | 'LIABILITIES' | 'EQUITY' | 'REVENUE' | 'DIRECT_COSTS' | 'EXPENSES'
@@ -669,8 +670,9 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
           sub => sub.toLowerCase() === subCategorySearch.trim().toLowerCase()
         );
 
-        return (
-          <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        if (!mounted || typeof document === 'undefined') return null;
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 my-auto">
               {/* Modal Header */}
               <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between rounded-t-2xl">

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Receipt, 
   PlusCircle, 
@@ -23,11 +24,14 @@ import {
 import { saveInvoice } from '../../lib/erpData';
 import CustomDatePicker from './CustomDatePicker';
 
-export default function BillReceiptManager({ 
+export default function BillReceiptManager({
+ 
   invoices = [], 
   parties = [], 
   onInvoicesUpdated 
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [searchTerm, setSearchTerm] = useState('');
   const [methodFilter, setMethodFilter] = useState('ALL');
   const [showIssueModal, setShowIssueModal] = useState(false);
@@ -374,8 +378,8 @@ export default function BillReceiptManager({
       {/* ========================================================= */}
       {/* MODAL 1: ISSUE BILL RECEIPT                               */}
       {/* ========================================================= */}
-      {showIssueModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+      {showIssueModal && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in fade-in duration-200">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -503,8 +507,8 @@ export default function BillReceiptManager({
       {/* ========================================================= */}
       {/* MODAL 2: PRINT OFFICIAL BILL RECEIPT SLIP                */}
       {/* ========================================================= */}
-      {selectedReceiptForPrint && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 overflow-y-auto">
+      {selectedReceiptForPrint && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-8 shadow-2xl border border-slate-200 space-y-6 my-8">
             
             {/* Top Toolbar (Non-printable buttons) */}
@@ -643,9 +647,9 @@ export default function BillReceiptManager({
 
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-
     </div>
   );
 }
