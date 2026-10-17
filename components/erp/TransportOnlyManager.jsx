@@ -85,6 +85,10 @@ export function formatTimeWithoutSeconds(timeVal) {
 }
 
 export default function TransportOnlyManager({ parties = [], onVouchersUpdated, onPartiesUpdated }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

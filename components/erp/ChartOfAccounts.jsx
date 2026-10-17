@@ -85,6 +85,10 @@ const CATEGORIES_LIST = [
 
 export default function ChartOfAccounts({
  companyName = 'NOOR E HARAM TRAVELS & TOURS', invoices = [], parties = [] }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [accounts, setAccounts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('ALL'); // 'ALL' | 'ASSETS' | 'LIABILITIES' | 'EQUITY' | 'REVENUE' | 'DIRECT_COSTS' | 'EXPENSES'

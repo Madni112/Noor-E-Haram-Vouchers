@@ -66,6 +66,10 @@ export default function InvoiceLedger({
   onViewChange,
   onInvoicesUpdated 
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [viewMode, setViewMode] = useState(initialView || 'INVOICES'); // 'INVOICES' | 'LEDGER'
   const [invoiceList, setInvoiceList] = useState(invoices || []);
   const [searchTerm, setSearchTerm] = useState('');
