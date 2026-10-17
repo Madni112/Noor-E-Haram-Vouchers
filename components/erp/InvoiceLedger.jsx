@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
@@ -1937,7 +1937,7 @@ export default function InvoiceLedger({
       {/* 4. MODAL: CREATE / EDIT INVOICE                               */}
       {/* ============================================================= */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto print-hide">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto print-hide">
           <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl p-6 sm:p-7 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -2031,7 +2031,7 @@ export default function InvoiceLedger({
                         Package Name (Supabase Database) *
                       </label>
                       <span className="text-[9.5px] text-slate-400">
-                        Single typable dropdown — select saved package to auto-fill travel dates
+                        Single typable dropdown � select saved package to auto-fill travel dates
                       </span>
                     </div>
                   </div>
@@ -2238,7 +2238,7 @@ export default function InvoiceLedger({
                           : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
                       }`}
                     >
-                      <span className="text-sm">🇸🇦</span>
+                      <span className="text-sm">????</span>
                       <span>SAR Currency Engine</span>
                       <span className={`px-1.5 py-0.5 rounded-full text-[8.5px] uppercase tracking-wider font-black ${
                         sarEngineActive ? 'bg-emerald-950 text-emerald-200' : 'bg-slate-200 text-slate-600'
@@ -2293,7 +2293,7 @@ export default function InvoiceLedger({
                   <div className="hidden sm:grid sm:grid-cols-12 gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-wider">
                     <div className="sm:col-span-5">Item / Service Description</div>
                     <div className="sm:col-span-5 text-right">
-                      Price per Category ({priceInputCurrency}) — Adult {childrenCount >= 1 ? '/ Child' : ''} {infantsCount >= 1 ? '/ Infant' : ''}
+                      Price per Category ({priceInputCurrency}) � Adult {childrenCount >= 1 ? '/ Child' : ''} {infantsCount >= 1 ? '/ Infant' : ''}
                     </div>
                     <div className="sm:col-span-2 text-right">Total</div>
                   </div>
@@ -2393,8 +2393,8 @@ export default function InvoiceLedger({
                                 {sarEngineActive && (
                                   <div className="w-24 shrink-0 text-right font-mono text-[9px] font-bold text-emerald-700 truncate">
                                     {priceInputCurrency === 'SAR'
-                                      ? `≈ PKR ${Math.round((parseFloat(item.adultRate !== undefined ? item.adultRate : item.rate) || 0) * exchangeRateSarPkr).toLocaleString()}`
-                                      : `≈ SAR ${(((parseFloat(item.adultRate !== undefined ? item.adultRate : item.rate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                      ? `� PKR ${Math.round((parseFloat(item.adultRate !== undefined ? item.adultRate : item.rate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                      : `� SAR ${(((parseFloat(item.adultRate !== undefined ? item.adultRate : item.rate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
                                   </div>
                                 )}
                               </div>
@@ -2426,8 +2426,8 @@ export default function InvoiceLedger({
                                   {sarEngineActive && (
                                     <div className="w-24 shrink-0 text-right font-mono text-[9px] font-bold text-emerald-700 truncate">
                                       {priceInputCurrency === 'SAR'
-                                        ? `≈ PKR ${Math.round((parseFloat(item.childRate) || 0) * exchangeRateSarPkr).toLocaleString()}`
-                                        : `≈ SAR ${(((parseFloat(item.childRate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                        ? `� PKR ${Math.round((parseFloat(item.childRate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                        : `� SAR ${(((parseFloat(item.childRate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
                                     </div>
                                   )}
                                 </div>
@@ -2460,8 +2460,8 @@ export default function InvoiceLedger({
                                   {sarEngineActive && (
                                     <div className="w-24 shrink-0 text-right font-mono text-[9px] font-bold text-emerald-700 truncate">
                                       {priceInputCurrency === 'SAR'
-                                        ? `≈ PKR ${Math.round((parseFloat(item.infantRate) || 0) * exchangeRateSarPkr).toLocaleString()}`
-                                        : `≈ SAR ${(((parseFloat(item.infantRate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                        ? `� PKR ${Math.round((parseFloat(item.infantRate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                        : `� SAR ${(((parseFloat(item.infantRate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
                                     </div>
                                   )}
                                 </div>
@@ -2474,7 +2474,7 @@ export default function InvoiceLedger({
                                   type="button"
                                   onClick={() => handleSaveRateToPreset(idx)}
                                   className="text-[9.5px] font-bold text-emerald-700 hover:text-emerald-900 flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 transition-colors cursor-pointer"
-                                  title="✔ Save this adult rate to preset catalog in Supabase"
+                                  title="? Save this adult rate to preset catalog in Supabase"
                                 >
                                   <Check className="w-3 h-3 stroke-[3]" />
                                   <span>Save Adult Rate</span>
@@ -2510,7 +2510,7 @@ export default function InvoiceLedger({
                                     <button
                                       type="button"
                                       onClick={() => handleSaveRateToPreset(idx)}
-                                      title="✔ Save this price per qty for this item into preset catalog in Supabase"
+                                      title="? Save this price per qty for this item into preset catalog in Supabase"
                                       className="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 transition-colors shadow-xs cursor-pointer"
                                     >
                                       <Check className="w-3.5 h-3.5 stroke-[3]" />
@@ -2518,7 +2518,7 @@ export default function InvoiceLedger({
                                     <button
                                       type="button"
                                       onClick={() => handleResetRateToPreset(idx)}
-                                      title="✖ Reset price back to default saved rate"
+                                      title="? Reset price back to default saved rate"
                                       className="p-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 transition-colors cursor-pointer"
                                     >
                                       <X className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -2532,8 +2532,8 @@ export default function InvoiceLedger({
                               {sarEngineActive && (
                                 <span className="font-mono text-emerald-700 font-bold">
                                   {priceInputCurrency === 'SAR'
-                                    ? `≈ PKR ${Math.round((parseFloat(item.rate) || 0) * exchangeRateSarPkr).toLocaleString()}`
-                                    : `≈ SAR ${(((parseFloat(item.rate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
+                                    ? `� PKR ${Math.round((parseFloat(item.rate) || 0) * exchangeRateSarPkr).toLocaleString()}`
+                                    : `� SAR ${(((parseFloat(item.rate) || 0) / exchangeRateSarPkr)).toFixed(1)}`}
                                 </span>
                               )}
                               {isSavedNotice && (
@@ -2712,7 +2712,7 @@ export default function InvoiceLedger({
       {/* 5. MODAL: RECORD PAYMENT                                      */}
       {/* ============================================================= */}
       {activeInvoiceForPay && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 print-hide">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-4 print-hide">
           <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95">
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -2844,7 +2844,7 @@ export default function InvoiceLedger({
       {/* 6. MODAL: CUSTOMER STATEMENT OF ACCOUNT PRINT PREVIEW         */}
       {/* ============================================================= */}
       {selectedPartyForPrint && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-4xl w-full border border-slate-200 shadow-2xl p-6 sm:p-8 space-y-6 my-6 max-h-[92vh] overflow-y-auto print:max-h-none print:overflow-visible print:border-none print:shadow-none print:p-0 print:my-0">
             
             {/* Action Bar (print-hide) */}
@@ -2934,7 +2934,7 @@ export default function InvoiceLedger({
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Booking &amp; Travel Leg</span>
                   <div className="font-bold text-slate-800">Total Group Passengers: {selectedPartyForPrint.passengersCount} PAX</div>
                   <div className="text-slate-600 text-[11px]">
-                    Departure: {selectedPartyForPrint.departureDate || 'Standard Leg'} {selectedPartyForPrint.arrivalDate ? `• Return: ${selectedPartyForPrint.arrivalDate}` : ''}
+                    Departure: {selectedPartyForPrint.departureDate || 'Standard Leg'} {selectedPartyForPrint.arrivalDate ? `� Return: ${selectedPartyForPrint.arrivalDate}` : ''}
                   </div>
                   <div className="text-[10px] text-emerald-700 font-mono font-bold">
                     Financial Status: {selectedPartyForPrint.balanceDue <= 0 ? 'Fully Settled' : 'Open Balance Payable'}
@@ -3032,7 +3032,7 @@ export default function InvoiceLedger({
       {/* 7. MODAL: ADD COMPANY BANK / CASH ACCOUNT (PKR)               */}
       {/* ============================================================= */}
       {showAddBankModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 print-hide">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-50 flex items-center justify-center p-4 print-hide">
           <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 shadow-2xl p-6 space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">

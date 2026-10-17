@@ -1300,7 +1300,7 @@ export default function TransportVoucherManager({ parties = [], onGenerateHotelV
       {/* COMPREHENSIVE CREATE / EDIT TRANSPORT VOUCHER MODAL */}
       {/* ========================================================= */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-150">
           <div className="bg-white w-full max-w-5xl max-h-[92vh] rounded-3xl shadow-2xl flex flex-col border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
@@ -2419,7 +2419,7 @@ export default function TransportVoucherManager({ parties = [], onGenerateHotelV
 
       {/* QR Code Quick Modal */}
       {qrModalVoucher && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150">
             <button
               onClick={() => setQrModalVoucher(null)}
@@ -2476,7 +2476,7 @@ export default function TransportVoucherManager({ parties = [], onGenerateHotelV
 
       {/* Delete Confirmation Modal */}
       {deletingVoucher && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-xl border border-slate-200 relative animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
               <AlertCircle className="w-6 h-6" />

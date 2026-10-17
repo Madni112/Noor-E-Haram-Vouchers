@@ -670,7 +670,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
         );
 
         return (
-          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 my-auto">
               {/* Modal Header */}
               <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between rounded-t-2xl">

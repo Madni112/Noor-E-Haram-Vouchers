@@ -949,7 +949,7 @@ export default function HotelVoucherManager({
       {/* WIDESCREEN MODAL: GENERATE MULTI-STAY HOTEL VOUCHER */}
       {/* ============================================================== */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-4xl lg:max-w-5xl w-full flex flex-col max-h-[92vh] overflow-hidden my-4 animate-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
@@ -1848,7 +1848,7 @@ export default function HotelVoucherManager({
       {/* DELETE CONFIRMATION MODAL WITH PASSWORD PROTECTION */}
       {/* ============================================================== */}
       {deletingVoucher && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden p-6 animate-in zoom-in-95 duration-150 space-y-4">
             
             <div className="flex items-center gap-3">

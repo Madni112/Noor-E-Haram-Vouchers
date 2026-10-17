@@ -1870,7 +1870,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       {/* UNIFIED FAMILY & PASSENGER MANIFEST BUILDER MODAL */}
       {/* ============================================================== */}
       {showFamilyModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full p-5 sm:p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150 my-6">
             
             {/* Modal Header & Mode Switcher */}
@@ -2292,7 +2292,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
 
       {/* 4. EDIT PASSENGER DETAILS MODAL */}
       {showEditPaxModal && editingPax && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-150">
           <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             
             {/* Modal Header */}
@@ -2508,7 +2508,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       {/* 5. EDIT FAMILY GROUP & PARTY HEAD MODAL */}
       {showEditFamilyModal && editingFamily && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-150"
           onClick={() => {
             setShowEditFamilyModal(false);
             setEditingFamily(null);
@@ -2636,7 +2636,7 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
       {/* Dependency Protection Alert Popup Modal */}
       {showDependencyModal && dependencyBlockInfo.length > 0 && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200"
           onClick={() => {
             setShowDependencyModal(false);
             setDependencyBlockInfo([]);

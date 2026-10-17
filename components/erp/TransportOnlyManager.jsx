@@ -1153,7 +1153,7 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated, 
 
       {/* CREATE / EDIT DEDICATED TRANSPORT VOUCHER MODAL */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl max-w-3xl w-full flex flex-col max-h-[90vh] shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
@@ -2025,7 +2025,7 @@ export default function TransportOnlyManager({ parties = [], onVouchersUpdated, 
 
       {/* Delete Confirmation Modal */}
       {deletingVoucher && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-xl border border-slate-200">
             <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
               <AlertCircle className="w-6 h-6" />
