@@ -515,39 +515,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
             </div>
 
             <form onSubmit={handleSave} className="p-5 space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase">
-                    Account Code *
-                  </label>
-                  <span className="text-[10px] text-indigo-600 font-semibold flex items-center gap-0.5">
-                    <Sparkles className="w-2.5 h-2.5" /> Auto-suggested
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 1060"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-slate-900 bg-slate-50/50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                  Account Name / Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Cash in Hand - Petty Cash / Standard Chartered"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-slate-900"
-                />
-              </div>
-
+              {/* 1. Category & Sub-Category */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
@@ -556,7 +524,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
                   <select
                     value={formData.category}
                     onChange={(e) => handleCategoryChangeInModal(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-slate-900"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-slate-900 bg-white"
                   >
                     <option value="ASSETS">Assets (1000s)</option>
                     <option value="LIABILITIES">Liabilities (2000s)</option>
@@ -580,35 +548,78 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
                 </div>
               </div>
 
+              {/* 2. Account Code (Auto-suggested) & Normal Balance (Uneditable / Locked) */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                    Opening / Initial Balance (Rs.)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">
+                      Account Code *
+                    </label>
+                    <span className="text-[10px] text-indigo-600 font-semibold flex items-center gap-0.5">
+                      <Sparkles className="w-2.5 h-2.5" /> Auto-suggested
+                    </span>
+                  </div>
                   <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    placeholder="0"
-                    value={formData.balance}
-                    onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-slate-900"
+                    type="text"
+                    required
+                    placeholder="e.g. 1060"
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-slate-900 bg-slate-50/70"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                    Normal Balance
-                  </label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-slate-900"
-                  >
-                    <option value="DEBIT">Debit (DR)</option>
-                    <option value="CREDIT">Credit (CR)</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">
+                      Normal Balance
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-semibold">
+                      Auto-locked
+                    </span>
+                  </div>
+                  <div className={`w-full px-3 py-2 border rounded-xl text-xs font-bold font-mono flex items-center justify-between ${
+                    formData.type === 'DEBIT' 
+                      ? 'bg-blue-50/70 border-blue-200 text-blue-700' 
+                      : 'bg-emerald-50/70 border-emerald-200 text-emerald-700'
+                  }`}>
+                    <span>{formData.type === 'DEBIT' ? 'Debit (DR)' : 'Credit (CR)'}</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-white border border-current font-sans font-bold">
+                      Standard
+                    </span>
+                  </div>
                 </div>
+              </div>
+
+              {/* 3. Account Name */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  Account Name / Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Cash in Hand - Petty Cash / Standard Chartered"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-slate-900"
+                />
+              </div>
+
+              {/* 4. Opening Balance */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  Opening / Initial Balance (Rs.)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="0"
+                  value={formData.balance}
+                  onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-slate-900"
+                />
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
