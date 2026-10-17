@@ -52,7 +52,12 @@ import {
   deleteCloudItemPreset,
   getBankAccounts,
   saveBankAccount,
-  deleteBankAccount
+  deleteBankAccount,
+  getAllJournalVouchers,
+  saveJournalVoucher,
+  deleteJournalVoucher,
+  getNextJournalVoucherNo,
+  getChartOfAccounts
 } from '../../lib/erpData';
 import CustomDatePicker from './CustomDatePicker';
 import ItemCombobox from './ItemCombobox';
@@ -71,6 +76,109 @@ export default function InvoiceLedger({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // -------------------------------------------------------------
+  // MANUAL & AUTO DOUBLE-ENTRY GENERAL JOURNAL STATE
+  // -------------------------------------------------------------
+  const [journalVouchers, setJournalVouchers] = useState([]);
+  const [journalSourceFilter, setJournalSourceFilter] = useState('ALL'); // 'ALL' | 'AUTO' | 'MANUAL'
+  const [journalViewMode, setJournalViewMode] = useState('DOUBLE_ENTRY'); // 'DOUBLE_ENTRY' | 'LEDGER'
+  const [journalSearch, setJournalSearch] = useState('');
+  const [showJournalModal, setShowJournalModal] = useState(false);
+  const [editingJournalVoucher, setEditingJournalVoucher] = useState(null);
+  const [jvDate, setJvDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [jvNumber, setJvNumber] = useState('');
+  const [jvDebitAccount, setJvDebitAccount] = useState('');
+  const [jvCreditAccount, setJvCreditAccount] = useState('');
+  const [jvAmount, setJvAmount] = useState('');
+  const [jvParty, setJvParty] = useState('');
+  const [jvNarration, setJvNarration] = useState('');
+  const [jvSaving, setJvSaving] = useState(false);
+
+  // Load Journal Vouchers on mount
+  useEffect(() => {
+    try {
+      const storedJVs = getAllJournalVouchers('NOOR E HARAM TRAVELS & TOURS');
+      setJournalVouchers(Array.isArray(storedJVs) ? storedJVs : []);
+    } catch (e) {
+      console.warn('Failed loading journal vouchers', e);
+    }
+  }, []);
+
+  const chartAccounts = useMemo(() => {
+    try {
+      return getChartOfAccounts('NOOR E HARAM TRAVELS & TOURS') || [];
+    } catch (e) {
+      return [];
+    }
+  }, []);
+
+  const handleOpenCreateJV = () => {
+    setEditingJournalVoucher(null);
+    setJvDate(new Date().toISOString().split('T')[0]);
+    setJvNumber(getNextJournalVoucherNo('NOOR E HARAM TRAVELS & TOURS'));
+    setJvDebitAccount(chartAccounts[0]?.code || '1010');
+    setJvCreditAccount(chartAccounts[1]?.code || '1020');
+    setJvAmount('');
+    setJvParty('');
+    setJvNarration('');
+    setShowJournalModal(true);
+  };
+
+  const handleOpenEditJV = (jv) => {
+    setEditingJournalVoucher(jv);
+    setJvDate(jv.date || new Date().toISOString().split('T')[0]);
+    setJvNumber(jv.voucherNo || '');
+    setJvDebitAccount(jv.debitAccountCode || chartAccounts[0]?.code || '1010');
+    setJvCreditAccount(jv.creditAccountCode || chartAccounts[1]?.code || '1020');
+    setJvAmount(String(jv.amount || ''));
+    setJvParty(jv.partyName || '');
+    setJvNarration(jv.narration || '');
+    setShowJournalModal(true);
+  };
+
+  const handleSaveJV = (e) => {
+    e.preventDefault();
+    const parsedAmount = parseFloat(jvAmount);
+    if (!parsedAmount || parsedAmount <= 0) {
+      alert('Please enter a valid amount greater than 0.');
+      return;
+    }
+    if (jvDebitAccount === jvCreditAccount) {
+      alert('Debit Account and Credit Account cannot be the same account.');
+      return;
+    }
+
+    setJvSaving(true);
+    const drObj = chartAccounts.find(a => a.code === jvDebitAccount) || { code: jvDebitAccount, name: jvDebitAccount };
+    const crObj = chartAccounts.find(a => a.code === jvCreditAccount) || { code: jvCreditAccount, name: jvCreditAccount };
+
+    const jvPayload = {
+      id: editingJournalVoucher ? editingJournalVoucher.id : undefined,
+      voucherNo: jvNumber || getNextJournalVoucherNo('NOOR E HARAM TRAVELS & TOURS'),
+      date: jvDate,
+      amount: parsedAmount,
+      debitAccountCode: drObj.code,
+      debitAccountName: drObj.name,
+      creditAccountCode: crObj.code,
+      creditAccountName: crObj.name,
+      partyName: jvParty ? jvParty.trim() : 'General Ledger',
+      partyHeadUid: jvParty ? (parties.find(p => p.name === jvParty)?.partyHeadUid || 'CUSTOM') : 'GENERAL',
+      narration: jvNarration ? jvNarration.trim() : 'Manual Journal Adjustment'
+    };
+
+    const updated = saveJournalVoucher(jvPayload, 'NOOR E HARAM TRAVELS & TOURS');
+    setJournalVouchers(updated);
+    setJvSaving(false);
+    setShowJournalModal(false);
+  };
+
+  const handleDeleteJV = (id, voucherNo) => {
+    if (confirm(`Are you sure you want to delete Journal Voucher ${voucherNo}? This action cannot be undone.`)) {
+      const updated = deleteJournalVoucher(id, 'NOOR E HARAM TRAVELS & TOURS');
+      setJournalVouchers(updated);
+    }
+  };
   const [viewMode, setViewMode] = useState(initialView || 'INVOICES'); // 'INVOICES' | 'LEDGER'
   const [invoiceList, setInvoiceList] = useState(invoices || []);
   const [searchTerm, setSearchTerm] = useState('');
@@ -776,6 +884,120 @@ export default function InvoiceLedger({
   };
 
   // -------------------------------------------------------------
+  // UNIFIED DOUBLE-ENTRY JOURNAL ENGINE (AUTO + MANUAL ENTRIES)
+  // -------------------------------------------------------------
+  const allDoubleEntryTransactions = useMemo(() => {
+    const list = [];
+
+    // 1. AUTO INVOICES: Dr Accounts Receivable / Cr Umrah Sales
+    displayInvoices.forEach(inv => {
+      const totalAmt = parseFloat(inv.totalAmount) || 0;
+      list.push({
+        id: `inv-${inv.id || inv.invoiceNo}`,
+        date: inv.issueDate || '2026-01-01',
+        source: 'AUTO',
+        type: 'INVOICE',
+        refNo: inv.invoiceNo,
+        partyName: inv.partyName || 'Customer',
+        partyHeadUid: inv.partyHeadUid || 'CUSTOM',
+        narration: `Package Invoice: ${inv.packageTitle || 'Umrah Travel Package'}`,
+        totalAmount: totalAmt,
+        invoiceId: inv.id,
+        rawTimestamp: new Date(inv.issueDate || '2026-01-01').getTime(),
+        lines: [
+          {
+            code: '1030',
+            name: `Accounts Receivable (${inv.partyName || 'Customer'})`,
+            type: 'DEBIT',
+            debit: totalAmt,
+            credit: 0
+          },
+          {
+            code: '4010',
+            name: 'Umrah Package Revenue / Sales',
+            type: 'CREDIT',
+            debit: 0,
+            credit: totalAmt
+          }
+        ]
+      });
+
+      // 2. AUTO RECEIPTS: Dr Bank/Cash Account / Cr Accounts Receivable
+      (inv.ledgerTransactions || []).forEach(tx => {
+        const txAmt = parseFloat(tx.amount) || 0;
+        const bName = tx.bankAccountName || tx.method || 'Cash & Bank';
+        list.push({
+          id: `tx-${tx.id || tx.referenceNo}`,
+          date: tx.date || inv.issueDate || '2026-01-01',
+          source: 'AUTO',
+          type: 'RECEIPT',
+          refNo: tx.referenceNo || `PAY-${tx.id}`,
+          partyName: inv.partyName || 'Customer',
+          partyHeadUid: inv.partyHeadUid || 'CUSTOM',
+          narration: `Payment via ${tx.method || 'Bank Transfer'}${tx.notes ? ` (${tx.notes})` : ''}`,
+          totalAmount: txAmt,
+          invoiceId: inv.id,
+          rawTimestamp: new Date(tx.date || inv.issueDate || '2026-01-01').getTime() + 1,
+          lines: [
+            {
+              code: '1020',
+              name: bName,
+              type: 'DEBIT',
+              debit: txAmt,
+              credit: 0
+            },
+            {
+              code: '1030',
+              name: `Accounts Receivable (${inv.partyName || 'Customer'})`,
+              type: 'CREDIT',
+              debit: 0,
+              credit: txAmt
+            }
+          ]
+        });
+      });
+    });
+
+    // 3. MANUAL JOURNAL VOUCHERS: Dr Selected Debit / Cr Selected Credit
+    (journalVouchers || []).forEach(jv => {
+      const jvAmt = parseFloat(jv.amount) || 0;
+      list.push({
+        id: jv.id,
+        date: jv.date || '2026-01-01',
+        source: 'MANUAL',
+        type: 'JOURNAL_VOUCHER',
+        refNo: jv.voucherNo || `JV-${jv.id}`,
+        partyName: jv.partyName || 'General Journal Entry',
+        partyHeadUid: jv.partyHeadUid || 'GENERAL',
+        narration: jv.narration || 'Manual Journal Adjustment',
+        totalAmount: jvAmt,
+        rawTimestamp: new Date(jv.date || '2026-01-01').getTime() + 2,
+        rawJv: jv,
+        lines: [
+          {
+            code: jv.debitAccountCode || '1010',
+            name: jv.debitAccountName || 'Debit Account',
+            type: 'DEBIT',
+            debit: jvAmt,
+            credit: 0
+          },
+          {
+            code: jv.creditAccountCode || '1020',
+            name: jv.creditAccountName || 'Credit Account',
+            type: 'CREDIT',
+            debit: 0,
+            credit: jvAmt
+          }
+        ]
+      });
+    });
+
+    // Sort chronologically ascending
+    list.sort((a, b) => a.rawTimestamp - b.rawTimestamp);
+    return list;
+  }, [invoices, journalVouchers]);
+
+  // -------------------------------------------------------------
   // ALL LEDGER TRANSACTIONS (DEBITS & CREDITS ENGINE)
   // -------------------------------------------------------------
   const allLedgerEntries = useMemo(() => {
@@ -818,6 +1040,60 @@ export default function InvoiceLedger({
     list.sort((a, b) => a.rawTimestamp - b.rawTimestamp);
     return list;
   }, [invoices]);
+
+    // Filtered Double-Entry Journal Transactions
+  const { filteredJournalTransactions, jvTotalDebits, jvTotalCredits, autoCount, manualCount } = useMemo(() => {
+    let tDr = 0;
+    let tCr = 0;
+    let aCount = 0;
+    let mCount = 0;
+
+    const filtered = allDoubleEntryTransactions.filter(item => {
+      // Source filter
+      if (journalSourceFilter === 'AUTO' && item.source !== 'AUTO') return false;
+      if (journalSourceFilter === 'MANUAL' && item.source !== 'MANUAL') return false;
+
+      // Party filter
+      if (selectedLedgerParty !== 'ALL') {
+        const matchUid = item.partyHeadUid === selectedLedgerParty;
+        const matchName = (item.partyName || '').toLowerCase() === selectedLedgerParty.toLowerCase();
+        if (!matchUid && !matchName) return false;
+      }
+
+      // Date filters
+      if (ledgerDateFrom && item.date < ledgerDateFrom) return false;
+      if (ledgerDateTo && item.date > ledgerDateTo) return false;
+
+      // Search filter
+      if (journalSearch && journalSearch.trim()) {
+        const q = journalSearch.toLowerCase();
+        const inRef = (item.refNo || '').toLowerCase().includes(q);
+        const inParty = (item.partyName || '').toLowerCase().includes(q);
+        const inDesc = (item.narration || '').toLowerCase().includes(q);
+        const inLines = item.lines.some(l => (l.name || '').toLowerCase().includes(q) || (l.code || '').includes(q));
+        if (!inRef && !inParty && !inDesc && !inLines) return false;
+      }
+
+      return true;
+    });
+
+    filtered.forEach(item => {
+      if (item.source === 'AUTO') aCount++;
+      else mCount++;
+      item.lines.forEach(l => {
+        tDr += (l.debit || 0);
+        tCr += (l.credit || 0);
+      });
+    });
+
+    return {
+      filteredJournalTransactions: filtered,
+      jvTotalDebits: tDr,
+      jvTotalCredits: tCr,
+      autoCount: aCount,
+      manualCount: mCount
+    };
+  }, [allDoubleEntryTransactions, journalSourceFilter, selectedLedgerParty, ledgerDateFrom, ledgerDateTo, journalSearch]);
 
   // Compute filtered ledger transactions with running balance
   const { filteredLedgerEntries, ledgerTotalDebit, ledgerTotalCredit, ledgerNetBalance } = useMemo(() => {
@@ -1137,13 +1413,23 @@ export default function InvoiceLedger({
               <span>Add Bank Account</span>
             </button>
           ) : ledgerSubTab === 'JOURNAL' ? (
-            <button
-              onClick={handlePrintLedger}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] border border-[#dfba73]/40 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print Consolidated Journal</span>
-            </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenCreateJV}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4 text-emerald-400" />
+                  <span>New Journal Voucher (JV)</span>
+                </button>
+                <button
+                  onClick={handlePrintLedger}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#0a192f] hover:bg-slate-800 text-[#dfba73] border border-[#dfba73]/40 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Print Journal</span>
+                </button>
+              </div>
           ) : (
             <button
               onClick={handlePrintLedger}
@@ -1663,8 +1949,8 @@ export default function InvoiceLedger({
             </div>
           )}
 
-          {/* ========================================================= */}
-          {/* SUB-VIEW 3: ALL CONSOLIDATED JOURNAL ENTRIES               */}
+                    {/* ========================================================= */}
+          {/* SUB-VIEW 3: ALL CONSOLIDATED JOURNAL ENTRIES (DOUBLE-ENTRY) */}
           {/* ========================================================= */}
           {ledgerSubTab === 'JOURNAL' && (
             <div className="space-y-4">
@@ -1674,34 +1960,127 @@ export default function InvoiceLedger({
                 <div className="flex items-start justify-between">
                   <div>
                     <h1 className="text-xl font-black text-[#0a192f] uppercase tracking-tight">
-                      NOOR E HARAM TRAVELS & TOURS
+                      {customCompany || 'NOOR E HARAM TRAVELS & TOURS'}
                     </h1>
-                    <p className="text-xs text-slate-600">
-                      Customer Account Ledger &bull; Statement of Account
+                    <p className="text-xs text-slate-600 font-medium">
+                      Consolidated General Journal &bull; Double-Entry Audit Book
                     </p>
                     <p className="text-[10px] text-slate-500 font-mono mt-1">
-                      Generated On: {new Date().toLocaleDateString('en-GB')}
+                      Generated On: {new Date().toLocaleDateString('en-GB')} &bull; Source: {journalSourceFilter}
                     </p>
                   </div>
                   <div className="text-right">
                     <span className="px-2.5 py-1 bg-[#0a192f] text-[#dfba73] font-mono font-bold text-xs rounded uppercase">
-                      Statement
+                      General Journal
                     </span>
                     <p className="text-xs font-bold text-slate-800 mt-1">
-                      Account: {selectedPartyObj ? selectedPartyObj.name : 'All Accounts'}
+                      {selectedLedgerParty === 'ALL' ? 'All Accounts & Parties' : selectedLedgerParty}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Filter Bar & Account Selector */}
-              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3 print-hide">
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
-                  
+              {/* Filter Bar & Controls */}
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5 print-hide">
+                {/* Row 1: Source Filter Tabs + Search + View Switcher */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {/* Source Filter Switcher Pills */}
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/70 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setJournalSourceFilter('ALL')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        journalSourceFilter === 'ALL'
+                          ? 'bg-white text-slate-900 shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      All Transactions ({allDoubleEntryTransactions.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setJournalSourceFilter('AUTO')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        journalSourceFilter === 'AUTO'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-blue-700'
+                      }`}
+                    >
+                      Auto (Invoices &amp; Receipts) ({autoCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setJournalSourceFilter('MANUAL')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        journalSourceFilter === 'MANUAL'
+                          ? 'bg-amber-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-amber-700'
+                      }`}
+                    >
+                      Manual JVs ({manualCount})
+                    </button>
+                  </div>
+
+                  {/* Search box & View Switcher */}
+                  <div className="flex items-center gap-2 flex-1 max-w-md justify-end">
+                    <div className="relative flex-1">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={journalSearch}
+                        onChange={(e) => setJournalSearch(e.target.value)}
+                        placeholder="Search ref #, party, account, narration..."
+                        className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-xl text-xs text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800"
+                      />
+                      {journalSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setJournalSearch('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* View Switcher: Double-Entry (Dr/Cr Together) vs Ledger Flow */}
+                    <div className="flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setJournalViewMode('DOUBLE_ENTRY')}
+                        title="Show Balanced Double-Entry (Debit & Credit Together)"
+                        className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
+                          journalViewMode === 'DOUBLE_ENTRY'
+                            ? 'bg-white text-slate-900 shadow-xs'
+                            : 'text-slate-500 hover:text-slate-900'
+                        }`}
+                      >
+                        <Layers className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="hidden md:inline">Dr &amp; Cr Together</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setJournalViewMode('LEDGER')}
+                        title="Show Running Ledger Flow"
+                        className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold ${
+                          journalViewMode === 'LEDGER'
+                            ? 'bg-white text-slate-900 shadow-xs'
+                            : 'text-slate-500 hover:text-slate-900'
+                        }`}
+                      >
+                        <FileText className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="hidden md:inline">Ledger Flow</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 2: Customer / Party Dropdown + Dates + Reset */}
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end pt-2 border-t border-slate-100">
                   {/* Account / Party Dropdown */}
                   <div className="sm:col-span-5 space-y-1">
                     <label className="block text-[10px] font-bold text-slate-700 uppercase">
-                      Select Customer / Account
+                      Filter Customer / Party
                     </label>
                     <div className="relative">
                       <User className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1710,7 +2089,7 @@ export default function InvoiceLedger({
                         onChange={(e) => setSelectedLedgerParty(e.target.value)}
                         className="w-full pl-9 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 bg-white outline-none focus:border-slate-800 cursor-pointer"
                       >
-                        <option value="ALL">All Parties / Master Consolidated Ledger</option>
+                        <option value="ALL">All Parties &amp; General Journal Entries</option>
                         {uniqueLedgerParties.map(p => (
                           <option key={p.uid} value={p.uid}>
                             {p.name} ({p.uid})
@@ -1753,188 +2132,391 @@ export default function InvoiceLedger({
                         setSelectedLedgerParty('ALL');
                         setLedgerDateFrom('');
                         setLedgerDateTo('');
+                        setJournalSearch('');
+                        setJournalSourceFilter('ALL');
                       }}
-                      title="Reset Filters"
+                      title="Reset All Filters"
                       className="w-full p-2 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 flex items-center justify-center transition-colors cursor-pointer"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                     </button>
                   </div>
-
                 </div>
               </div>
 
               {/* KPI Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 
-                {/* Total Invoiced (Debit) */}
+                {/* Total Vouchers / Transactions */}
                 <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                      Total Billed (Debits)
+                      Total Transactions
                     </span>
                     <span className="text-xl font-black font-mono text-slate-900 block">
-                      PKR {ledgerTotalDebit.toLocaleString()}
+                      {filteredJournalTransactions.length}
                     </span>
-                    <span className="text-[10px] text-slate-400">Total charges invoiced to client</span>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      {autoCount} Auto &bull; {manualCount} Manual JVs
+                    </span>
+                  </div>
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                </div>
+
+                {/* Total Debits */}
+                <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                      Total Debits (Dr.)
+                    </span>
+                    <span className="text-xl font-black font-mono text-blue-700 block">
+                      PKR {jvTotalDebits.toLocaleString()}
+                    </span>
+                    <span className="text-[10px] text-slate-400">Sum of all Debit legs</span>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0">
                     <TrendingUp className="w-5 h-5" />
                   </div>
                 </div>
 
-                {/* Total Received (Credit) */}
+                {/* Total Credits */}
                 <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                      Total Received (Credits)
+                      Total Credits (Cr.)
                     </span>
                     <span className="text-xl font-black font-mono text-emerald-700 block">
-                      PKR {ledgerTotalCredit.toLocaleString()}
+                      PKR {jvTotalCredits.toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-slate-400">Payments collected &amp; cleared</span>
+                    <span className="text-[10px] text-slate-400">Sum of all Credit legs</span>
                   </div>
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
                     <CreditCard className="w-5 h-5" />
                   </div>
                 </div>
 
-                {/* Net Balance Due */}
+                {/* Double-Entry Equilibrium */}
                 <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                      Net Outstanding Balance
+                      Equilibrium Status
                     </span>
                     <span className={`text-xl font-black font-mono block ${
-                      ledgerNetBalance > 0 ? 'text-rose-600' : (ledgerNetBalance === 0 ? 'text-emerald-700' : 'text-indigo-600')
+                      jvTotalDebits === jvTotalCredits ? 'text-emerald-700' : 'text-rose-600'
                     }`}>
-                      PKR {ledgerNetBalance.toLocaleString()}
+                      {jvTotalDebits === jvTotalCredits ? 'BALANCED' : `DIFF: ${(jvTotalDebits - jvTotalCredits).toLocaleString()}`}
                     </span>
-                    <span className="text-[10px] text-slate-400">
-                      {ledgerNetBalance > 0 ? 'Outstanding receivable' : (ledgerNetBalance === 0 ? 'Account fully settled' : 'Advance credit balance')}
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      {jvTotalDebits === jvTotalCredits ? 'Total Dr = Total Cr' : 'Discrepancy detected'}
                     </span>
                   </div>
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    ledgerNetBalance > 0 ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'
+                    jvTotalDebits === jvTotalCredits ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
                   }`}>
-                    {ledgerNetBalance > 0 ? <AlertCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
+                    {jvTotalDebits === jvTotalCredits ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
                   </div>
                 </div>
 
               </div>
 
-              {/* Chronological Ledger Entries Table */}
-              <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
-                <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 print-hide">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-emerald-600" />
-                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
-                      Account Ledger Transactions ({filteredLedgerEntries.length})
+              {/* View 1: DOUBLE ENTRY (DR & CR TOGETHER) */}
+              {journalViewMode === 'DOUBLE_ENTRY' ? (
+                <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+                  <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 print-hide">
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-emerald-600" />
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                        Double-Entry Journal Vouchers ({filteredJournalTransactions.length} Transactions)
+                      </span>
+                    </div>
+
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      Debit &amp; Credit Shown Together Per Transaction
                     </span>
                   </div>
 
-                  {selectedPartyObj && (
-                    <span className="text-xs font-mono font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded border border-slate-200">
-                      {selectedPartyObj.name} &bull; {selectedPartyObj.phone}
-                    </span>
-                  )}
-                </div>
+                  {filteredJournalTransactions.length === 0 ? (
+                    <div className="py-16 text-center text-slate-400">
+                      <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                      <p className="font-semibold text-slate-600">No journal transactions match your filter</p>
+                      <p className="text-xs text-slate-400 mt-1">Try resetting filters or click "+ New Journal Voucher (JV)" to record a manual entry.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-200/80">
+                      {filteredJournalTransactions.map((tx) => (
+                        <div key={tx.id} className="p-3.5 sm:p-4 hover:bg-slate-50/50 transition-colors">
+                          {/* Voucher Meta Header */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-dashed border-slate-200">
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                                {tx.date}
+                              </span>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-mono text-[10px]">
-                      <tr>
-                        <th className="py-3 px-3.5 font-bold">Date</th>
-                        <th className="py-3 px-3.5 font-bold">Entry Type</th>
-                        <th className="py-3 px-3.5 font-bold">Voucher / Ref #</th>
-                        <th className="py-3 px-3.5 font-bold">Customer / Party</th>
-                        <th className="py-3 px-3.5 font-bold">Particulars &amp; Details</th>
-                        <th className="py-3 px-3.5 font-bold text-right">Debit (+)</th>
-                        <th className="py-3 px-3.5 font-bold text-right">Credit (-)</th>
-                        <th className="py-3 px-3.5 font-bold text-right">Balance</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredLedgerEntries.length === 0 ? (
-                        <tr>
-                          <td colSpan="8" className="py-12 text-center text-slate-400">
-                            <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                            <p className="font-semibold">No ledger entries found for this selection</p>
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredLedgerEntries.map((entry) => (
-                          <tr key={entry.id} className="hover:bg-slate-50/80 transition-colors">
-                            <td className="py-3 px-3.5 font-mono text-[11px] text-slate-700 whitespace-nowrap">
-                              {entry.date}
-                            </td>
-                            <td className="py-3 px-3.5 whitespace-nowrap">
-                              {entry.type === 'INVOICE' ? (
-                                <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">
-                                  INVOICE
-                                </span>
+                              <span className="font-mono font-black text-slate-900 text-xs tracking-tight">
+                                {tx.refNo}
+                              </span>
+
+                              {tx.source === 'AUTO' ? (
+                                tx.type === 'INVOICE' ? (
+                                  <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">
+                                    AUTO INVOICE
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    AUTO RECEIPT
+                                  </span>
+                                )
                               ) : (
-                                <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                  RECEIPT
+                                <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-amber-50 text-amber-800 border border-amber-200 font-bold">
+                                  MANUAL JV
                                 </span>
                               )}
-                            </td>
-                            <td className="py-3 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
-                              {entry.invoiceId ? (
-                                <Link 
-                                  href={`/invoice/${encodeURIComponent(entry.refNo)}`} 
-                                  className="text-indigo-600 hover:underline flex items-center gap-1"
+
+                              <span className="text-xs font-bold text-slate-800">
+                                {tx.partyName}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono font-black text-slate-900">
+                                PKR {tx.totalAmount.toLocaleString()}
+                              </span>
+
+                              {/* Action Buttons */}
+                              {tx.source === 'AUTO' && tx.refNo?.startsWith('INV') && (
+                                <Link
+                                  href={`/invoice/${encodeURIComponent(tx.refNo)}`}
+                                  className="p-1 rounded-lg hover:bg-slate-100 text-indigo-600 hover:text-indigo-800 transition-colors print-hide"
+                                  title="View Invoice"
                                 >
-                                  <span>{entry.refNo}</span>
+                                  <ExternalLink className="w-3.5 h-3.5" />
                                 </Link>
-                              ) : (
-                                <span>{entry.refNo}</span>
                               )}
-                            </td>
-                            <td className="py-3 px-3.5">
-                              <span className="font-bold text-slate-900 uppercase block text-[11px]">
-                                {entry.partyName}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3.5 text-slate-600 text-[11px]">
-                              {entry.particulars}
-                            </td>
-                            <td className="py-3 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
-                              {entry.debit > 0 ? `PKR ${entry.debit.toLocaleString()}` : '-'}
-                            </td>
-                            <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
-                              {entry.credit > 0 ? `PKR ${entry.credit.toLocaleString()}` : '-'}
-                            </td>
-                            <td className="py-3 px-3.5 text-right font-mono font-black whitespace-nowrap">
-                              <span className={entry.runningBalance > 0 ? 'text-rose-600' : 'text-emerald-700'}>
-                                PKR {entry.runningBalance.toLocaleString()}
-                              </span>
+
+                              {tx.source === 'MANUAL' && (
+                                <div className="flex items-center gap-1 print-hide">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditJV(tx.rawJv)}
+                                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                                    title="Edit Manual JV"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteJV(tx.id, tx.refNo)}
+                                    className="p-1 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+                                    title="Delete Manual JV"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Narration */}
+                          {tx.narration && (
+                            <p className="text-[11px] text-slate-500 italic mb-2">
+                              Narration: {tx.narration}
+                            </p>
+                          )}
+
+                          {/* Double-Entry Legs Table (Dr & Cr Together) */}
+                          <div className="bg-slate-50/70 border border-slate-200/80 rounded-xl overflow-hidden">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-slate-100/90 border-b border-slate-200 text-slate-500 uppercase font-mono text-[9.5px]">
+                                <tr>
+                                  <th className="py-2 px-3 font-bold w-16">Leg</th>
+                                  <th className="py-2 px-3 font-bold">Chart Account Title &amp; Code</th>
+                                  <th className="py-2 px-3 font-bold text-right w-36">Debit (Dr.)</th>
+                                  <th className="py-2 px-3 font-bold text-right w-36">Credit (Cr.)</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                                {tx.lines.map((line, lIdx) => (
+                                  <tr key={lIdx} className={line.type === 'DEBIT' ? 'bg-white' : 'bg-slate-50/40'}>
+                                    <td className="py-2 px-3 font-bold whitespace-nowrap">
+                                      {line.type === 'DEBIT' ? (
+                                        <span className="text-blue-700 font-extrabold">Dr.</span>
+                                      ) : (
+                                        <span className="text-emerald-700 font-extrabold pl-2">Cr.</span>
+                                      )}
+                                    </td>
+                                    <td className="py-2 px-3">
+                                      <div className={`flex items-center gap-2 ${line.type === 'CREDIT' ? 'pl-4' : ''}`}>
+                                        <span className="px-1.5 py-0.2 rounded text-[9.5px] bg-slate-200/70 text-slate-700 font-bold">
+                                          {line.code}
+                                        </span>
+                                        <span className={`font-semibold ${line.type === 'DEBIT' ? 'text-slate-900 font-bold' : 'text-slate-700'}`}>
+                                          {line.name}
+                                        </span>
+                                      </div>
+                                    </td>
+                                    <td className="py-2 px-3 text-right font-bold text-blue-700 whitespace-nowrap">
+                                      {line.debit > 0 ? `PKR ${line.debit.toLocaleString()}` : '-'}
+                                    </td>
+                                    <td className="py-2 px-3 text-right font-bold text-emerald-700 whitespace-nowrap">
+                                      {line.credit > 0 ? `PKR ${line.credit.toLocaleString()}` : '-'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                              <tfoot className="bg-slate-100/60 border-t border-slate-200 text-[10.5px] font-mono">
+                                <tr>
+                                  <td colSpan="2" className="py-1.5 px-3 text-right text-slate-500 font-bold uppercase">
+                                    Voucher Balance Equilibrium:
+                                  </td>
+                                  <td className="py-1.5 px-3 text-right font-black text-slate-900 border-t border-slate-300">
+                                    PKR {tx.totalAmount.toLocaleString()}
+                                  </td>
+                                  <td className="py-1.5 px-3 text-right font-black text-slate-900 border-t border-slate-300">
+                                    PKR {tx.totalAmount.toLocaleString()}
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Print Sign-off Footer */}
+                  <div className="print-only pt-8 mt-6 border-t border-slate-300 p-6">
+                    <div className="flex items-center justify-between text-xs text-slate-600">
+                      <div className="text-center">
+                        <div className="w-48 border-b border-slate-400 mb-1" />
+                        <span>Prepared By / Accountant</span>
+                      </div>
+                      <div className="text-center">
+                        <div className="w-48 border-b border-slate-400 mb-1" />
+                        <span>Audit &amp; Stamp</span>
+                      </div>
+                      <div className="text-center">
+                        <div className="w-48 border-b border-slate-400 mb-1" />
+                        <span>Authorized Signatory</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* View 2: CLASSIC RUNNING BALANCE LEDGER */
+                <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
+                  <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 print-hide">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                        Chronological Running Balance Ledger ({filteredLedgerEntries.length} Records)
+                      </span>
+                    </div>
+
+                    {selectedPartyObj && (
+                      <span className="text-xs font-mono font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded border border-slate-200">
+                        {selectedPartyObj.name} &bull; {selectedPartyObj.phone}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-mono text-[10px]">
+                        <tr>
+                          <th className="py-3 px-3.5 font-bold">Date</th>
+                          <th className="py-3 px-3.5 font-bold">Entry Type</th>
+                          <th className="py-3 px-3.5 font-bold">Voucher / Ref #</th>
+                          <th className="py-3 px-3.5 font-bold">Customer / Party</th>
+                          <th className="py-3 px-3.5 font-bold">Particulars &amp; Details</th>
+                          <th className="py-3 px-3.5 font-bold text-right">Debit (+)</th>
+                          <th className="py-3 px-3.5 font-bold text-right">Credit (-)</th>
+                          <th className="py-3 px-3.5 font-bold text-right">Running Balance</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredLedgerEntries.length === 0 ? (
+                          <tr>
+                            <td colSpan="8" className="py-12 text-center text-slate-400">
+                              <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                              <p className="font-semibold">No ledger entries found for this selection</p>
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                        ) : (
+                          filteredLedgerEntries.map((entry) => (
+                            <tr key={entry.id} className="hover:bg-slate-50/80 transition-colors">
+                              <td className="py-3 px-3.5 font-mono text-[11px] text-slate-700 whitespace-nowrap">
+                                {entry.date}
+                              </td>
+                              <td className="py-3 px-3.5 whitespace-nowrap">
+                                {entry.type === 'INVOICE' ? (
+                                  <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-blue-50 text-blue-700 border border-blue-200">
+                                    INVOICE
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    RECEIPT
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
+                                {entry.invoiceId ? (
+                                  <Link 
+                                    href={`/invoice/${encodeURIComponent(entry.refNo)}`} 
+                                    className="text-indigo-600 hover:underline flex items-center gap-1"
+                                  >
+                                    <span>{entry.refNo}</span>
+                                  </Link>
+                                ) : (
+                                  <span>{entry.refNo}</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3.5">
+                                <span className="font-bold text-slate-900 uppercase block text-[11px]">
+                                  {entry.partyName}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3.5 text-slate-600 text-[11px]">
+                                {entry.particulars}
+                              </td>
+                              <td className="py-3 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                                {entry.debit > 0 ? `PKR ${entry.debit.toLocaleString()}` : '-'}
+                              </td>
+                              <td className="py-3 px-3.5 text-right font-mono font-bold text-emerald-700 whitespace-nowrap">
+                                {entry.credit > 0 ? `PKR ${entry.credit.toLocaleString()}` : '-'}
+                              </td>
+                              <td className="py-3 px-3.5 text-right font-mono font-black whitespace-nowrap">
+                                <span className={entry.runningBalance > 0 ? 'text-rose-600' : 'text-emerald-700'}>
+                                  PKR {entry.runningBalance.toLocaleString()}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
 
-                {/* Print Sign-off Footer */}
-                <div className="print-only pt-8 mt-6 border-t border-slate-300">
-                  <div className="flex items-center justify-between text-xs text-slate-600">
-                    <div className="text-center">
-                      <div className="w-48 border-b border-slate-400 mb-1" />
-                      <span>Prepared By / Cashier</span>
-                    </div>
-                    <div className="text-center">
-                      <div className="w-48 border-b border-slate-400 mb-1" />
-                      <span>Authorized Signature &amp; Stamp</span>
+                  {/* Print Sign-off Footer */}
+                  <div className="print-only pt-8 mt-6 border-t border-slate-300 p-6">
+                    <div className="flex items-center justify-between text-xs text-slate-600">
+                      <div className="text-center">
+                        <div className="w-48 border-b border-slate-400 mb-1" />
+                        <span>Prepared By / Cashier</span>
+                      </div>
+                      <div className="text-center">
+                        <div className="w-48 border-b border-slate-400 mb-1" />
+                        <span>Authorized Signature &amp; Stamp</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-              </div>
+              )}
 
             </div>
           )}
+
 
         </div>
       )}
@@ -3161,6 +3743,212 @@ export default function InvoiceLedger({
         </div>,
         document.body
       )}
+      {/* ============================================================= */}
+      {/* MODAL: CREATE / EDIT MANUAL JOURNAL VOUCHER (JV)              */}
+      {/* ============================================================= */}
+      {showJournalModal && mounted && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[9999] flex items-center justify-center p-3 sm:p-4 overflow-y-auto print-hide">
+          <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-2xl p-6 sm:p-7 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white shadow-xs ${
+                  editingJournalVoucher ? 'bg-amber-600' : 'bg-slate-900'
+                }`}>
+                  <Layers className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                    {editingJournalVoucher ? `Edit Journal Voucher: ${jvNumber}` : 'New Manual Journal Voucher (JV)'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Record a balanced double-entry transaction directly into the General Journal
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowJournalModal(false);
+                  setEditingJournalVoucher(null);
+                }} 
+                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveJV} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Date */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase">
+                    Voucher Date *
+                  </label>
+                  <CustomDatePicker
+                    value={jvDate}
+                    onChange={(val) => setJvDate(val)}
+                    placeholder="YYYY-MM-DD"
+                  />
+                </div>
+
+                {/* Voucher Number */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase">
+                    Voucher Ref #
+                  </label>
+                  <input
+                    type="text"
+                    value={jvNumber}
+                    onChange={(e) => setJvNumber(e.target.value)}
+                    placeholder="e.g. JV-2026-001"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-800 bg-slate-50 outline-none focus:bg-white focus:border-slate-800"
+                    required
+                  />
+                </div>
+
+                {/* Amount (PKR) */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase">
+                    Transaction Amount (PKR) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">PKR</span>
+                    <input
+                      type="number"
+                      min="1"
+                      step="any"
+                      value={jvAmount}
+                      onChange={(e) => setJvAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full pl-12 pr-3 py-2 border border-slate-300 rounded-xl text-xs font-mono font-bold text-slate-800 outline-none focus:border-slate-800"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Party / Entity */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-slate-700 uppercase">
+                    Party / Counterparty (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={jvParty}
+                    onChange={(e) => setJvParty(e.target.value)}
+                    placeholder="e.g. Al-Rajhi Bank / Airline / Office Expenses"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-800 outline-none focus:border-slate-800"
+                  />
+                </div>
+              </div>
+
+              {/* Debit & Credit Account Selectors */}
+              <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/90 space-y-3">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-600 block">
+                  Double-Entry Account Allocation
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Debit Account (Dr.) */}
+                  <div className="space-y-1 bg-white p-3 rounded-xl border border-blue-200">
+                    <label className="block text-[11px] font-black text-blue-700 uppercase">
+                      Debit Account (Dr. +)
+                    </label>
+                    <select
+                      value={jvDebitAccount}
+                      onChange={(e) => setJvDebitAccount(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 bg-white outline-none focus:border-blue-600 cursor-pointer"
+                      required
+                    >
+                      {chartAccounts.map((acc) => (
+                        <option key={acc.code} value={acc.code}>
+                          {acc.code} - {acc.name} ({acc.category})
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-slate-400 block">
+                      Amount debited to this account
+                    </span>
+                  </div>
+
+                  {/* Credit Account (Cr.) */}
+                  <div className="space-y-1 bg-white p-3 rounded-xl border border-emerald-200">
+                    <label className="block text-[11px] font-black text-emerald-700 uppercase">
+                      Credit Account (Cr. -)
+                    </label>
+                    <select
+                      value={jvCreditAccount}
+                      onChange={(e) => setJvCreditAccount(e.target.value)}
+                      className="w-full p-2 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 bg-white outline-none focus:border-emerald-600 cursor-pointer"
+                      required
+                    >
+                      {chartAccounts.map((acc) => (
+                        <option key={acc.code} value={acc.code}>
+                          {acc.code} - {acc.name} ({acc.category})
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-slate-400 block">
+                      Amount credited to this account
+                    </span>
+                  </div>
+                </div>
+
+                {/* Real-time Double Entry Equilibrium Indicator */}
+                <div className="flex items-center justify-between p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 text-xs">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-bold text-emerald-900">
+                      Balanced Double Entry:
+                    </span>
+                  </div>
+                  <span className="font-mono font-black text-emerald-800">
+                    Dr. PKR {parseFloat(jvAmount || 0).toLocaleString()} = Cr. PKR {parseFloat(jvAmount || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Narration */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-700 uppercase">
+                  Narration / Description
+                </label>
+                <textarea
+                  rows={2}
+                  value={jvNarration}
+                  onChange={(e) => setJvNarration(e.target.value)}
+                  placeholder="State clearly the reason for this manual journal entry..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs text-slate-800 outline-none focus:border-slate-800 resize-none"
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowJournalModal(false);
+                    setEditingJournalVoucher(null);
+                  }}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={jvSaving}
+                  className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>{jvSaving ? 'Saving...' : (editingJournalVoucher ? 'Update Voucher' : 'Post Journal Voucher')}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
     </div>
   );
 }
