@@ -1076,7 +1076,8 @@ export default function GroupManager({
             </form>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* VIEW MANIFEST MODAL */}
@@ -1206,7 +1207,8 @@ export default function GroupManager({
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* DELETE CONFIRMATION MODAL */}

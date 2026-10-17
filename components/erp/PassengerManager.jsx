@@ -2290,7 +2290,8 @@ export default function PassengerManager({ parties = [], onPartiesUpdated }) {
             </form>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 4. EDIT PASSENGER DETAILS MODAL */}

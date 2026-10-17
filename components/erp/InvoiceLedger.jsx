@@ -2844,7 +2844,8 @@ export default function InvoiceLedger({
             </form>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ============================================================= */}
@@ -3032,7 +3033,8 @@ export default function InvoiceLedger({
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ============================================================= */}

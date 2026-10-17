@@ -501,7 +501,8 @@ export default function BillReceiptManager({
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================= */}
