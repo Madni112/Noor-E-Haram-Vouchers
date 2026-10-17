@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
@@ -965,41 +965,32 @@ export default function InvoiceLedger({
     return list.sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [invoiceList, invoices, bankAccounts]);
 
-  // Master customer summary aggregated across parties and invoices
+  // Master customer summary aggregated across invoices (only customers with at least 1 bill)
   const customerLedgerSummaries = useMemo(() => {
     const map = new Map();
-
-    parties.forEach(p => {
-      const uid = p.partyHeadUid || p.fid || p.id;
-      if (!uid) return;
-      map.set(uid, {
-        partyUid: uid,
-        partyName: p.partyName || p.name || 'Valued Client',
-        contactPhone: p.contactPhone || p.phone || '',
-        companyName: p.companyName || 'NOOR E HARAM TRAVELS & TOURS',
-        departureDate: p.departureDate || '',
-        arrivalDate: p.arrivalDate || '',
-        passengersCount: Array.isArray(p.passengers) ? p.passengers.length : 1,
-        totalBilled: 0,
-        totalPaid: 0,
-        balanceDue: 0,
-        invoices: []
-      });
-    });
-
     const currentInvs = invoiceList.length > 0 ? invoiceList : invoices;
+
     currentInvs.forEach(inv => {
-      const uid = inv.partyHeadUid || inv.partyName || 'UNKNOWN';
+      // Match with parties manifest to retrieve official FID, contact, etc.
+      const matchedParty = parties.find(p => 
+        (inv.partyHeadUid && (p.partyHeadUid === inv.partyHeadUid || p.fid === inv.partyHeadUid || p.id === inv.partyHeadUid)) ||
+        (inv.partyName && p.partyName && p.partyName.trim().toLowerCase() === inv.partyName.trim().toLowerCase())
+      );
+
+      const resolvedFid = inv.fid || matchedParty?.fid || (inv.partyHeadUid && String(inv.partyHeadUid).startsWith('FID-') ? inv.partyHeadUid : matchedParty?.partyHeadUid) || inv.partyHeadUid || 'FID-001';
+      const uid = inv.partyHeadUid || matchedParty?.partyHeadUid || resolvedFid || inv.partyName || 'UNKNOWN';
+
       let entry = map.get(uid);
       if (!entry) {
         entry = {
           partyUid: uid,
-          partyName: inv.partyName || 'Valued Client',
-          contactPhone: inv.contactPhone || '',
-          companyName: inv.companyName || 'NOOR E HARAM TRAVELS & TOURS',
-          departureDate: inv.departureDate || inv.issueDate || '',
-          arrivalDate: inv.arrivalDate || inv.dueDate || '',
-          passengersCount: inv.totalPax || 1,
+          fid: resolvedFid,
+          partyName: inv.partyName || matchedParty?.partyName || 'Valued Client',
+          contactPhone: inv.contactPhone || matchedParty?.contactPhone || matchedParty?.phone || '',
+          companyName: inv.companyName || matchedParty?.companyName || 'NOOR E HARAM TRAVELS & TOURS',
+          departureDate: inv.departureDate || inv.issueDate || matchedParty?.departureDate || '',
+          arrivalDate: inv.arrivalDate || inv.dueDate || matchedParty?.arrivalDate || '',
+          passengersCount: inv.totalPax || (matchedParty?.passengers ? matchedParty.passengers.length : 1),
           totalBilled: 0,
           totalPaid: 0,
           balanceDue: 0,
@@ -1015,7 +1006,9 @@ export default function InvoiceLedger({
       if (!entry.arrivalDate && inv.arrivalDate) entry.arrivalDate = inv.arrivalDate;
     });
 
-    return Array.from(map.values()).sort((a, b) => b.balanceDue - a.balanceDue);
+    return Array.from(map.values())
+      .filter(c => c.invoices.length > 0)
+      .sort((a, b) => b.balanceDue - a.balanceDue);
   }, [parties, invoiceList, invoices]);
 
   const filteredCustomerLedgers = useMemo(() => {
@@ -1023,6 +1016,7 @@ export default function InvoiceLedger({
     const q = customerSearchTerm.toLowerCase();
     return customerLedgerSummaries.filter(c => 
       (c.partyName || '').toLowerCase().includes(q) ||
+      (c.fid || '').toLowerCase().includes(q) ||
       (c.partyUid || '').toLowerCase().includes(q) ||
       (c.contactPhone || '').toLowerCase().includes(q)
     );
@@ -1366,7 +1360,7 @@ export default function InvoiceLedger({
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Search by Customer Name, Phone, or Party UID (e.g. PHU-0001)..."
+                    placeholder="Search by Customer Name, Phone, or FID (e.g. FID-001)..."
                     value={customerSearchTerm}
                     onChange={(e) => setCustomerSearchTerm(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-600"
@@ -1401,9 +1395,8 @@ export default function InvoiceLedger({
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-mono text-[10px]">
                       <tr>
-                        <th className="py-3 px-3.5 font-bold">Party UID</th>
+                        <th className="py-3 px-3.5 font-bold">FID</th>
                         <th className="py-3 px-3.5 font-bold">Customer / Party Head</th>
-                        <th className="py-3 px-3.5 font-bold">Travel Dates &amp; PAX</th>
                         <th className="py-3 px-3.5 font-bold text-right">Total Billed</th>
                         <th className="py-3 px-3.5 font-bold text-right">Total Paid (Advance)</th>
                         <th className="py-3 px-3.5 font-bold text-right">Balance Due</th>
@@ -1414,9 +1407,9 @@ export default function InvoiceLedger({
                     <tbody className="divide-y divide-slate-100">
                       {filteredCustomerLedgers.length === 0 ? (
                         <tr>
-                          <td colSpan="8" className="py-12 text-center text-slate-400">
+                          <td colSpan="7" className="py-12 text-center text-slate-400">
                             <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                            <p className="font-semibold">No customer accounts match your search</p>
+                            <p className="font-semibold">No customer accounts with issued bills match your search</p>
                           </td>
                         </tr>
                       ) : (
@@ -1426,27 +1419,24 @@ export default function InvoiceLedger({
                           return (
                             <tr key={cust.partyUid} className="hover:bg-slate-50/80 transition-colors">
                               <td className="py-3 px-3.5 font-mono text-[11px] font-bold text-slate-700 whitespace-nowrap">
-                                <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200">
-                                  {cust.partyUid}
+                                <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-800">
+                                  {cust.fid || cust.partyUid}
                                 </span>
                               </td>
                               <td className="py-3 px-3.5">
-                                <div className="font-bold text-slate-900 text-xs">
-                                  {cust.partyName}
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-slate-900 text-xs">
+                                    {cust.partyName}
+                                  </span>
+                                  {cust.invoices.length > 0 && (
+                                    <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 font-mono">
+                                      {cust.invoices.length} Bill{cust.invoices.length > 1 ? 's' : ''}
+                                    </span>
+                                  )}
                                 </div>
-                                <div className="text-[10px] text-slate-500 font-mono">
+                                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
                                   {cust.contactPhone || 'No Phone'}
                                 </div>
-                              </td>
-                              <td className="py-3 px-3.5 text-[11px] text-slate-600">
-                                <div className="font-semibold">
-                                  {cust.passengersCount} PAX {cust.departureDate ? `• Dep: ${cust.departureDate}` : ''}
-                                </div>
-                                {cust.invoices.length > 0 && (
-                                  <div className="text-[10px] text-slate-400 font-mono">
-                                    {cust.invoices.length} Bill{cust.invoices.length > 1 ? 's' : ''} Linked
-                                  </div>
-                                )}
                               </td>
                               <td className="py-3 px-3.5 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
                                 PKR {cust.totalBilled.toLocaleString()}
@@ -1544,8 +1534,8 @@ export default function InvoiceLedger({
                               {isCash ? <Wallet className="w-4 h-4" /> : <Landmark className="w-4 h-4" />}
                             </div>
                             <div>
-                              <h4 className="font-bold text-slate-900 text-xs">{acc.accountName}</h4>
-                              <p className="text-[10px] text-slate-400 font-semibold">{acc.bankName}</p>
+                              <h4 className="font-bold text-slate-900 text-xs">{acc.accountName || acc.name}</h4>
+                              <p className="text-[10px] text-slate-400 font-semibold">{acc.bankName || acc.branch || (acc.type === 'CASH' ? 'Cash Counter' : 'Bank Account')}</p>
                             </div>
                           </div>
 
@@ -1571,11 +1561,11 @@ export default function InvoiceLedger({
                         <div className="pt-2 border-t border-slate-100 text-[10.5px] space-y-1">
                           <div className="flex justify-between text-slate-500">
                             <span>Account Title:</span>
-                            <span className="font-semibold text-slate-800">{acc.accountTitle}</span>
+                            <span className="font-semibold text-slate-800">{acc.accountTitle || acc.name}</span>
                           </div>
                           <div className="flex justify-between text-slate-500">
                             <span>Account / Drawer #:</span>
-                            <span className="font-mono font-bold text-slate-800">{acc.accountNumber}</span>
+                            <span className="font-mono font-bold text-slate-800">{acc.accountNumber || (acc.code ? `GL: ${acc.code}` : '-')}</span>
                           </div>
                           {acc.iban && acc.iban !== '-' && (
                             <div className="flex justify-between text-slate-500">
