@@ -1,5 +1,5 @@
-import './globals.css';
-import Footer from '../components/Footer';
+﻿import './globals.css';
+
 import { AuthProvider } from '../lib/AuthContext';
 
 export const metadata = {
@@ -15,7 +15,7 @@ export default function RootLayout({ children }) {
                     <main className="flex-1">
             {children}
           </main>
-          <Footer />
+          
         </AuthProvider>
       </body>
     </html>
