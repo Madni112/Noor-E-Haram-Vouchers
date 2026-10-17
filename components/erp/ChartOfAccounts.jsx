@@ -17,7 +17,8 @@ import {
   Edit3, 
   ShieldCheck, 
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Sparkles
 } from 'lucide-react';
 import { 
   getChartOfAccounts, 
@@ -39,16 +40,32 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
     category: 'ASSETS',
     subCategory: 'Current Assets',
     type: 'DEBIT',
-    currency: 'PKR',
+    currency: 'Rs',
     balance: ''
   });
 
+  const getNextAvailableCode = (cat, currentList) => {
+    let prefix = 1000;
+    if (cat === 'ASSETS') prefix = 1000;
+    else if (cat === 'LIABILITIES') prefix = 2000;
+    else if (cat === 'EQUITY') prefix = 3000;
+    else if (cat === 'REVENUE') prefix = 4000;
+    else if (cat === 'DIRECT_COSTS') prefix = 5000;
+    else if (cat === 'EXPENSES') prefix = 6000;
+
+    const list = currentList || accounts;
+    const catCodes = list
+      .filter(a => a.category === cat)
+      .map(a => parseInt(a.code, 10))
+      .filter(n => !isNaN(n) && n >= prefix && n < prefix + 1000);
+
+    if (catCodes.length === 0) return String(prefix + 10);
+    const maxCode = Math.max(...catCodes);
+    return String(maxCode + 10);
+  };
+
   const loadAccounts = () => {
     const list = getChartOfAccounts(companyName);
-    
-    // Dynamically calculate and sync live balances from active transactions
-    const bankList = getBankAccounts(companyName);
-    const totalCashBank = bankList.reduce((acc, b) => acc + (parseFloat(b.initialBalance) || 0), 0);
     
     // Invoices total billed and customer debt
     const totalBilled = invoices.reduce((sum, inv) => sum + (parseFloat(inv.netTotal || inv.totalAmount) || 0), 0);
@@ -56,16 +73,15 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
     const totalReceivables = Math.max(0, totalBilled - totalPaid);
 
     const updated = list.map(a => {
+      let b = a.balance;
       if (a.code === '1030') {
-        return { ...a, balance: totalReceivables };
+        b = totalReceivables;
+      } else if (a.code === '4010') {
+        b = totalBilled;
+      } else if (a.code === '2030') {
+        b = totalPaid;
       }
-      if (a.code === '4010') {
-        return { ...a, balance: totalBilled };
-      }
-      if (a.code === '2030') {
-        return { ...a, balance: totalPaid };
-      }
-      return a;
+      return { ...a, currency: 'Rs', balance: b };
     });
 
     setAccounts(updated);
@@ -77,16 +93,37 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
 
   const handleOpenCreate = () => {
     setEditingAccount(null);
+    const nextCode = getNextAvailableCode('ASSETS', accounts);
     setFormData({
-      code: '',
+      code: nextCode,
       name: '',
       category: 'ASSETS',
       subCategory: 'Current Assets',
       type: 'DEBIT',
-      currency: 'PKR',
+      currency: 'Rs',
       balance: '0'
     });
     setShowAddModal(true);
+  };
+
+  const handleCategoryChangeInModal = (cat) => {
+    let sub = 'Current Assets';
+    let typ = 'DEBIT';
+    if (cat === 'LIABILITIES') { sub = 'Current Liabilities'; typ = 'CREDIT'; }
+    if (cat === 'EQUITY') { sub = 'Equity'; typ = 'CREDIT'; }
+    if (cat === 'REVENUE') { sub = 'Operating Revenue'; typ = 'CREDIT'; }
+    if (cat === 'DIRECT_COSTS') { sub = 'Cost of Sales'; typ = 'DEBIT'; }
+    if (cat === 'EXPENSES') { sub = 'Operating Expenses'; typ = 'DEBIT'; }
+
+    const autoCode = (!editingAccount) ? getNextAvailableCode(cat, accounts) : formData.code;
+
+    setFormData({ 
+      ...formData, 
+      category: cat, 
+      subCategory: sub, 
+      type: typ,
+      code: autoCode
+    });
   };
 
   const handleOpenEdit = (acc) => {
@@ -97,7 +134,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
       category: acc.category,
       subCategory: acc.subCategory,
       type: acc.type,
-      currency: acc.currency,
+      currency: 'Rs',
       balance: acc.balance.toString()
     });
     setShowAddModal(true);
@@ -117,7 +154,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
       category: formData.category,
       subCategory: formData.subCategory,
       type: formData.type,
-      currency: formData.currency,
+      currency: 'Rs',
       balance: parseFloat(formData.balance) || 0
     };
 
@@ -255,7 +292,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
             <span className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs">A</span>
           </div>
           <span className="text-lg font-black font-mono text-slate-900 block mt-1">
-            PKR {totalAssets.toLocaleString()}
+            Rs. {totalAssets.toLocaleString()}
           </span>
           <span className="text-[10px] text-blue-600 font-semibold">Cash, Banks &amp; Receivables</span>
         </div>
@@ -266,7 +303,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
             <span className="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-xs">L</span>
           </div>
           <span className="text-lg font-black font-mono text-rose-700 block mt-1">
-            PKR {totalLiabilities.toLocaleString()}
+            Rs. {totalLiabilities.toLocaleString()}
           </span>
           <span className="text-[10px] text-rose-600 font-semibold">Payables &amp; Advances</span>
         </div>
@@ -277,7 +314,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
             <span className="w-6 h-6 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-xs">E</span>
           </div>
           <span className="text-lg font-black font-mono text-purple-700 block mt-1">
-            PKR {totalEquity.toLocaleString()}
+            Rs. {totalEquity.toLocaleString()}
           </span>
           <span className="text-[10px] text-purple-600 font-semibold">Capital &amp; Reserves</span>
         </div>
@@ -288,7 +325,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
             <span className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs">R</span>
           </div>
           <span className="text-lg font-black font-mono text-emerald-700 block mt-1">
-            PKR {totalRevenue.toLocaleString()}
+            Rs. {totalRevenue.toLocaleString()}
           </span>
           <span className="text-[10px] text-emerald-600 font-semibold">Umrah &amp; Visa Sales</span>
         </div>
@@ -299,7 +336,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
             <span className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs">C</span>
           </div>
           <span className="text-lg font-black font-mono text-amber-700 block mt-1">
-            PKR {totalCostsExpenses.toLocaleString()}
+            Rs. {totalCostsExpenses.toLocaleString()}
           </span>
           <span className="text-[10px] text-amber-600 font-semibold">Direct Costs &amp; Admin</span>
         </div>
@@ -360,7 +397,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
             </div>
             <div className="text-right text-xs text-slate-500">
               <p className="font-bold">Printed: {new Date().toLocaleDateString('en-GB')}</p>
-              <p>Currency: PKR / SAR Base</p>
+              <p>Currency: PKR / Rs.</p>
             </div>
           </div>
         </div>
@@ -417,7 +454,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right font-mono font-bold text-slate-900">
-                      {acc.currency} {parseFloat(acc.balance || 0).toLocaleString()}
+                      Rs. {parseFloat(acc.balance || 0).toLocaleString()}
                     </td>
                     <td className="py-3 px-4 text-center">
                       <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
@@ -480,16 +517,21 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
             <form onSubmit={handleSave} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                    Account Code *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-600 uppercase">
+                      Account Code *
+                    </label>
+                    <span className="text-[10px] text-indigo-600 font-semibold flex items-center gap-0.5">
+                      <Sparkles className="w-2.5 h-2.5" /> Auto-suggested
+                    </span>
+                  </div>
                   <input
                     type="text"
                     required
                     placeholder="e.g. 1060"
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-slate-900"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono font-bold focus:outline-none focus:border-slate-900 bg-slate-50/50"
                   />
                 </div>
 
@@ -497,15 +539,9 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
                     Currency
                   </label>
-                  <select
-                    value={formData.currency}
-                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-slate-900"
-                  >
-                    <option value="PKR">PKR (Pakistani Rupee)</option>
-                    <option value="SAR">SAR (Saudi Riyal)</option>
-                    <option value="USD">USD (US Dollar)</option>
-                  </select>
+                  <div className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold bg-slate-100 text-slate-800">
+                    Rs (Pakistani Rupee)
+                  </div>
                 </div>
               </div>
 
@@ -516,7 +552,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Standard Chartered Bank Corporate"
+                  placeholder="e.g. Cash in Hand - Petty Cash / Standard Chartered"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-slate-900"
@@ -530,17 +566,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
                   </label>
                   <select
                     value={formData.category}
-                    onChange={(e) => {
-                      const cat = e.target.value;
-                      let sub = 'Current Assets';
-                      let typ = 'DEBIT';
-                      if (cat === 'LIABILITIES') { sub = 'Current Liabilities'; typ = 'CREDIT'; }
-                      if (cat === 'EQUITY') { sub = 'Equity'; typ = 'CREDIT'; }
-                      if (cat === 'REVENUE') { sub = 'Operating Revenue'; typ = 'CREDIT'; }
-                      if (cat === 'DIRECT_COSTS') { sub = 'Cost of Sales'; typ = 'DEBIT'; }
-                      if (cat === 'EXPENSES') { sub = 'Operating Expenses'; typ = 'DEBIT'; }
-                      setFormData({ ...formData, category: cat, subCategory: sub, type: typ });
-                    }}
+                    onChange={(e) => handleCategoryChangeInModal(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-slate-900"
                   >
                     <option value="ASSETS">Assets (1000s)</option>
@@ -582,7 +608,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                    Opening / Initial Balance
+                    Opening / Initial Balance (Rs.)
                   </label>
                   <input
                     type="number"
