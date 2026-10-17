@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useMemo } from 'react';
 import { 
@@ -403,7 +403,7 @@ export default function BillReceiptManager({
                 >
                   {invoices.map(inv => (
                     <option key={inv.id || inv.invoiceNo} value={inv.id || inv.invoiceNo}>
-                      {inv.invoiceNo} â€” {inv.partyName} (Balance: PKR {(inv.balanceDue || 0).toLocaleString()})
+                      {inv.invoiceNo} — {inv.partyName} (Balance: PKR {(inv.balanceDue || 0).toLocaleString()})
                     </option>
                   ))}
                 </select>
@@ -544,7 +544,7 @@ export default function BillReceiptManager({
                       {selectedReceiptForPrint.companyName}
                     </h1>
                     <p className="text-[11px] text-slate-600 font-medium">
-                      Official Payment Receipt â€¢ Umrah &amp; Hajj Travel Operations
+                      Official Payment Receipt • Umrah &amp; Hajj Travel Operations
                     </p>
                     <p className="text-[10px] text-slate-500 font-mono">
                       Tax Reg. B2B Voucher Portal
