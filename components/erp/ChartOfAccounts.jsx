@@ -44,10 +44,40 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
     balance: ''
   });
 
+  const getNextAvailableBankCode = (currentList) => {
+    const list = currentList || accounts;
+    const codes = list
+      .filter(a => a.category === 'ASSETS' && a.code.startsWith('102'))
+      .map(a => parseInt(a.code, 10))
+      .filter(n => !isNaN(n));
+    if (codes.length === 0) return '1020';
+    return String(Math.max(...codes) + 1);
+  };
+
+  const getNextAvailableCashCode = (currentList) => {
+    const list = currentList || accounts;
+    const codes = list
+      .filter(a => a.category === 'ASSETS' && a.code.startsWith('101'))
+      .map(a => parseInt(a.code, 10))
+      .filter(n => !isNaN(n));
+    if (codes.length === 0) return '1010';
+    return String(Math.max(...codes) + 1);
+  };
+
+  const getNextAvailableGeneralAssetCode = (currentList) => {
+    const list = currentList || accounts;
+    const codes = list
+      .filter(a => a.category === 'ASSETS' && !a.code.startsWith('101') && !a.code.startsWith('102'))
+      .map(a => parseInt(a.code, 10))
+      .filter(n => !isNaN(n));
+    if (codes.length === 0) return '1040';
+    return String(Math.max(...codes) + 10);
+  };
+
   const getNextAvailableCode = (cat, currentList) => {
+    if (cat === 'ASSETS') return getNextAvailableBankCode(currentList);
     let prefix = 1000;
-    if (cat === 'ASSETS') prefix = 1000;
-    else if (cat === 'LIABILITIES') prefix = 2000;
+    if (cat === 'LIABILITIES') prefix = 2000;
     else if (cat === 'EQUITY') prefix = 3000;
     else if (cat === 'REVENUE') prefix = 4000;
     else if (cat === 'DIRECT_COSTS') prefix = 5000;
@@ -93,11 +123,12 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
 
   const handleOpenCreate = () => {
     setEditingAccount(null);
-    const nextCode = getNextAvailableCode('ASSETS', accounts);
+    const nextCode = getNextAvailableBankCode(accounts);
     setFormData({
       code: nextCode,
       name: '',
       category: 'ASSETS',
+      accountSubtype: 'BANK',
       subCategory: 'Current Assets',
       type: 'DEBIT',
       currency: 'Rs',
@@ -109,17 +140,40 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
   const handleCategoryChangeInModal = (cat) => {
     let sub = 'Current Assets';
     let typ = 'DEBIT';
-    if (cat === 'LIABILITIES') { sub = 'Current Liabilities'; typ = 'CREDIT'; }
-    if (cat === 'EQUITY') { sub = 'Equity'; typ = 'CREDIT'; }
-    if (cat === 'REVENUE') { sub = 'Operating Revenue'; typ = 'CREDIT'; }
-    if (cat === 'DIRECT_COSTS') { sub = 'Cost of Sales'; typ = 'DEBIT'; }
-    if (cat === 'EXPENSES') { sub = 'Operating Expenses'; typ = 'DEBIT'; }
+    let subtype = undefined;
+    let autoCode = '';
 
-    const autoCode = (!editingAccount) ? getNextAvailableCode(cat, accounts) : formData.code;
+    if (cat === 'ASSETS') {
+      sub = 'Current Assets';
+      typ = 'DEBIT';
+      subtype = 'BANK';
+      autoCode = (!editingAccount) ? getNextAvailableBankCode(accounts) : formData.code;
+    } else if (cat === 'LIABILITIES') { 
+      sub = 'Current Liabilities'; 
+      typ = 'CREDIT'; 
+      autoCode = (!editingAccount) ? getNextAvailableCode(cat, accounts) : formData.code;
+    } else if (cat === 'EQUITY') { 
+      sub = 'Equity'; 
+      typ = 'CREDIT'; 
+      autoCode = (!editingAccount) ? getNextAvailableCode(cat, accounts) : formData.code;
+    } else if (cat === 'REVENUE') { 
+      sub = 'Operating Revenue'; 
+      typ = 'CREDIT'; 
+      autoCode = (!editingAccount) ? getNextAvailableCode(cat, accounts) : formData.code;
+    } else if (cat === 'DIRECT_COSTS') { 
+      sub = 'Cost of Sales'; 
+      typ = 'DEBIT'; 
+      autoCode = (!editingAccount) ? getNextAvailableCode(cat, accounts) : formData.code;
+    } else if (cat === 'EXPENSES') { 
+      sub = 'Operating Expenses'; 
+      typ = 'DEBIT'; 
+      autoCode = (!editingAccount) ? getNextAvailableCode(cat, accounts) : formData.code;
+    }
 
     setFormData({ 
       ...formData, 
       category: cat, 
+      accountSubtype: subtype,
       subCategory: sub, 
       type: typ,
       code: autoCode
@@ -128,10 +182,17 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
 
   const handleOpenEdit = (acc) => {
     setEditingAccount(acc);
+    let subtype = acc.accountSubtype;
+    if (!subtype && acc.category === 'ASSETS') {
+      if (acc.code.startsWith('101') || acc.name.toLowerCase().includes('cash')) subtype = 'CASH';
+      else if (acc.code.startsWith('102') || acc.name.toLowerCase().includes('bank')) subtype = 'BANK';
+      else subtype = 'GENERAL';
+    }
     setFormData({
       code: acc.code,
       name: acc.name,
       category: acc.category,
+      accountSubtype: subtype || 'GENERAL',
       subCategory: acc.subCategory,
       type: acc.type,
       currency: 'Rs',
@@ -152,6 +213,7 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
       code: formData.code.trim(),
       name: formData.name.trim(),
       category: formData.category,
+      accountSubtype: formData.category === 'ASSETS' ? (formData.accountSubtype || 'GENERAL') : undefined,
       subCategory: formData.subCategory,
       type: formData.type,
       currency: 'Rs',
@@ -556,6 +618,95 @@ export default function ChartOfAccounts({ companyName = 'NOOR E HARAM TRAVELS & 
                   />
                 </div>
               </div>
+
+              {/* Asset Classification (Bank vs Cash vs General Asset) */}
+              {formData.category === 'ASSETS' && (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase">
+                      Asset Nature / Classification *
+                    </label>
+                    <span className="text-[10px] text-slate-400">Controls Bank &amp; Cash synchronization</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextCode = getNextAvailableBankCode(accounts);
+                        setFormData({ 
+                          ...formData, 
+                          accountSubtype: 'BANK', 
+                          subCategory: 'Current Assets', 
+                          code: editingAccount ? formData.code : nextCode 
+                        });
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        formData.accountSubtype === 'BANK'
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-950 ring-2 ring-emerald-500/20'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="font-bold text-xs flex items-center gap-1.5 text-emerald-800">
+                        <span>🏛️</span> Bank Account
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        Syncs to Bank Wallets (Meezan, HBL, etc.)
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextCode = getNextAvailableCashCode(accounts);
+                        setFormData({ 
+                          ...formData, 
+                          accountSubtype: 'CASH', 
+                          subCategory: 'Current Assets', 
+                          code: editingAccount ? formData.code : nextCode 
+                        });
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        formData.accountSubtype === 'CASH'
+                          ? 'border-amber-600 bg-amber-50 text-amber-950 ring-2 ring-amber-500/20'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="font-bold text-xs flex items-center gap-1.5 text-amber-800">
+                        <span>💵</span> Cash Drawer
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        Petty cash &amp; counter tills (1010s)
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextCode = getNextAvailableGeneralAssetCode(accounts);
+                        setFormData({ 
+                          ...formData, 
+                          accountSubtype: 'GENERAL', 
+                          subCategory: 'Fixed / Other Assets', 
+                          code: editingAccount ? formData.code : nextCode 
+                        });
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        formData.accountSubtype === 'GENERAL'
+                          ? 'border-blue-600 bg-blue-50 text-blue-950 ring-2 ring-blue-500/20'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="font-bold text-xs flex items-center gap-1.5 text-blue-800">
+                        <span>📁</span> General Asset
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-0.5 leading-tight">
+                        Furniture, Advances, Debtors (No bank card)
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* 2. Account Code (Auto-suggested) & Opening Balance */}
               <div className="grid grid-cols-2 gap-3">
