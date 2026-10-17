@@ -2868,7 +2868,7 @@ export default function InvoiceLedger({
                     Customer Statement of Account Preview
                   </h3>
                   <p className="text-[11px] text-slate-400 font-mono">
-                    Account: {selectedPartyForPrint.partyName} ({selectedPartyForPrint.partyUid})
+                    Account: {selectedPartyForPrint.partyName} ({selectedPartyForPrint.fid || selectedPartyForPrint.partyUid})
                   </p>
                 </div>
               </div>
@@ -2937,7 +2937,7 @@ export default function InvoiceLedger({
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Customer Details</span>
                   <div className="font-black text-slate-900 text-sm">{selectedPartyForPrint.partyName}</div>
                   <div className="text-slate-600 font-mono">Contact Phone: <strong>{selectedPartyForPrint.contactPhone || 'N/A'}</strong></div>
-                  <div className="text-slate-500 font-mono text-[10.5px]">Account UID: <strong>{selectedPartyForPrint.partyUid}</strong></div>
+                  <div className="text-slate-500 font-mono text-[10.5px]">FID: <strong>{selectedPartyForPrint.fid || selectedPartyForPrint.partyUid}</strong></div>
                 </div>
 
                 <div className="space-y-1 sm:text-right">
